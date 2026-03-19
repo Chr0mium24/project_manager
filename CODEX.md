@@ -55,6 +55,9 @@ Branch rule:
 - Start or resume a task branch through `./scripts/codex-start-task.sh <slug>`
 - Do not commit on `main` or `master`
 - Do not create PRs
+- Each completed slice must end with one local commit on the task branch
+- Use a narrow commit that includes its tests and doc updates
+- Preferred commit message format: `<type>(<scope>): <summary>`
 
 ## Stack rules
 

@@ -59,6 +59,29 @@ Commit rule:
 - commits from non-`task/<slug>` branches are blocked by the wrapper
 - Codex must stop at branch + commit; it must not create a PR
 
+Commit cadence rule:
+
+- each completed vertical slice must end with exactly one local commit
+- do not accumulate many unrelated changes and commit them later as one batch
+- if a task becomes multi-phase, split it into multiple narrow commits on the same task branch
+- do not leave finished work uncommitted
+
+Commit content rule:
+
+- one commit should represent one coherent change
+- include related tests and required doc updates in the same commit
+- do not mix unrelated refactors into the same commit
+- if the change crosses multiple modules, document why before committing
+
+Commit message rule:
+
+- use a short imperative subject
+- preferred format: `<type>(<scope>): <summary>`
+- examples:
+  - `chore(gate): add task-branch commit policy`
+  - `feat(gateway): add route registry reader`
+  - `test(project-core): cover draft validation`
+
 PR rule:
 
 - `gh pr create` is not part of the allowed workflow

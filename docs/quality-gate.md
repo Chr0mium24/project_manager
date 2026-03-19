@@ -50,6 +50,7 @@ A feature is not ready unless:
 - tests for the changed behavior exist
 - all required checks pass
 - module boundaries remain intact
+- the completed slice has been committed on its task branch
 
 ## Per-change expectations
 
