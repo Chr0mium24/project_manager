@@ -98,3 +98,25 @@ export function createProjectVersion(
   writeJson(getVersionMetadataPath(rootDir, slug, versionId), record);
   return record;
 }
+
+export function restoreProjectVersion(
+  rootDir: string,
+  slug: string,
+  versionId: string
+): ProjectVersionRecord | null {
+  const version = readProjectVersion(rootDir, slug, versionId);
+  if (version === null) {
+    return null;
+  }
+
+  const snapshotDir = path.join(rootDir, version.snapshotPath);
+  if (!fs.existsSync(snapshotDir) || !fs.statSync(snapshotDir).isDirectory()) {
+    return null;
+  }
+
+  const projectDir = getProjectSourceDir(rootDir, slug);
+  fs.rmSync(projectDir, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(projectDir), { recursive: true });
+  fs.cpSync(snapshotDir, projectDir, { recursive: true });
+  return version;
+}

@@ -102,3 +102,46 @@ void test("createGatewayApp rejects invalid version payloads", async () => {
 
   await app.close();
 });
+
+void test("createGatewayApp restores a previous project version", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const createResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/versions",
+    payload: {
+      message: "restore target"
+    }
+  });
+  const createPayload: { version: { versionId: string } } = createResponse.json();
+  fs.writeFileSync(
+    path.join(rootDir, "content-repo", "projects", "landing-a", "src", "index.html"),
+    "<html><body>Changed</body></html>\n",
+    "utf8"
+  );
+
+  const restoreResponse = await app.inject({
+    method: "POST",
+    url: `/api/projects/landing-a/versions/${createPayload.version.versionId}/restore`
+  });
+  const restorePayload: {
+    restoredVersion: { versionId: string };
+  } = restoreResponse.json();
+
+  assert.equal(restoreResponse.statusCode, 200);
+  assert.equal(restorePayload.restoredVersion.versionId, createPayload.version.versionId);
+  assert.match(
+    fs.readFileSync(path.join(rootDir, "content-repo", "projects", "landing-a", "src", "index.html"), "utf8"),
+    /Landing A/
+  );
+
+  const missingResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/versions/missing-version/restore"
+  });
+  assert.equal(missingResponse.statusCode, 404);
+
+  await app.close();
+});

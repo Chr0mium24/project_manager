@@ -2,6 +2,7 @@ import {
   createProjectVersion,
   listProjectVersions,
   readProjectVersion,
+  restoreProjectVersion,
   type ProjectVersionRecord
 } from "@project-manager/git-core";
 import { type FastifyReply, type FastifyRequest } from "fastify";
@@ -21,6 +22,10 @@ interface ProjectVersionReadPayload {
 
 interface ProjectVersionCreatePayload {
   version: ProjectVersionRecord;
+}
+
+interface ProjectVersionRestorePayload {
+  restoredVersion: ProjectVersionRecord;
 }
 
 const versionCreateBodySchema = z.object({
@@ -85,34 +90,90 @@ function sendProjectVersionCreate(
   return true;
 }
 
-export function sendProjectVersionsApi(
+function sendProjectVersionRestore(
+  rootDir: string,
+  slug: string,
+  versionId: string,
+  reply: FastifyReply
+): boolean {
+  const restoredVersion = restoreProjectVersion(rootDir, slug, versionId);
+  if (restoredVersion === null) {
+    void reply.code(404).send({
+      error: "project-version-not-found",
+      slug,
+      versionId
+    });
+    return true;
+  }
+
+  const payload: ProjectVersionRestorePayload = { restoredVersion };
+  void reply.code(200).send(payload);
+  return true;
+}
+
+function sendVersionRestoreRoute(
+  rootDir: string,
+  pathname: string,
+  method: string,
+  reply: FastifyReply
+): boolean {
+  const restoreMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/versions\/([^/]+)\/restore$/);
+  if (!restoreMatch || method !== "POST") {
+    return false;
+  }
+
+  return sendProjectVersionRestore(rootDir, restoreMatch[1] ?? "", restoreMatch[2] ?? "", reply);
+}
+
+function sendVersionReadRoute(
+  rootDir: string,
+  pathname: string,
+  method: string,
+  reply: FastifyReply
+): boolean {
+  const versionMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/versions\/([^/]+)$/);
+  if (!versionMatch || method !== "GET") {
+    return false;
+  }
+
+  return sendProjectVersionRead(rootDir, versionMatch[1] ?? "", versionMatch[2] ?? "", reply);
+}
+
+function sendVersionCollectionRoute(
   rootDir: string,
   pathname: string,
   request: FastifyRequest<{ Body: VersionCreateBody }>,
   reply: FastifyReply
 ): boolean {
-  const versionMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/versions\/([^/]+)$/);
-  if (versionMatch) {
-    if (request.method !== "GET") {
-      return false;
-    }
-
-    return sendProjectVersionRead(rootDir, versionMatch[1] ?? "", versionMatch[2] ?? "", reply);
-  }
-
   const versionsMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/versions$/);
   if (!versionsMatch) {
     return false;
   }
 
   const slug = versionsMatch[1] ?? "";
-  if (request.method === "GET") {
-    return sendProjectVersionList(rootDir, slug, reply);
+  switch (request.method) {
+    case "GET":
+      return sendProjectVersionList(rootDir, slug, reply);
+    case "POST":
+      return sendProjectVersionCreate(rootDir, slug, request, reply);
+    default:
+      return false;
+  }
+}
+
+export function sendProjectVersionsApi(
+  rootDir: string,
+  pathname: string,
+  request: FastifyRequest<{ Body: VersionCreateBody }>,
+  reply: FastifyReply
+): boolean {
+  if (sendVersionRestoreRoute(rootDir, pathname, request.method, reply)) {
+    return true;
   }
 
-  if (request.method === "POST") {
-    return sendProjectVersionCreate(rootDir, slug, request, reply);
+  if (sendVersionReadRoute(rootDir, pathname, request.method, reply)) {
+    return true;
   }
 
-  return false;
+  return sendVersionCollectionRoute(rootDir, pathname, request, reply);
 }
