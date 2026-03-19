@@ -157,7 +157,10 @@ The following should fail CI:
 Current repository enforcement:
 
 - `scripts/check-no-compat.mjs` enforces exact banned compatibility patterns
-- `eslint.config.mjs` reserves stricter AST-level enforcement for the bootstrapped TypeScript codebase
+- `eslint.config.mjs` enforces AST-level rules for TypeScript and JavaScript source in `apps/`, `packages/`, `scripts/`, and `tests/`
+- `scripts/check-architecture-imports.mjs` enforces public-entry-only cross-module imports
+- `scripts/check-changed-scope.mjs` enforces the single-slice change-scope rule
+- `.dependency-cruiser.cjs` enforces cycles and forbidden high-level dependencies
 - `scripts/check-file-limits.mjs` enforces file-size limits exactly today
 
 ## Exception policy

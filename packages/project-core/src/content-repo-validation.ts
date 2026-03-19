@@ -17,34 +17,53 @@ function fail(message: string): never {
 }
 
 function parseJsonFile<T>(filePath: string, parser: { parse(value: unknown): T }): T {
-  const rawValue = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  const rawValue: unknown = JSON.parse(fs.readFileSync(filePath, "utf8"));
   return parser.parse(rawValue);
+}
+
+function assertIndexEntry(entry: ProjectsIndex["projects"][number], previousSlug: string): void {
+  if (!entry.entry.startsWith("src/")) {
+    fail(`index entry must start with src/: ${entry.slug}`);
+  }
+  if (entry.path !== `projects/${entry.slug}`) {
+    fail(`index path must equal projects/<slug>: ${entry.slug}`);
+  }
+  if (entry.slug <= previousSlug) {
+    fail("projects-index.json must be sorted by slug");
+  }
+  if (entry.runtime === "static" && !entry.route.startsWith("/p/")) {
+    fail(`static project route must start with /p/: ${entry.slug}`);
+  }
+  if (entry.runtime === "dynamic" && !entry.route.startsWith("/app/")) {
+    fail(`dynamic project route must start with /app/: ${entry.slug}`);
+  }
 }
 
 function validateProjectsIndex(index: ProjectsIndex): ProjectsIndex {
   let previousSlug = "";
 
   for (const entry of index.projects) {
-    if (!entry.entry.startsWith("src/")) {
-      fail(`index entry must start with src/: ${entry.slug}`);
-    }
-    if (entry.path !== `projects/${entry.slug}`) {
-      fail(`index path must equal projects/<slug>: ${entry.slug}`);
-    }
-    if (entry.slug <= previousSlug) {
-      fail("projects-index.json must be sorted by slug");
-    }
-    if (entry.runtime === "static" && !entry.route.startsWith("/p/")) {
-      fail(`static project route must start with /p/: ${entry.slug}`);
-    }
-    if (entry.runtime === "dynamic" && !entry.route.startsWith("/app/")) {
-      fail(`dynamic project route must start with /app/: ${entry.slug}`);
-    }
-
+    assertIndexEntry(entry, previousSlug);
     previousSlug = entry.slug;
   }
 
   return index;
+}
+
+function validateProjectRoute(project: ManagedProject, expectedSlug: string): void {
+  if (project.runtime === "static") {
+    if (!project.entry.endsWith(".html")) {
+      fail(`static project entry must be an html file: ${expectedSlug}`);
+    }
+    if (project.route !== `/p/${project.slug}`) {
+      fail(`static project route must equal /p/<slug>: ${expectedSlug}`);
+    }
+    return;
+  }
+
+  if (project.route !== `/app/${project.slug}`) {
+    fail(`dynamic project route must equal /app/<slug>: ${expectedSlug}`);
+  }
 }
 
 function validateProject(project: ManagedProject, expectedSlug: string): ManagedProject {
@@ -57,17 +76,7 @@ function validateProject(project: ManagedProject, expectedSlug: string): Managed
   if (project.entry.startsWith("drafts/")) {
     fail(`project entry must not point into drafts/: ${expectedSlug}`);
   }
-  if (project.runtime === "static") {
-    if (!project.entry.endsWith(".html")) {
-      fail(`static project entry must be an html file: ${expectedSlug}`);
-    }
-    if (project.route !== `/p/${project.slug}`) {
-      fail(`static project route must equal /p/<slug>: ${expectedSlug}`);
-    }
-  }
-  if (project.runtime === "dynamic" && project.route !== `/app/${project.slug}`) {
-    fail(`dynamic project route must equal /app/<slug>: ${expectedSlug}`);
-  }
+  validateProjectRoute(project, expectedSlug);
 
   const uniqueTags = new Set(project.tags);
   if (uniqueTags.size !== project.tags.length) {
@@ -102,10 +111,7 @@ function assertProjectMatchesIndex(project: ManagedProject, index: ProjectsIndex
   }
 }
 
-export function validateContentRepo(contentRepoRoot: string): ContentRepoValidationSummary {
-  const projectsDir = path.join(contentRepoRoot, "projects");
-  const indexPath = path.join(contentRepoRoot, "projects-index.json");
-
+function assertContentRepoStructure(contentRepoRoot: string, projectsDir: string, indexPath: string): void {
   if (!fs.existsSync(contentRepoRoot)) {
     fail(`content-repo root is missing: ${contentRepoRoot}`);
   }
@@ -115,50 +121,74 @@ export function validateContentRepo(contentRepoRoot: string): ContentRepoValidat
   if (!fs.existsSync(indexPath)) {
     fail("projects-index.json is missing");
   }
+}
 
-  const index = validateProjectsIndex(parseJsonFile(indexPath, projectsIndexSchema));
-  const projectDirs = fs.readdirSync(projectsDir, { withFileTypes: true })
+function listProjectDirs(projectsDir: string): string[] {
+  return fs.readdirSync(projectsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
+}
+
+function assertProjectDirectoryLayout(projectDir: string, slug: string): void {
+  const projectJsonPath = path.join(projectDir, "project.json");
+  const srcDir = path.join(projectDir, "src");
+
+  if (!fs.existsSync(projectJsonPath)) {
+    fail(`project.json is missing: ${slug}`);
+  }
+  if (!fs.existsSync(srcDir)) {
+    fail(`src directory is missing: ${slug}`);
+  }
+  if (fs.existsSync(path.join(projectDir, ".git"))) {
+    fail(`nested .git directory is forbidden: ${slug}`);
+  }
+}
+
+function validateProjectDirectory(contentRepoRoot: string, index: ProjectsIndex, slug: string): void {
+  if (!slugRe.test(slug)) {
+    fail(`invalid project directory slug: ${slug}`);
+  }
+
+  const projectDir = path.join(contentRepoRoot, "projects", slug);
+  assertProjectDirectoryLayout(projectDir, slug);
+
+  const projectJsonPath = path.join(projectDir, "project.json");
+  const project = validateProject(parseJsonFile(projectJsonPath, projectJsonSchema), slug);
+  const entryPath = path.join(projectDir, project.entry);
+  if (!fs.existsSync(entryPath)) {
+    fail(`entry file does not exist: ${slug}:${project.entry}`);
+  }
+
+  assertProjectMatchesIndex(project, index, slug);
+}
+
+function assertIndexTargetsExist(contentRepoRoot: string, index: ProjectsIndex): void {
+  for (const indexEntry of index.projects) {
+    if (!fs.existsSync(path.join(contentRepoRoot, indexEntry.path))) {
+      fail(`index points to a missing project directory: ${indexEntry.path}`);
+    }
+  }
+}
+
+export function validateContentRepo(contentRepoRoot: string): ContentRepoValidationSummary {
+  const projectsDir = path.join(contentRepoRoot, "projects");
+  const indexPath = path.join(contentRepoRoot, "projects-index.json");
+
+  assertContentRepoStructure(contentRepoRoot, projectsDir, indexPath);
+
+  const index = validateProjectsIndex(parseJsonFile(indexPath, projectsIndexSchema));
+  const projectDirs = listProjectDirs(projectsDir);
 
   if (index.projects.length !== projectDirs.length) {
     fail("index project count does not match directory count");
   }
 
   for (const slug of projectDirs) {
-    if (!slugRe.test(slug)) {
-      fail(`invalid project directory slug: ${slug}`);
-    }
-
-    const projectDir = path.join(projectsDir, slug);
-    const projectJsonPath = path.join(projectDir, "project.json");
-    const srcDir = path.join(projectDir, "src");
-
-    if (!fs.existsSync(projectJsonPath)) {
-      fail(`project.json is missing: ${slug}`);
-    }
-    if (!fs.existsSync(srcDir)) {
-      fail(`src directory is missing: ${slug}`);
-    }
-    if (fs.existsSync(path.join(projectDir, ".git"))) {
-      fail(`nested .git directory is forbidden: ${slug}`);
-    }
-
-    const project = validateProject(parseJsonFile(projectJsonPath, projectJsonSchema), slug);
-    const entryPath = path.join(projectDir, project.entry);
-    if (!fs.existsSync(entryPath)) {
-      fail(`entry file does not exist: ${slug}:${project.entry}`);
-    }
-
-    assertProjectMatchesIndex(project, index, slug);
+    validateProjectDirectory(contentRepoRoot, index, slug);
   }
 
-  for (const indexEntry of index.projects) {
-    if (!fs.existsSync(path.join(contentRepoRoot, indexEntry.path))) {
-      fail(`index points to a missing project directory: ${indexEntry.path}`);
-    }
-  }
+  assertIndexTargetsExist(contentRepoRoot, index);
 
   return { projects: projectDirs.length };
 }

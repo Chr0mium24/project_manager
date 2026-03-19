@@ -66,29 +66,30 @@ function writeContentRepo(rootDir: string): void {
   );
 }
 
-test("listProjects reads the formal content repo index", () => {
+void test("listProjects reads the formal content repo index", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
   const projects = listProjects(rootDir);
 
   assert.equal(projects.length, 1);
-  assert.equal(projects[0]?.slug, "landing-a");
-  assert.equal(projects[0]?.route, "/p/landing-a");
+  assert.equal(projects[0].slug, "landing-a");
+  assert.equal(projects[0].route, "/p/landing-a");
 });
 
-test("readProject returns a full project document", () => {
+void test("readProject returns a full project document", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
   const project = readProject(rootDir, "landing-a");
 
-  assert.equal(project?.slug, "landing-a");
-  assert.equal(project?.runtime, "static");
-  assert.equal(project?.framework, "vanilla");
+  assert.notEqual(project, null);
+  assert.equal(project.slug, "landing-a");
+  assert.equal(project.runtime, "static");
+  assert.equal(project.framework, "vanilla");
 });
 
-test("readProjectEntry returns null for missing projects", () => {
+void test("readProjectEntry returns null for missing projects", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
@@ -96,7 +97,7 @@ test("readProjectEntry returns null for missing projects", () => {
   assert.equal(readProjectEntry(rootDir, "missing-project"), null);
 });
 
-test("readProjectEntry returns the project entry file contents", () => {
+void test("readProjectEntry returns the project entry file contents", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
@@ -105,7 +106,7 @@ test("readProjectEntry returns the project entry file contents", () => {
   assert.match(entryContent ?? "", /Landing A/);
 });
 
-test("validateContentRepo succeeds for a valid formal content repo", () => {
+void test("validateContentRepo succeeds for a valid formal content repo", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
@@ -114,7 +115,7 @@ test("validateContentRepo succeeds for a valid formal content repo", () => {
   assert.deepEqual(summary, { projects: 1 });
 });
 
-test("validateContentRepo rejects a project that diverges from the index", () => {
+void test("validateContentRepo rejects a project that diverges from the index", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
   writeJson(path.join(rootDir, "content-repo", "projects", "landing-a", "project.json"), {
@@ -141,7 +142,7 @@ test("validateContentRepo rejects a project that diverges from the index", () =>
   );
 });
 
-test("createProject creates a static project in the formal content repo", () => {
+void test("createProject creates a static project in the formal content repo", () => {
   const rootDir = createTempRoot();
   fs.mkdirSync(path.join(rootDir, "content-repo", "projects"), { recursive: true });
   writeJson(getProjectsIndexPath(rootDir), {
@@ -163,7 +164,7 @@ test("createProject creates a static project in the formal content repo", () => 
   assert.deepEqual(validateContentRepo(path.join(rootDir, "content-repo")), { projects: 1 });
 });
 
-test("createProject creates a dynamic project and force recreates the directory", () => {
+void test("createProject creates a dynamic project and force recreates the directory", () => {
   const rootDir = createTempRoot();
   fs.mkdirSync(path.join(rootDir, "content-repo", "projects"), { recursive: true });
   writeJson(getProjectsIndexPath(rootDir), {
@@ -199,7 +200,7 @@ test("createProject creates a dynamic project and force recreates the directory"
   assert.deepEqual(validateContentRepo(path.join(rootDir, "content-repo")), { projects: 1 });
 });
 
-test("startManagedTask creates an isolated formal workspace and manifest", () => {
+void test("startManagedTask creates an isolated formal workspace and manifest", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
@@ -222,7 +223,7 @@ test("startManagedTask creates an isolated formal workspace and manifest", () =>
   );
 });
 
-test("startManagedTask produces branch metadata for git-branch mode", () => {
+void test("startManagedTask produces branch metadata for git-branch mode", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
   createProject(rootDir, {
@@ -241,7 +242,7 @@ test("startManagedTask produces branch metadata for git-branch mode", () => {
   assert.equal(result.manifest.prPolicy, "forbidden");
 });
 
-test("startManagedTask rejects unknown managed projects", () => {
+void test("startManagedTask rejects unknown managed projects", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
@@ -256,7 +257,7 @@ test("startManagedTask rejects unknown managed projects", () => {
   );
 });
 
-test("startManagedTask with force recreates a clean task directory", () => {
+void test("startManagedTask with force recreates a clean task directory", () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 

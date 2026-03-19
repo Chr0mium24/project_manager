@@ -5,9 +5,9 @@ import {
   getContentRepoRoot,
   getProjectJsonPath,
   getProjectRoot,
-  readProject,
-  validateContentRepo
-} from "./index.ts";
+  readProject
+} from "./content-repo.ts";
+import { validateContentRepo } from "./content-repo-validation.ts";
 import { slugRe } from "./schemas.ts";
 
 const managedTaskModeSchema = z.enum(["workspace", "git-branch"]);

@@ -1,4 +1,3 @@
-import path from "node:path";
 import process from "node:process";
 import { createProject } from "../packages/project-core/src/index.ts";
 
@@ -7,6 +6,10 @@ function parseArgs(argv: string[]): Record<string, string | boolean> {
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
+    if (token === undefined) {
+      continue;
+    }
+
     if (!token.startsWith("--")) {
       continue;
     }

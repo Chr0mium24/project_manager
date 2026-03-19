@@ -2,36 +2,50 @@ import process from "node:process";
 import { startManagedTask } from "../packages/project-core/src/index.ts";
 
 interface CliArgs {
-  projectSlug?: string;
-  taskSlug?: string;
-  mode?: "workspace" | "git-branch";
+  projectSlug: string | undefined;
+  taskSlug: string | undefined;
+  mode: "workspace" | "git-branch";
   force: boolean;
+}
+
+function parseMode(value: string | undefined): "workspace" | "git-branch" {
+  if (value === "workspace" || value === "git-branch") {
+    return value;
+  }
+
+  const label = value ?? "<missing>";
+  throw new Error(`invalid mode: ${label}`);
+}
+
+function assignFlag(args: CliArgs, token: string, value: string | undefined): boolean {
+  switch (token) {
+    case "--project":
+      args.projectSlug = value;
+      return true;
+    case "--task":
+      args.taskSlug = value;
+      return true;
+    case "--mode":
+      args.mode = parseMode(value);
+      return true;
+    default:
+      return false;
+  }
 }
 
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
+    projectSlug: undefined,
+    taskSlug: undefined,
     mode: "workspace",
     force: false
   };
 
   for (let index = 2; index < argv.length; index += 1) {
-    const token = argv[index];
+    const token = argv[index] ?? "";
     const value = argv[index + 1];
 
-    if (token === "--project") {
-      args.projectSlug = value;
-      index += 1;
-      continue;
-    }
-
-    if (token === "--task") {
-      args.taskSlug = value;
-      index += 1;
-      continue;
-    }
-
-    if (token === "--mode") {
-      args.mode = value as "workspace" | "git-branch";
+    if (assignFlag(args, token, value)) {
       index += 1;
       continue;
     }

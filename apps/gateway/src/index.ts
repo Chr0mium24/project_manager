@@ -16,7 +16,7 @@ export interface RouteRecord {
   routePrefix: string;
   targetKind: RouteTargetKind;
   targetRef: string;
-  updatedAt?: string;
+  updatedAt?: string | undefined;
 }
 
 export interface RouteRegistry {
@@ -61,7 +61,7 @@ export function readRouteRegistry(rootDir: string): RouteRegistry {
     return { version: REGISTRY_VERSION, updatedAt: null, routes: [] };
   }
 
-  const rawValue = JSON.parse(fs.readFileSync(registryPath, "utf8"));
+  const rawValue: unknown = JSON.parse(fs.readFileSync(registryPath, "utf8"));
   return routeRegistrySchema.parse(rawValue);
 }
 
@@ -141,97 +141,128 @@ function resolveRequestPath(request: FastifyRequest): string {
   return request.url.split("?")[0] ?? "/";
 }
 
-function sendResolution(
-  rootDir: string,
-  request: FastifyRequest,
-  reply: FastifyReply
-): void {
-  const pathname = resolveRequestPath(request);
+function sendStaticProject(rootDir: string, pathname: string, reply: FastifyReply): boolean {
   const staticProjectMatch = pathname.match(/^\/p\/([a-z0-9-]+)(?:\/.*)?$/);
-  if (staticProjectMatch) {
-    const project = readProject(rootDir, staticProjectMatch[1] ?? "");
-    const entryContent = readProjectEntry(rootDir, staticProjectMatch[1] ?? "");
-
-    if (project === null || project.runtime !== "static" || entryContent === null) {
-      void reply.code(404).send({
-        error: "static-project-not-found",
-        slug: staticProjectMatch[1]
-      });
-      return;
-    }
-
-    void reply
-      .code(200)
-      .header("content-type", "text/html; charset=utf-8")
-      .send(entryContent);
-    return;
+  if (!staticProjectMatch) {
+    return false;
   }
 
-  const dynamicProjectMatch = pathname.match(/^\/app\/([a-z0-9-]+)(?:\/.*)?$/);
-  if (dynamicProjectMatch) {
-    const project = readProject(rootDir, dynamicProjectMatch[1] ?? "");
-    if (project === null || project.runtime !== "dynamic") {
-      void reply.code(404).send({
-        error: "dynamic-project-not-found",
-        slug: dynamicProjectMatch[1]
-      });
-      return;
-    }
+  const slug = staticProjectMatch[1] ?? "";
+  const project = readProject(rootDir, slug);
+  const entryContent = readProjectEntry(rootDir, slug);
 
-    void reply.code(200).send({
-      slug: project.slug,
-      runtime: project.runtime,
-      route: project.route,
-      entry: project.entry,
-      framework: project.framework
+  if (project === null || project.runtime !== "static" || entryContent === null) {
+    void reply.code(404).send({
+      error: "static-project-not-found",
+      slug
     });
+    return true;
+  }
+
+  void reply
+    .code(200)
+    .header("content-type", "text/html; charset=utf-8")
+    .send(entryContent);
+  return true;
+}
+
+function sendDynamicProject(rootDir: string, pathname: string, reply: FastifyReply): boolean {
+  const dynamicProjectMatch = pathname.match(/^\/app\/([a-z0-9-]+)(?:\/.*)?$/);
+  if (!dynamicProjectMatch) {
+    return false;
+  }
+
+  const slug = dynamicProjectMatch[1] ?? "";
+  const project = readProject(rootDir, slug);
+  if (project === null || project.runtime !== "dynamic") {
+    void reply.code(404).send({
+      error: "dynamic-project-not-found",
+      slug
+    });
+    return true;
+  }
+
+  void reply.code(200).send({
+    slug: project.slug,
+    runtime: project.runtime,
+    route: project.route,
+    entry: project.entry,
+    framework: project.framework
+  });
+  return true;
+}
+
+function sendProjectApi(rootDir: string, pathname: string, reply: FastifyReply): boolean {
+  if (pathname === "/api/projects") {
+    void reply.code(200).send({
+      projects: listProjects(rootDir)
+    });
+    return true;
+  }
+
+  const projectSlugMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)$/);
+  if (!projectSlugMatch) {
+    return false;
+  }
+
+  const slug = projectSlugMatch[1] ?? "";
+  const project = readProject(rootDir, slug);
+  if (project === null) {
+    void reply.code(404).send({
+      error: "project-not-found",
+      slug
+    });
+    return true;
+  }
+
+  void reply.code(200).send(project);
+  return true;
+}
+
+function sendControlApi(rootDir: string, pathname: string, reply: FastifyReply): boolean {
+  if (!pathname.startsWith("/api/")) {
+    return false;
+  }
+
+  if (sendProjectApi(rootDir, pathname, reply)) {
+    return true;
+  }
+
+  const resolution = resolveGatewayRequest(rootDir, pathname);
+  if (resolution.kind !== "control-api") {
+    return false;
+  }
+
+  const registry = readRouteRegistry(rootDir);
+  void reply.code(200).send({
+    ...resolution,
+    registryVersion: registry.version,
+    routeCount: registry.routes.length
+  });
+  return true;
+}
+
+function sendResolution(rootDir: string, request: FastifyRequest, reply: FastifyReply): void {
+  const pathname = resolveRequestPath(request);
+  if (sendStaticProject(rootDir, pathname, reply)) {
+    return;
+  }
+  if (sendDynamicProject(rootDir, pathname, reply)) {
+    return;
+  }
+  if (sendControlApi(rootDir, pathname, reply)) {
     return;
   }
 
   const resolution = resolveGatewayRequest(rootDir, pathname);
-
-  if (resolution.kind === "not-found") {
-    void reply.code(404).send(resolution);
-    return;
-  }
-
   if (resolution.kind === "healthz") {
     void reply.code(200).send({ ok: true, service: moduleName });
     return;
   }
-
-  if (resolution.kind === "control-api") {
-    if (pathname === "/api/projects") {
-      void reply.code(200).send({
-        projects: listProjects(rootDir)
-      });
-      return;
-    }
-
-    const projectSlugMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)$/);
-    if (projectSlugMatch) {
-      const project = readProject(rootDir, projectSlugMatch[1] ?? "");
-      if (project === null) {
-        void reply.code(404).send({
-          error: "project-not-found",
-          slug: projectSlugMatch[1]
-        });
-        return;
-      }
-
-      void reply.code(200).send(project);
-      return;
-    }
-
-    const registry = readRouteRegistry(rootDir);
-    void reply.code(200).send({
-      ...resolution,
-      registryVersion: registry.version,
-      routeCount: registry.routes.length
-    });
+  if (resolution.kind === "not-found") {
+    void reply.code(404).send(resolution);
     return;
   }
-
   void reply.code(200).send(resolution);
 }
 

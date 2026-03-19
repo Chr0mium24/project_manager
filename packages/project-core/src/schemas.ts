@@ -11,12 +11,12 @@ export const projectIndexEntrySchema = z.object({
   visibility: z.enum(["private", "public"]),
   entry: z.string().min(1),
   route: z.string().regex(routeRe),
-  updatedAt: z.string().datetime({ offset: true })
+  updatedAt: z.iso.datetime()
 }).strict();
 
 export const projectsIndexSchema = z.object({
   version: z.literal(1),
-  generatedAt: z.string().datetime({ offset: true }),
+  generatedAt: z.iso.datetime(),
   projects: z.array(projectIndexEntrySchema)
 }).strict();
 
@@ -34,8 +34,8 @@ export const projectJsonSchema = z.object({
   mainLanguage: z.string().min(1).max(32),
   framework: z.string().min(1).max(32),
   owner: z.string().min(1).max(64),
-  createdAt: z.string().datetime({ offset: true }),
-  updatedAt: z.string().datetime({ offset: true })
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime()
 }).strict();
 
 export type ProjectIndexEntry = z.infer<typeof projectIndexEntrySchema>;

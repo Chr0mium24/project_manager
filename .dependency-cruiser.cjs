@@ -3,28 +3,35 @@ module.exports = {
     {
       name: 'no-circular',
       severity: 'error',
-      from: {},
+      from: { path: '^(apps|packages|scripts)/' },
       to: { circular: true },
     },
     {
-      name: 'no-app-import-from-package',
+      name: 'packages-must-not-import-apps',
       severity: 'error',
       from: { path: '^packages/' },
       to: { path: '^apps/' },
     },
     {
-      name: 'no-private-cross-module-imports',
+      name: 'scripts-must-not-import-apps',
       severity: 'error',
-      from: { path: '^(apps|packages)/' },
-      to: { path: '^(apps|packages)/.+/(src|internal)/', pathNot: '^(apps|packages)/[^/]+/(src/index|public/)' },
+      from: { path: '^scripts/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'no-runtime-import-from-validation',
+      severity: 'error',
+      from: { path: '^(apps|packages|scripts)/' },
+      to: { path: '^validation/' },
     },
   ],
   options: {
     doNotFollow: {
       path: 'node_modules',
     },
+    exclude: '^(content-repo|storage|tmp)/',
     tsConfig: {
-      fileName: 'tsconfig.base.json',
+      fileName: 'tsconfig.eslint.json',
     },
   },
 };

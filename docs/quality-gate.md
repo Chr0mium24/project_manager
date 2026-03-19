@@ -16,6 +16,7 @@ Current implementation detail:
 
 - the gate is executable in this repository today
 - the current runnable lanes are implemented with Node policy scripts, formal `content-repo/` validation, and `validation/` tests
+- the `lint` lane now includes real `ESLint`, dependency-boundary checks, and changed-scope enforcement
 - once the product monorepo is bootstrapped, the same lane names stay stable and their implementations can move to `pnpm`, `turbo`, `tsx`, `eslint`, `tsc`, `vitest`, and `playwright`
 
 ## Required pipeline
