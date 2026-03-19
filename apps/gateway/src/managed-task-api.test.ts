@@ -39,6 +39,14 @@ function postWithAuth(
   });
 }
 
+function deleteWithAuth(app: FastifyInstance, url: string): ReturnType<FastifyInstance["inject"]> {
+  return app.inject({
+    method: "DELETE",
+    url,
+    headers: authHeaders()
+  });
+}
+
 void test("createGatewayApp starts a managed task workspace", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
@@ -322,6 +330,31 @@ void test("createGatewayApp applies a managed task workspace back to the project
     fs.readFileSync(path.join(rootDir, "content-repo", "projects", "landing-a", "src", "index.html"), "utf8"),
     /Landing A Applied/
   );
+
+  await app.close();
+});
+
+void test("createGatewayApp deletes a managed task", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createSecuredApp(rootDir);
+
+  const started = await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "delete-me"
+  });
+  const deleted = await deleteWithAuth(app, "/api/projects/landing-a/tasks/delete-me");
+  const readDeleted = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/tasks/delete-me"
+  });
+  const deleteMissing = await deleteWithAuth(app, "/api/projects/landing-a/tasks/missing-task");
+  const deletedPayload: ManagedTaskResponse = deleted.json();
+
+  assert.equal(started.statusCode, 201);
+  assert.equal(deleted.statusCode, 200);
+  assert.equal(deletedPayload.task.taskSlug, "delete-me");
+  assert.equal(readDeleted.statusCode, 404);
+  assert.equal(deleteMissing.statusCode, 404);
 
   await app.close();
 });

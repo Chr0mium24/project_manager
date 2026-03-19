@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   applyManagedTask,
   createProject,
+  deleteManagedTask,
   listManagedTasks,
   readManagedTask,
   readManagedTaskSummary,
@@ -338,4 +339,35 @@ void test("managed task summary and validation artifacts can be read", () => {
     generatedAt: persistedSummary.generatedAt
   });
   assert.deepEqual(persistedValidation, validation);
+});
+
+void test("deleteManagedTask removes a managed task workspace", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const started = startManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "delete-me",
+    mode: "workspace"
+  });
+  const deleted = deleteManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "delete-me"
+  });
+
+  assert.notEqual(deleted, null);
+  assert.equal(deleted.taskSlug, "delete-me");
+  assert.equal(fs.existsSync(started.taskRoot), false);
+  assert.equal(readManagedTask(rootDir, "landing-a", "delete-me"), null);
+  assert.deepEqual(listManagedTasks(rootDir, "landing-a"), []);
+});
+
+void test("deleteManagedTask returns null for missing tasks", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  assert.equal(deleteManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "missing-task"
+  }), null);
 });

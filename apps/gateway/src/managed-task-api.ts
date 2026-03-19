@@ -1,5 +1,6 @@
 import {
   applyManagedTask,
+  deleteManagedTask,
   startManagedTask,
   summarizeManagedTask,
   validateManagedTask,
@@ -31,6 +32,10 @@ interface ManagedTaskValidationPayload {
 
 interface ManagedTaskApplyPayload {
   result: ManagedTaskApplyResult;
+}
+
+interface ManagedTaskDeletePayload {
+  task: ManagedTaskManifest;
 }
 
 const startManagedTaskBodySchema = z.object({
@@ -190,6 +195,30 @@ function sendManagedTaskApply(
   }
 }
 
+function sendManagedTaskDelete(
+  rootDir: string,
+  slug: string,
+  taskSlug: string,
+  reply: FastifyReply
+): boolean {
+  const task = deleteManagedTask(rootDir, {
+    projectSlug: slug,
+    taskSlug
+  });
+  if (task === null) {
+    void reply.code(404).send({
+      error: "managed-task-not-found",
+      slug,
+      taskSlug
+    });
+    return true;
+  }
+
+  const payload: ManagedTaskDeletePayload = { task };
+  void reply.code(200).send(payload);
+  return true;
+}
+
 export function sendManagedTaskApi(
   rootDir: string,
   pathname: string,
@@ -203,12 +232,30 @@ export function sendManagedTaskApi(
   return sendManagedTaskCreateApi(rootDir, pathname, request, reply);
 }
 
+function sendManagedTaskDeleteApi(
+  rootDir: string,
+  pathname: string,
+  method: string,
+  reply: FastifyReply
+): boolean {
+  const taskMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)$/);
+  if (!taskMatch || method !== "DELETE") {
+    return false;
+  }
+
+  return sendManagedTaskDelete(rootDir, taskMatch[1] ?? "", taskMatch[2] ?? "", reply);
+}
+
 function sendManagedTaskLifecycleApi(
   rootDir: string,
   pathname: string,
   method: string,
   reply: FastifyReply
 ): boolean {
+  if (sendManagedTaskDeleteApi(rootDir, pathname, method, reply)) {
+    return true;
+  }
+
   const lifecycleRoutes = [
     {
       pattern: /^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)\/apply$/,

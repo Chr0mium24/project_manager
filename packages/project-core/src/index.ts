@@ -52,6 +52,7 @@ export {
   applyManagedTask,
   type ManagedTaskApplyResult
 } from "./managed-task-apply.ts";
+export { deleteManagedTask } from "./managed-task-delete.ts";
 export type {
   ManagedProject,
   ProjectIndexEntry,

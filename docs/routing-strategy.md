@@ -47,6 +47,7 @@ Important:
 - `/api/projects/:slug/file?path=...`
 - `PUT /api/projects/:slug/file`
 - `POST /api/projects/:slug/tasks`
+- `DELETE /api/projects/:slug/tasks/:taskSlug`
 - `GET /api/projects/:slug/tasks`
 - `GET /api/projects/:slug/tasks/:taskSlug`
 - `GET /api/projects/:slug/tasks/:taskSlug/summary`
