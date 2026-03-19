@@ -158,6 +158,20 @@ If a new managed project needs to be created in the formal content repo, use:
 node --import tsx scripts/create-project.ts --slug demo-static --name "Demo Static" --runtime static
 ```
 
+If write APIs are exercised locally, set:
+
+```bash
+export PROJECT_MANAGER_ADMIN_TOKEN=your-local-admin-token
+```
+
+Then send:
+
+```text
+Authorization: Bearer <token>
+```
+
+for control-plane mutations.
+
 ## Development behavior policy
 
 Codex should:

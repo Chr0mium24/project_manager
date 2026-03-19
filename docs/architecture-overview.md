@@ -44,6 +44,15 @@ The formal `content-repo/` must be validated by product code in `packages/projec
 
 Product runtime code must not depend on ad hoc experimental directories or one-off local prototypes.
 
+V1 control-plane mutations use a minimal admin Bearer token.
+
+That token protects write operations such as:
+
+- file writes
+- task lifecycle mutations
+- version creation and restore
+- publish mutations
+
 ## Runtime split
 
 ### Static projects

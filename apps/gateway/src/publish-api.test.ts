@@ -4,7 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createGatewayApp } from "./index.ts";
-import { writeContentRepo } from "./test-fixtures.ts";
+import {
+  TEST_ADMIN_TOKEN,
+  authHeaders,
+  writeContentRepo
+} from "./test-fixtures.ts";
 
 interface StaticPublishPayload {
   result: {
@@ -30,11 +34,12 @@ interface DynamicPublishPayload {
 void test("createGatewayApp publishes a static project", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const publishResponse = await app.inject({
     method: "POST",
-    url: "/api/publish/static/landing-a"
+    url: "/api/publish/static/landing-a",
+    headers: authHeaders()
   });
   const publishPayload: StaticPublishPayload = publishResponse.json();
 
@@ -59,11 +64,12 @@ void test("createGatewayApp publishes a static project", async () => {
 void test("createGatewayApp rejects publishing a dynamic project as static", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const response = await app.inject({
     method: "POST",
-    url: "/api/publish/static/service-b"
+    url: "/api/publish/static/service-b",
+    headers: authHeaders()
   });
 
   assert.equal(response.statusCode, 400);
@@ -79,7 +85,7 @@ void test("createGatewayApp rejects publishing a dynamic project as static", asy
 void test("createGatewayApp lists and reads static publish records", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const emptyListResponse = await app.inject({
     method: "GET",
@@ -100,7 +106,8 @@ void test("createGatewayApp lists and reads static publish records", async () =>
 
   await app.inject({
     method: "POST",
-    url: "/api/publish/static/landing-a"
+    url: "/api/publish/static/landing-a",
+    headers: authHeaders()
   });
 
   const listResponse = await app.inject({
@@ -130,11 +137,12 @@ void test("createGatewayApp lists and reads static publish records", async () =>
 void test("createGatewayApp publishes a dynamic project", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const publishResponse = await app.inject({
     method: "POST",
-    url: "/api/publish/dynamic/service-b"
+    url: "/api/publish/dynamic/service-b",
+    headers: authHeaders()
   });
   const publishPayload: DynamicPublishPayload = publishResponse.json();
 
@@ -160,7 +168,7 @@ void test("createGatewayApp publishes a dynamic project", async () => {
 void test("createGatewayApp lists and reads dynamic publish records", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const emptyListResponse = await app.inject({
     method: "GET",
@@ -185,11 +193,12 @@ void test("createGatewayApp lists and reads dynamic publish records", async () =
 void test("createGatewayApp reads dynamic publish records after publish", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   await app.inject({
     method: "POST",
-    url: "/api/publish/dynamic/service-b"
+    url: "/api/publish/dynamic/service-b",
+    headers: authHeaders()
   });
 
   const listResponse = await app.inject({
@@ -220,11 +229,12 @@ void test("createGatewayApp reads dynamic publish records after publish", async 
 void test("createGatewayApp rejects publishing a static project as dynamic", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const invalidResponse = await app.inject({
     method: "POST",
-    url: "/api/publish/dynamic/landing-a"
+    url: "/api/publish/dynamic/landing-a",
+    headers: authHeaders()
   });
   assert.equal(invalidResponse.statusCode, 400);
   assert.deepEqual(invalidResponse.json(), {

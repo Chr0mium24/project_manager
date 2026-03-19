@@ -63,6 +63,12 @@ Important:
 - `/api/ai/tasks`
 - `/api/publish`
 
+Control-plane auth rule:
+
+- `GET` control routes are readable without auth in V1 local mode
+- non-`GET` control mutations under `/api/projects/*`, `/api/publish/*`, and `/api/ai/*` require `Authorization: Bearer <token>`
+- the token is read from `PROJECT_MANAGER_ADMIN_TOKEN` unless the server is started with an explicit override
+
 ### Static project publish routes
 
 - `/p/:slug`

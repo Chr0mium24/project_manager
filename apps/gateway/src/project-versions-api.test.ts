@@ -4,16 +4,21 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createGatewayApp } from "./index.ts";
-import { writeContentRepo } from "./test-fixtures.ts";
+import {
+  TEST_ADMIN_TOKEN,
+  authHeaders,
+  writeContentRepo
+} from "./test-fixtures.ts";
 
 void test("createGatewayApp creates and lists project versions", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const createResponse = await app.inject({
     method: "POST",
     url: "/api/projects/landing-a/versions",
+    headers: authHeaders(),
     payload: {
       message: "capture current state"
     }
@@ -47,11 +52,12 @@ void test("createGatewayApp creates and lists project versions", async () => {
 void test("createGatewayApp reads a single project version", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const createResponse = await app.inject({
     method: "POST",
     url: "/api/projects/landing-a/versions",
+    headers: authHeaders(),
     payload: {
       message: "snapshot for read"
     }
@@ -82,16 +88,18 @@ void test("createGatewayApp reads a single project version", async () => {
 void test("createGatewayApp rejects invalid version payloads", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const invalidResponse = await app.inject({
     method: "POST",
     url: "/api/projects/landing-a/versions",
+    headers: authHeaders(),
     payload: {}
   });
   const missingResponse = await app.inject({
     method: "POST",
     url: "/api/projects/missing-project/versions",
+    headers: authHeaders(),
     payload: {
       message: "noop"
     }
@@ -106,11 +114,12 @@ void test("createGatewayApp rejects invalid version payloads", async () => {
 void test("createGatewayApp restores a previous project version", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const createResponse = await app.inject({
     method: "POST",
     url: "/api/projects/landing-a/versions",
+    headers: authHeaders(),
     payload: {
       message: "restore target"
     }
@@ -124,7 +133,8 @@ void test("createGatewayApp restores a previous project version", async () => {
 
   const restoreResponse = await app.inject({
     method: "POST",
-    url: `/api/projects/landing-a/versions/${createPayload.version.versionId}/restore`
+    url: `/api/projects/landing-a/versions/${createPayload.version.versionId}/restore`,
+    headers: authHeaders()
   });
   const restorePayload: {
     restoredVersion: { versionId: string };
@@ -139,7 +149,8 @@ void test("createGatewayApp restores a previous project version", async () => {
 
   const missingResponse = await app.inject({
     method: "POST",
-    url: "/api/projects/landing-a/versions/missing-version/restore"
+    url: "/api/projects/landing-a/versions/missing-version/restore",
+    headers: authHeaders()
   });
   assert.equal(missingResponse.statusCode, 404);
 
@@ -149,11 +160,12 @@ void test("createGatewayApp restores a previous project version", async () => {
 void test("createGatewayApp reads a version diff against the current project", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const createResponse = await app.inject({
     method: "POST",
     url: "/api/projects/landing-a/versions",
+    headers: authHeaders(),
     payload: {
       message: "baseline"
     }
@@ -196,11 +208,12 @@ void test("createGatewayApp reads a version diff against the current project", a
 void test("createGatewayApp reads a version diff against another version", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const firstResponse = await app.inject({
     method: "POST",
     url: "/api/projects/landing-a/versions",
+    headers: authHeaders(),
     payload: {
       message: "first"
     }
@@ -219,6 +232,7 @@ void test("createGatewayApp reads a version diff against another version", async
   const secondResponse = await app.inject({
     method: "POST",
     url: "/api/projects/landing-a/versions",
+    headers: authHeaders(),
     payload: {
       message: "second"
     }

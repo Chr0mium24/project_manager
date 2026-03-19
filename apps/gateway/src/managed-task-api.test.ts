@@ -3,8 +3,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { type FastifyInstance } from "fastify";
 import { createGatewayApp } from "./index.ts";
-import { writeContentRepo } from "./test-fixtures.ts";
+import {
+  TEST_ADMIN_TOKEN,
+  authHeaders,
+  writeContentRepo
+} from "./test-fixtures.ts";
 
 interface ManagedTaskResponse {
   task: {
@@ -17,17 +22,30 @@ interface ManagedTaskResponse {
   };
 }
 
+function createSecuredApp(rootDir: string) {
+  return createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
+}
+
+function postWithAuth(
+  app: FastifyInstance,
+  url: string,
+  payload?: Record<string, unknown>
+): ReturnType<FastifyInstance["inject"]> {
+  return app.inject({
+    method: "POST",
+    url,
+    headers: authHeaders(),
+    payload
+  });
+}
+
 void test("createGatewayApp starts a managed task workspace", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createSecuredApp(rootDir);
 
-  const response = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "fix-copy"
-    }
+  const response = await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "fix-copy"
   });
   const payload: ManagedTaskResponse = response.json();
 
@@ -45,21 +63,13 @@ void test("createGatewayApp starts a managed task workspace", async () => {
 void test("createGatewayApp rejects duplicate managed tasks without force", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createSecuredApp(rootDir);
 
-  const firstResponse = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "fix-copy"
-    }
+  const firstResponse = await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "fix-copy"
   });
-  const secondResponse = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "fix-copy"
-    }
+  const secondResponse = await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "fix-copy"
   });
 
   assert.equal(firstResponse.statusCode, 201);
@@ -71,27 +81,19 @@ void test("createGatewayApp rejects duplicate managed tasks without force", asyn
 void test("createGatewayApp lists managed tasks", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createSecuredApp(rootDir);
 
   const emptyListResponse = await app.inject({
     method: "GET",
     url: "/api/projects/landing-a/tasks"
   });
 
-  await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "first-task"
-    }
+  await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "first-task"
   });
-  const started = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "second-task",
-      mode: "git-branch"
-    }
+  const started = await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "second-task",
+    mode: "git-branch"
   });
   const listResponse = await app.inject({
     method: "GET",
@@ -114,15 +116,11 @@ void test("createGatewayApp lists managed tasks", async () => {
 void test("createGatewayApp reads a single managed task", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createSecuredApp(rootDir);
 
-  const started = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "second-task",
-      mode: "git-branch"
-    }
+  const started = await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "second-task",
+    mode: "git-branch"
   });
   const readResponse = await app.inject({
     method: "GET",
@@ -146,14 +144,10 @@ void test("createGatewayApp reads a single managed task", async () => {
 void test("createGatewayApp reads managed task summary and validation artifacts", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createSecuredApp(rootDir);
 
-  await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "artifact-task"
-    }
+  await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "artifact-task"
   });
   fs.writeFileSync(
     path.join(
@@ -170,14 +164,8 @@ void test("createGatewayApp reads managed task summary and validation artifacts"
     "<!doctype html>\n<html><body><h1>Artifact Task</h1></body></html>\n",
     "utf8"
   );
-  await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks/artifact-task/summarize"
-  });
-  await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks/artifact-task/validate"
-  });
+  await postWithAuth(app, "/api/projects/landing-a/tasks/artifact-task/summarize");
+  await postWithAuth(app, "/api/projects/landing-a/tasks/artifact-task/validate");
 
   const summaryResponse = await app.inject({
     method: "GET",
@@ -215,14 +203,10 @@ void test("createGatewayApp reads managed task summary and validation artifacts"
 void test("createGatewayApp summarizes a managed task workspace", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createSecuredApp(rootDir);
 
-  const startResponse = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "fix-copy"
-    }
+  const startResponse = await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "fix-copy"
   });
   assert.equal(startResponse.statusCode, 201);
 
@@ -242,10 +226,7 @@ void test("createGatewayApp summarizes a managed task workspace", async () => {
     "utf8"
   );
 
-  const summaryResponse = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks/fix-copy/summarize"
-  });
+  const summaryResponse = await postWithAuth(app, "/api/projects/landing-a/tasks/fix-copy/summarize");
   const payload: {
     summary: { changedFiles: number; changes: Array<{ path: string; kind: string }> };
   } = summaryResponse.json();
@@ -265,14 +246,10 @@ void test("createGatewayApp summarizes a managed task workspace", async () => {
 void test("createGatewayApp validates a managed task workspace", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createSecuredApp(rootDir);
 
-  const startResponse = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "fix-copy"
-    }
+  const startResponse = await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "fix-copy"
   });
   assert.equal(startResponse.statusCode, 201);
 
@@ -292,10 +269,7 @@ void test("createGatewayApp validates a managed task workspace", async () => {
     "utf8"
   );
 
-  const validationResponse = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks/fix-copy/validate"
-  });
+  const validationResponse = await postWithAuth(app, "/api/projects/landing-a/tasks/fix-copy/validate");
   const payload: {
     validation: { status: "validated"; changedFiles: number; summaryPath: string };
   } = validationResponse.json();
@@ -311,14 +285,10 @@ void test("createGatewayApp validates a managed task workspace", async () => {
 void test("createGatewayApp applies a managed task workspace back to the project", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createSecuredApp(rootDir);
 
-  const startResponse = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks",
-    payload: {
-      taskSlug: "fix-copy"
-    }
+  const startResponse = await postWithAuth(app, "/api/projects/landing-a/tasks", {
+    taskSlug: "fix-copy"
   });
   assert.equal(startResponse.statusCode, 201);
 
@@ -339,10 +309,7 @@ void test("createGatewayApp applies a managed task workspace back to the project
     "utf8"
   );
 
-  const applyResponse = await app.inject({
-    method: "POST",
-    url: "/api/projects/landing-a/tasks/fix-copy/apply"
-  });
+  const applyResponse = await postWithAuth(app, "/api/projects/landing-a/tasks/fix-copy/apply");
   const payload: {
     result: { status: "applied"; changedFiles: number; projectSlug: string };
   } = applyResponse.json();

@@ -5,6 +5,12 @@ import { pathToFileURL } from "node:url";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
 import {
+  sendAdminAuthRejection,
+  resolveGatewayAuthConfig,
+  type GatewayAuthConfig,
+  type GatewayAuthOptions
+} from "./auth.ts";
+import {
   executeDynamicRuntimeRequest,
   normalizeRuntimeQuery
 } from "./runtime-api.ts";
@@ -43,6 +49,12 @@ export interface GatewayResolution {
   routePrefix: string | null;
   targetKind: RouteTargetKind | null;
   targetRef: string | null;
+}
+
+interface ControlApiRequest {
+  rootDir: string;
+  pathname: string;
+  request: FastifyRequest;
 }
 
 const routeRecordSchema = z.object({
@@ -162,15 +174,11 @@ function resolveRequestPath(request: FastifyRequest): string {
   return request.url.split("?")[0] ?? "/";
 }
 
-function sendControlApi(
-  rootDir: string,
-  pathname: string,
-  request: FastifyRequest,
+function sendControlApiRoutes(
+  controlRequest: ControlApiRequest,
   reply: FastifyReply
 ): boolean {
-  if (!pathname.startsWith("/api/")) {
-    return false;
-  }
+  const { rootDir, pathname, request } = controlRequest;
 
   if (sendProjectFilesApi(rootDir, pathname, request, reply)) {
     return true;
@@ -192,7 +200,24 @@ function sendControlApi(
     return true;
   }
 
-  if (sendProjectApi(rootDir, pathname, reply)) {
+  return sendProjectApi(rootDir, pathname, reply);
+}
+
+function sendControlApi(
+  authConfig: GatewayAuthConfig,
+  controlRequest: ControlApiRequest,
+  reply: FastifyReply
+): boolean {
+  const { rootDir, pathname, request } = controlRequest;
+  if (!pathname.startsWith("/api/")) {
+    return false;
+  }
+
+  if (sendAdminAuthRejection(authConfig, pathname, request, reply)) {
+    return true;
+  }
+
+  if (sendControlApiRoutes(controlRequest, reply)) {
     return true;
   }
 
@@ -250,7 +275,12 @@ async function sendRuntimeApi(
   void reply.code(response.statusCode).send(response.body);
   return true;
 }
-async function sendResolution(rootDir: string, request: FastifyRequest, reply: FastifyReply): Promise<void> {
+async function sendResolution(
+  authConfig: GatewayAuthConfig,
+  rootDir: string,
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
   const pathname = resolveRequestPath(request);
   if (sendStaticProject(rootDir, pathname, reply)) {
     return;
@@ -261,7 +291,7 @@ async function sendResolution(rootDir: string, request: FastifyRequest, reply: F
   if (await sendRuntimeApi(rootDir, pathname, request, reply)) {
     return;
   }
-  if (sendControlApi(rootDir, pathname, request, reply)) {
+  if (sendControlApi(authConfig, { rootDir, pathname, request }, reply)) {
     return;
   }
 
@@ -277,67 +307,68 @@ async function sendResolution(rootDir: string, request: FastifyRequest, reply: F
   void reply.code(200).send(resolution);
 }
 
-export function createGatewayApp(rootDir: string): FastifyInstance {
+export function createGatewayApp(rootDir: string, authOptions?: GatewayAuthOptions): FastifyInstance {
   const app = Fastify({ logger: false });
+  const authConfig = resolveGatewayAuthConfig(authOptions);
 
   app.get("/healthz", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.get("/", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.get("/projects/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.get("/assets/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.get("/api/projects", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.get("/api/projects/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.post("/api/projects/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.put("/api/projects/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.get("/api/ai/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.get("/api/publish/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.post("/api/publish/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.get("/p/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.get("/app/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.all("/api/runtime/*", (request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   app.setNotFoundHandler((request, reply) => {
-    return sendResolution(rootDir, request, reply);
+    return sendResolution(authConfig, rootDir, request, reply);
   });
 
   return app;

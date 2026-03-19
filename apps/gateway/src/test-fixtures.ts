@@ -1,6 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
+export const TEST_ADMIN_TOKEN = "test-admin-token";
+
+export function authHeaders(token: string = TEST_ADMIN_TOKEN): { authorization: string } {
+  return {
+    authorization: `Bearer ${token}`
+  };
+}
+
 function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");

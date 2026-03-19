@@ -4,7 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createGatewayApp } from "./index.ts";
-import { writeContentRepo } from "./test-fixtures.ts";
+import {
+  TEST_ADMIN_TOKEN,
+  authHeaders,
+  writeContentRepo
+} from "./test-fixtures.ts";
 
 interface FilesPayload {
   slug: string;
@@ -98,11 +102,12 @@ void test("createGatewayApp serves a project file tree", async () => {
 void test("createGatewayApp writes project file content", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
-  const app = createGatewayApp(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
 
   const writeResponse = await app.inject({
     method: "PUT",
     url: "/api/projects/landing-a/file",
+    headers: authHeaders(),
     payload: {
       path: "src/app.js",
       content: 'console.log("saved");\n'
@@ -115,6 +120,7 @@ void test("createGatewayApp writes project file content", async () => {
   const invalidWriteResponse = await app.inject({
     method: "PUT",
     url: "/api/projects/landing-a/file",
+    headers: authHeaders(),
     payload: {
       path: "../outside.txt",
       content: "bad"
