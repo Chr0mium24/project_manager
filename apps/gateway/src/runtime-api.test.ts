@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { getProjectsIndexPath } from "@project-manager/project-core";
+import { publishDynamicProject } from "@project-manager/publish-core";
 import { executeDynamicRuntimeRequest } from "./runtime-api.ts";
 
 function writeJson(filePath: string, value: unknown): void {
@@ -166,6 +167,34 @@ void test("executeDynamicRuntimeRequest converts handler exceptions into stable 
       error: "dynamic-handler-failed",
       slug: "service-b",
       message: "boom"
+    }
+  });
+});
+
+void test("executeDynamicRuntimeRequest prefers the published dynamic snapshot", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-runtime-"));
+  writeDynamicProject(
+    rootDir,
+    "service-b",
+    "export function handler() { return { source: 'content' }; }"
+  );
+  const publishResult = publishDynamicProject(rootDir, "service-b");
+  fs.writeFileSync(
+    path.join(rootDir, "content-repo", "projects", "service-b", "src", "server.ts"),
+    "export function handler() { return { source: 'mutated' }; }\n",
+    "utf8"
+  );
+
+  const response = await executeDynamicRuntimeRequest(rootDir, {
+    pathname: "/api/runtime/service-b",
+    method: "GET"
+  });
+
+  assert.notEqual(publishResult, null);
+  assert.deepEqual(response, {
+    statusCode: 200,
+    body: {
+      source: "content"
     }
   });
 });

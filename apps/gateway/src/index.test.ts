@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { publishDynamicProject } from "@project-manager/publish-core";
 import {
   createGatewayApp,
   readRouteRegistry,
@@ -190,13 +191,37 @@ void test("createGatewayApp serves dynamic project metadata from the formal cont
     runtime: "dynamic",
     route: "/app/service-b",
     entry: "src/server.ts",
-    framework: "fastify"
+    framework: "fastify",
+    publishedAt: null
   });
 
   assert.equal(wrongRuntime.statusCode, 404);
   assert.deepEqual(wrongRuntime.json(), {
     error: "dynamic-project-not-found",
     slug: "landing-a"
+  });
+
+  await app.close();
+});
+
+void test("createGatewayApp serves published dynamic project metadata", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const publishResult = publishDynamicProject(rootDir, "service-b");
+  const app = createGatewayApp(rootDir);
+
+  assert.notEqual(publishResult, null);
+
+  const dynamicRoute = await app.inject({ method: "GET", url: "/app/service-b" });
+
+  assert.equal(dynamicRoute.statusCode, 200);
+  assert.deepEqual(dynamicRoute.json(), {
+    slug: "service-b",
+    runtime: "dynamic",
+    route: "/app/service-b",
+    entry: "project/src/server.ts",
+    framework: "fastify",
+    publishedAt: publishResult.publishedAt
   });
 
   await app.close();

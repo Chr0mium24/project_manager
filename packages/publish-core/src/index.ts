@@ -19,6 +19,12 @@ export interface DynamicPublishResult {
   publishedAt: string;
 }
 
+export interface PublishedDynamicTarget {
+  entryPath: string;
+  route: string;
+  slug: string;
+}
+
 export const moduleName = "@project-manager/publish-core";
 
 function nowIso(): string {
@@ -90,6 +96,27 @@ export function readDynamicPublishRecord(rootDir: string, slug: string): Dynamic
   }
 
   return JSON.parse(fs.readFileSync(metadataPath, "utf8")) as DynamicPublishResult;
+}
+
+export function readPublishedDynamicTarget(
+  rootDir: string,
+  slug: string
+): PublishedDynamicTarget | null {
+  const record = readDynamicPublishRecord(rootDir, slug);
+  if (record === null) {
+    return null;
+  }
+
+  const entryPath = path.join(rootDir, record.outputDir, record.entryPath);
+  if (!fs.existsSync(entryPath) || !fs.statSync(entryPath).isFile()) {
+    return null;
+  }
+
+  return {
+    slug: record.slug,
+    route: record.route,
+    entryPath
+  };
 }
 
 export function listStaticPublishRecords(rootDir: string): StaticPublishResult[] {

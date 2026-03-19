@@ -66,6 +66,7 @@ Important:
 
 - `/app/:slug`
 - `/api/runtime/:slug/*` if the project exposes API-style handlers
+- published dynamic routes prefer `storage/dynamic-builds/<slug>/project/` over live source files
 
 V1 runtime handler contract:
 

@@ -8,6 +8,7 @@ import {
   publishDynamicProject,
   publishStaticProject,
   readDynamicPublishRecord,
+  readPublishedDynamicTarget,
   readPublishedStaticEntry,
   readStaticPublishRecord
 } from "./index.ts";
@@ -89,4 +90,19 @@ void test("dynamic publish records can be listed and read by slug", () => {
   assert.deepEqual(readDynamicPublishRecord(rootDir, "service-b"), result);
   assert.deepEqual(listDynamicPublishRecords(rootDir), [result]);
   assert.throws(() => publishDynamicProject(rootDir, "landing-a"), /project is not dynamic/);
+});
+
+void test("readPublishedDynamicTarget resolves a published dynamic entry", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  assert.equal(readPublishedDynamicTarget(rootDir, "service-b"), null);
+
+  const result = publishDynamicProject(rootDir, "service-b");
+  assert.notEqual(result, null);
+  assert.deepEqual(readPublishedDynamicTarget(rootDir, "service-b"), {
+    slug: "service-b",
+    route: "/app/service-b",
+    entryPath: path.join(rootDir, "storage", "dynamic-builds", "service-b", "project", "src", "server.ts")
+  });
 });

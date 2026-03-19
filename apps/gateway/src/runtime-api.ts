@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
+import { readPublishedDynamicTarget } from "@project-manager/publish-core";
 import {
   getProjectEntryPath,
   readProject
@@ -109,6 +110,11 @@ function resolveDynamicRuntimeTarget(
   rootDir: string,
   slug: string
 ): DynamicRuntimeResponse | ResolvedDynamicRuntimeTarget {
+  const publishedTarget = readPublishedDynamicTarget(rootDir, slug);
+  if (publishedTarget !== null) {
+    return publishedTarget;
+  }
+
   const project = readProject(rootDir, slug);
   const entryPath = getProjectEntryPath(rootDir, slug);
 
