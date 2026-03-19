@@ -57,6 +57,11 @@ interface ControlApiRequest {
   request: FastifyRequest;
 }
 
+interface ResolutionRouteRegistration {
+  method: "get" | "post" | "put" | "delete" | "all";
+  routePath: string;
+}
+
 const routeRecordSchema = z.object({
   routePrefix: z.string().min(1),
   targetKind: z.enum(["internal-handler", "static-build", "dynamic-handler"]),
@@ -307,65 +312,44 @@ async function sendResolution(
   void reply.code(200).send(resolution);
 }
 
+function registerResolutionRoute(
+  app: FastifyInstance,
+  registration: ResolutionRouteRegistration,
+  authConfig: GatewayAuthConfig,
+  rootDir: string
+): void {
+  app[registration.method](registration.routePath, (request, reply) => {
+    return sendResolution(authConfig, rootDir, request, reply);
+  });
+}
+
 export function createGatewayApp(rootDir: string, authOptions?: GatewayAuthOptions): FastifyInstance {
   const app = Fastify({ logger: false });
   const authConfig = resolveGatewayAuthConfig(authOptions);
+  const routes: ResolutionRouteRegistration[] = [
+    { method: "get", routePath: "/healthz" },
+    { method: "get", routePath: "/" },
+    { method: "get", routePath: "/projects/*" },
+    { method: "get", routePath: "/assets/*" },
+    { method: "get", routePath: "/api/projects" },
+    { method: "get", routePath: "/api/projects/*" },
+    { method: "post", routePath: "/api/projects/*" },
+    { method: "put", routePath: "/api/projects/*" },
+    { method: "delete", routePath: "/api/projects/*" },
+    { method: "get", routePath: "/api/ai/*" },
+    { method: "post", routePath: "/api/ai/*" },
+    { method: "delete", routePath: "/api/ai/*" },
+    { method: "get", routePath: "/api/publish/*" },
+    { method: "post", routePath: "/api/publish/*" },
+    { method: "delete", routePath: "/api/publish/*" },
+    { method: "get", routePath: "/p/*" },
+    { method: "get", routePath: "/app/*" },
+    { method: "all", routePath: "/api/runtime/*" }
+  ];
 
-  app.get("/healthz", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.get("/", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.get("/projects/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.get("/assets/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.get("/api/projects", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.get("/api/projects/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.post("/api/projects/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.put("/api/projects/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.get("/api/ai/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.get("/api/publish/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.post("/api/publish/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.get("/p/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.get("/app/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
-
-  app.all("/api/runtime/*", (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
-  });
+  for (const route of routes) {
+    registerResolutionRoute(app, route, authConfig, rootDir);
+  }
 
   app.setNotFoundHandler((request, reply) => {
     return sendResolution(authConfig, rootDir, request, reply);

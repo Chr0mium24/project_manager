@@ -34,11 +34,16 @@ void test("createGatewayApp keeps read routes open and protects control mutation
       taskSlug: "allowed-task"
     }
   });
+  const deleteResponse = await openApp.inject({
+    method: "DELETE",
+    url: "/api/projects/landing-a/tasks/allowed-task"
+  });
 
   assert.equal(readResponse.statusCode, 200);
   assert.equal(writeResponse.statusCode, 401);
   assert.equal(writeResponse.headers["www-authenticate"], 'Bearer realm="project-manager"');
   assert.equal(allowedWrite.statusCode, 201);
+  assert.equal(deleteResponse.statusCode, 401);
   await openApp.close();
 });
 
