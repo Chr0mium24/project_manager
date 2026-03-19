@@ -48,6 +48,8 @@ Important:
 - `POST /api/projects/:slug/tasks`
 - `GET /api/projects/:slug/tasks`
 - `GET /api/projects/:slug/tasks/:taskSlug`
+- `GET /api/projects/:slug/tasks/:taskSlug/summary`
+- `GET /api/projects/:slug/tasks/:taskSlug/validation`
 - `POST /api/projects/:slug/tasks/:taskSlug/summarize`
 - `POST /api/projects/:slug/tasks/:taskSlug/validate`
 - `POST /api/projects/:slug/tasks/:taskSlug/apply`

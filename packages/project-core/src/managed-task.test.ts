@@ -7,6 +7,8 @@ import {
   createProject,
   listManagedTasks,
   readManagedTask,
+  readManagedTaskSummary,
+  readManagedTaskValidation,
   readProjectEntry,
   startManagedTask,
   summarizeManagedTask,
@@ -300,4 +302,40 @@ void test("managed task records can be listed and read", () => {
     listManagedTasks(rootDir, "landing-a").map((task) => task.taskSlug),
     ["second-task", "first-task"]
   );
+});
+
+void test("managed task summary and validation artifacts can be read", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const started = startManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "artifact-task",
+    mode: "workspace"
+  });
+  fs.writeFileSync(
+    path.join(started.workspaceProjectDir, "src", "index.html"),
+    "<!doctype html>\n<html><body><h1>Artifact Task</h1></body></html>\n",
+    "utf8"
+  );
+  const summary = summarizeManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "artifact-task"
+  });
+  const validation = validateManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "artifact-task"
+  });
+  const persistedSummary = readManagedTaskSummary(rootDir, "landing-a", "artifact-task");
+  const persistedValidation = readManagedTaskValidation(rootDir, "landing-a", "artifact-task");
+
+  assert.equal(readManagedTaskSummary(rootDir, "landing-a", "missing-task"), null);
+  assert.equal(readManagedTaskValidation(rootDir, "landing-a", "missing-task"), null);
+  assert.notEqual(persistedSummary, null);
+  assert.notEqual(persistedValidation, null);
+  assert.deepEqual(persistedSummary, {
+    ...summary,
+    generatedAt: persistedSummary.generatedAt
+  });
+  assert.deepEqual(persistedValidation, validation);
 });

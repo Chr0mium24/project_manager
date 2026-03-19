@@ -4,8 +4,10 @@ import { z } from "zod";
 import {
   getManagedTaskPaths,
   getManagedTasksRoot,
-  type ManagedTaskManifest
+  type ManagedTaskManifest,
+  type ManagedTaskSummary
 } from "./managed-task.ts";
+import { type ManagedTaskValidation } from "./managed-task-validation.ts";
 import { slugRe } from "./schemas.ts";
 
 const managedTaskManifestSchema = z.object({
@@ -37,6 +39,41 @@ function readManagedTaskManifestFile(manifestPath: string): ManagedTaskManifest 
   return managedTaskManifestSchema.parse(rawValue);
 }
 
+function readManagedTaskSummaryFile(summaryPath: string): ManagedTaskSummary | null {
+  if (!fs.existsSync(summaryPath) || !fs.statSync(summaryPath).isFile()) {
+    return null;
+  }
+
+  const rawValue: unknown = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+  return z.object({
+    projectSlug: z.string().regex(slugRe),
+    taskSlug: z.string().regex(slugRe),
+    generatedAt: z.string().min(1),
+    changedFiles: z.number().int().min(0),
+    changes: z.array(z.object({
+      path: z.string().min(1),
+      kind: z.enum(["added", "deleted", "modified"])
+    }))
+  }).parse(rawValue);
+}
+
+function readManagedTaskValidationFile(validationPath: string): ManagedTaskValidation | null {
+  if (!fs.existsSync(validationPath) || !fs.statSync(validationPath).isFile()) {
+    return null;
+  }
+
+  const rawValue: unknown = JSON.parse(fs.readFileSync(validationPath, "utf8"));
+  return z.object({
+    schemaVersion: z.literal(1),
+    projectSlug: z.string().regex(slugRe),
+    taskSlug: z.string().regex(slugRe),
+    checkedAt: z.string().min(1),
+    status: z.literal("validated"),
+    changedFiles: z.number().int().min(0),
+    summaryPath: z.string().min(1)
+  }).parse(rawValue);
+}
+
 export function readManagedTask(
   rootDir: string,
   projectSlug: string,
@@ -57,4 +94,20 @@ export function listManagedTasks(rootDir: string, projectSlug: string): ManagedT
     .map((entry) => readManagedTask(rootDir, projectSlug, entry.name))
     .filter((manifest): manifest is ManagedTaskManifest => manifest !== null)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+export function readManagedTaskSummary(
+  rootDir: string,
+  projectSlug: string,
+  taskSlug: string
+): ManagedTaskSummary | null {
+  return readManagedTaskSummaryFile(getManagedTaskPaths(rootDir, projectSlug, taskSlug).summaryPath);
+}
+
+export function readManagedTaskValidation(
+  rootDir: string,
+  projectSlug: string,
+  taskSlug: string
+): ManagedTaskValidation | null {
+  return readManagedTaskValidationFile(getManagedTaskPaths(rootDir, projectSlug, taskSlug).validationPath);
 }

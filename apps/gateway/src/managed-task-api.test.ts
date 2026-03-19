@@ -143,6 +143,75 @@ void test("createGatewayApp reads a single managed task", async () => {
   await app.close();
 });
 
+void test("createGatewayApp reads managed task summary and validation artifacts", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks",
+    payload: {
+      taskSlug: "artifact-task"
+    }
+  });
+  fs.writeFileSync(
+    path.join(
+      rootDir,
+      "storage",
+      "managed-tasks",
+      "landing-a",
+      "artifact-task",
+      "workspace",
+      "landing-a",
+      "src",
+      "index.html"
+    ),
+    "<!doctype html>\n<html><body><h1>Artifact Task</h1></body></html>\n",
+    "utf8"
+  );
+  await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks/artifact-task/summarize"
+  });
+  await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks/artifact-task/validate"
+  });
+
+  const summaryResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/tasks/artifact-task/summary"
+  });
+  const validationResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/tasks/artifact-task/validation"
+  });
+  const missingSummary = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/tasks/missing-task/summary"
+  });
+  const missingValidation = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/tasks/missing-task/validation"
+  });
+  const summaryPayload: {
+    summary: { changedFiles: number };
+  } = summaryResponse.json();
+  const validationPayload: {
+    validation: { status: string };
+  } = validationResponse.json();
+
+  assert.equal(summaryResponse.statusCode, 200);
+  assert.equal(summaryPayload.summary.changedFiles, 1);
+  assert.equal(validationResponse.statusCode, 200);
+  assert.equal(validationPayload.validation.status, "validated");
+  assert.equal(missingSummary.statusCode, 404);
+  assert.equal(missingValidation.statusCode, 404);
+
+  await app.close();
+});
+
 void test("createGatewayApp summarizes a managed task workspace", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);

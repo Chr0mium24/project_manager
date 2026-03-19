@@ -28,7 +28,9 @@ export {
 export { validateContentRepo, type ContentRepoValidationSummary } from "./content-repo-validation.ts";
 export {
   listManagedTasks,
-  readManagedTask
+  readManagedTask,
+  readManagedTaskSummary,
+  readManagedTaskValidation
 } from "./managed-task-query.ts";
 export {
   getManagedTaskPaths,
