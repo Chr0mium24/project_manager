@@ -1,10 +1,13 @@
 import {
+  applyAiTask,
   createAiTask,
   listAiTasks,
   readAiTask,
+  readAiTaskSummary,
   type AiTaskRecord,
   type CodexExecutor
 } from "@project-manager/ai-core";
+import { type ManagedTaskApplyResult, type ManagedTaskSummary } from "@project-manager/project-core";
 import { type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
 
@@ -30,6 +33,14 @@ interface AiTaskPayload {
 
 interface AiTaskListPayload {
   tasks: AiTaskRecord[];
+}
+
+interface AiTaskSummaryPayload {
+  summary: ManagedTaskSummary;
+}
+
+interface AiTaskApplyPayload {
+  result: ManagedTaskApplyResult;
 }
 
 const createAiTaskBodySchema = z.object({
@@ -70,6 +81,83 @@ function sendAiTaskRead(rootDir: string, pathname: string, reply: FastifyReply):
   const payload: AiTaskPayload = { task };
   void reply.code(200).send(payload);
   return true;
+}
+
+function sendAiTaskSummary(rootDir: string, pathname: string, reply: FastifyReply): boolean {
+  const taskMatch = pathname.match(/^\/api\/ai\/tasks\/([a-z0-9-]+)\/summary$/);
+  if (!taskMatch) {
+    return false;
+  }
+
+  const taskId = taskMatch[1] ?? "";
+  try {
+    const summary = readAiTaskSummary(rootDir, taskId);
+    if (summary === null) {
+      void reply.code(404).send({
+        error: "ai-task-summary-not-found",
+        taskId
+      });
+      return true;
+    }
+
+    const payload: AiTaskSummaryPayload = { summary };
+    void reply.code(200).send(payload);
+    return true;
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+
+    if (error.message.startsWith("ai task not found:")) {
+      void reply.code(404).send({
+        error: "ai-task-not-found",
+        taskId
+      });
+      return true;
+    }
+
+    throw error;
+  }
+}
+
+function sendAiTaskApply(rootDir: string, pathname: string, reply: FastifyReply): boolean {
+  const taskMatch = pathname.match(/^\/api\/ai\/tasks\/([a-z0-9-]+)\/apply$/);
+  if (!taskMatch) {
+    return false;
+  }
+
+  const taskId = taskMatch[1] ?? "";
+  try {
+    const result = applyAiTask(rootDir, taskId);
+    const payload: AiTaskApplyPayload = { result };
+    void reply.code(200).send(payload);
+    return true;
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+
+    if (error.message.startsWith("ai task not found:")) {
+      void reply.code(404).send({
+        error: "ai-task-not-found",
+        taskId
+      });
+      return true;
+    }
+
+    if (
+      error.message.startsWith("ai task is not ready to apply:")
+      || error.message.startsWith("ai task validation not found:")
+    ) {
+      void reply.code(409).send({
+        error: "ai-task-not-applicable",
+        taskId
+      });
+      return true;
+    }
+
+    throw error;
+  }
 }
 
 function sendAiTaskCreate(
@@ -124,11 +212,16 @@ export function sendAiTaskApi(
 ): boolean {
   if (request.method === "GET") {
     return sendAiTaskList(context.rootDir, pathname, reply)
+      || sendAiTaskSummary(context.rootDir, pathname, reply)
       || sendAiTaskRead(context.rootDir, pathname, reply);
   }
 
   if (request.method === "POST" && pathname === "/api/ai/tasks") {
     return sendAiTaskCreate(context, request, reply);
+  }
+
+  if (request.method === "POST") {
+    return sendAiTaskApply(context.rootDir, pathname, reply);
   }
 
   return false;

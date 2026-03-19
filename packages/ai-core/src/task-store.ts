@@ -21,7 +21,8 @@ export const aiTaskRecordSchema = z.object({
   summaryPath: z.string().nullable(),
   validationPath: z.string().nullable(),
   codexExitCode: z.number().int().nullable(),
-  error: z.string().nullable()
+  error: z.string().nullable(),
+  appliedAt: z.string().nullable()
 });
 
 export type AiTaskRecord = z.infer<typeof aiTaskRecordSchema>;

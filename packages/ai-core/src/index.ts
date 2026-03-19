@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import {
+  applyManagedTask,
   getManagedTaskPaths,
+  readManagedTaskSummary,
+  readManagedTaskValidation,
   startManagedTask,
   summarizeManagedTask,
   validateManagedTask
@@ -76,7 +79,8 @@ function buildRunningTask(rootDir: string, input: {
     summaryPath: null,
     validationPath: null,
     codexExitCode: null,
-    error: null
+    error: null,
+    appliedAt: null
   };
 }
 
@@ -106,8 +110,18 @@ function completeTask(
     summaryPath: result.summaryPath ?? null,
     validationPath: result.validationPath ?? null,
     codexExitCode: result.exitCode,
-    error: result.error
+    error: result.error,
+    appliedAt: task.appliedAt
   });
+}
+
+function readRequiredAiTask(rootDir: string, taskId: string): AiTaskRecord {
+  const task = readAiTask(rootDir, taskId);
+  if (task === null) {
+    throw new Error(`ai task not found: ${taskId}`);
+  }
+
+  return task;
 }
 
 export function createAiTask(
@@ -163,9 +177,36 @@ export function createAiTask(
   });
 }
 
+export function readAiTaskSummary(rootDir: string, taskId: string) {
+  const task = readRequiredAiTask(rootDir, taskId);
+  return readManagedTaskSummary(rootDir, task.projectSlug, task.taskSlug);
+}
+
+export function applyAiTask(rootDir: string, taskId: string) {
+  const task = readRequiredAiTask(rootDir, taskId);
+  if (task.status !== "completed") {
+    throw new Error(`ai task is not ready to apply: ${taskId}`);
+  }
+  if (task.validationPath === null || readManagedTaskValidation(rootDir, task.projectSlug, task.taskSlug) === null) {
+    throw new Error(`ai task validation not found: ${taskId}`);
+  }
+
+  const result = applyManagedTask(rootDir, {
+    projectSlug: task.projectSlug,
+    taskSlug: task.taskSlug
+  });
+  writeAiTaskRecord(rootDir, {
+    ...task,
+    appliedAt: result.lastAppliedAt
+  });
+  return result;
+}
+
 export {
+  applyManagedTask,
   listAiTasks,
   readAiTask,
+  readManagedTaskSummary,
   runCodexExec,
   type AiTaskRecord,
   type CodexExecutor

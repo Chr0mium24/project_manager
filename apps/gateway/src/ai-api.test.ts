@@ -51,9 +51,16 @@ void test("createGatewayApp creates and reads an ai task", async () => {
     method: "GET",
     url: `/api/ai/tasks/${createPayload.task.taskId}`
   });
+  const summaryResponse = await app.inject({
+    method: "GET",
+    url: `/api/ai/tasks/${createPayload.task.taskId}/summary`
+  });
   const listPayload: {
     tasks: Array<{ taskId: string }>;
   } = listResponse.json();
+  const summaryPayload: {
+    summary: { changedFiles: number };
+  } = summaryResponse.json();
 
   assert.equal(createResponse.statusCode, 201);
   assert.equal(createPayload.task.status, "completed");
@@ -61,6 +68,8 @@ void test("createGatewayApp creates and reads an ai task", async () => {
   assert.equal(listResponse.statusCode, 200);
   assert.equal(listPayload.tasks.length, 1);
   assert.equal(readResponse.statusCode, 200);
+  assert.equal(summaryResponse.statusCode, 200);
+  assert.equal(summaryPayload.summary.changedFiles, 1);
 
   await app.close();
 });
@@ -85,6 +94,40 @@ void test("createGatewayApp validates ai task create body and missing task reads
 
   assert.equal(invalidCreate.statusCode, 400);
   assert.equal(missingRead.statusCode, 404);
+
+  await app.close();
+});
+
+void test("createGatewayApp applies a completed ai task back to the managed project", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createSecuredApp(rootDir);
+
+  const createResponse = await app.inject({
+    method: "POST",
+    url: "/api/ai/tasks",
+    headers: authHeaders(),
+    payload: {
+      projectSlug: "landing-a",
+      taskSlug: "apply-copy",
+      prompt: "Update the heading."
+    }
+  });
+  const createPayload: {
+    task: { taskId: string };
+  } = createResponse.json();
+  const applyResponse = await app.inject({
+    method: "POST",
+    url: `/api/ai/tasks/${createPayload.task.taskId}/apply`,
+    headers: authHeaders()
+  });
+  const projectSource = fs.readFileSync(
+    path.join(rootDir, "content-repo", "projects", "landing-a", "src", "index.html"),
+    "utf8"
+  );
+
+  assert.equal(applyResponse.statusCode, 200);
+  assert.match(projectSource, /Codex Updated/);
 
   await app.close();
 });
