@@ -43,6 +43,7 @@ node scripts/apply-managed-task.mjs --content-repo ./content-repo --project land
 - `probe:codex-create` can optionally ask Codex to create a project through the bootstrap script and then verifies the result
 - `create-project.mjs` is the canonical project bootstrap path for new projects
 - `start-managed-task.mjs` is the canonical single-target managed-project task bootstrap path in validation
+- `start-managed-task.mjs --force` recreates the task directory from scratch and removes stale summary/validation artifacts
 - `summarize-managed-task.mjs` writes the managed-task change summary before apply
 - `validate-managed-task.mjs` validates one managed-task workspace before apply and writes validation artifacts
 - `apply-managed-task.mjs` applies one managed-task workspace back to its target project and re-runs managed-task validation internally

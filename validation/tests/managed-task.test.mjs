@@ -83,6 +83,37 @@ test("startManagedTask rejects unknown managed project", () => {
   }, /managed project not found/);
 });
 
+test("startManagedTask with force recreates a clean task directory", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pm-managed-task-"));
+  const validationRoot = path.join(tempRoot, "validation");
+  const repo = path.join(validationRoot, "content-repo");
+
+  fs.mkdirSync(validationRoot, { recursive: true });
+  copyDir(fixtureRepo, repo);
+
+  const started = startManagedTask(validationRoot, {
+    contentRepoRoot: repo,
+    projectSlug: "landing-a",
+    taskSlug: "redo-copy",
+    mode: "workspace"
+  });
+
+  fs.writeFileSync(path.join(started.taskRoot, "summary.json"), '{"stale":true}\n', "utf8");
+  fs.writeFileSync(path.join(started.taskRoot, "validation.json"), '{"stale":true}\n', "utf8");
+
+  const restarted = startManagedTask(validationRoot, {
+    contentRepoRoot: repo,
+    projectSlug: "landing-a",
+    taskSlug: "redo-copy",
+    mode: "workspace",
+    force: true
+  });
+
+  assert.equal(fs.existsSync(path.join(restarted.taskRoot, "summary.json")), false);
+  assert.equal(fs.existsSync(path.join(restarted.taskRoot, "validation.json")), false);
+  assert.equal(fs.existsSync(restarted.manifestPath), true);
+});
+
 test("applyManagedTask copies workspace changes back to the target project", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pm-managed-task-"));
   const validationRoot = path.join(tempRoot, "validation");

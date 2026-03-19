@@ -125,8 +125,8 @@ export function startManagedTask(validationRoot, options) {
     assert(!fs.existsSync(taskRoot), `managed task already exists: ${projectSlug}/${taskSlug}`);
   }
 
+  fs.rmSync(taskRoot, { recursive: true, force: true });
   fs.mkdirSync(taskRoot, { recursive: true });
-  fs.rmSync(workspaceRoot, { recursive: true, force: true });
   fs.mkdirSync(workspaceRoot, { recursive: true });
   fs.cpSync(projectDir, workspaceProjectDir, { recursive: true });
 

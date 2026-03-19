@@ -55,6 +55,12 @@ Managed-project task workspace:
 node scripts/start-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy --mode workspace
 ```
 
+To rebuild the same task name from a clean slate:
+
+```bash
+node scripts/start-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy --mode workspace --force
+```
+
 Summarize managed-project task result:
 
 ```bash
