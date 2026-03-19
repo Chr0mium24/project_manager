@@ -5,6 +5,8 @@ import test from "node:test";
 import {
   applyManagedTask,
   createProject,
+  listManagedTasks,
+  readManagedTask,
   readProjectEntry,
   startManagedTask,
   summarizeManagedTask,
@@ -274,5 +276,28 @@ void test("applyManagedTask rejects missing managed task manifests", () => {
         taskSlug: "missing-task"
       }),
     /managed task manifest not found/
+  );
+});
+
+void test("managed task records can be listed and read", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  startManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "first-task",
+    mode: "workspace"
+  });
+  const second = startManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "second-task",
+    mode: "git-branch"
+  });
+
+  assert.equal(readManagedTask(rootDir, "landing-a", "missing-task"), null);
+  assert.deepEqual(readManagedTask(rootDir, "landing-a", "second-task"), second.manifest);
+  assert.deepEqual(
+    listManagedTasks(rootDir, "landing-a").map((task) => task.taskSlug),
+    ["second-task", "first-task"]
   );
 });

@@ -46,6 +46,8 @@ Important:
 - `/api/projects/:slug/file?path=...`
 - `PUT /api/projects/:slug/file`
 - `POST /api/projects/:slug/tasks`
+- `GET /api/projects/:slug/tasks`
+- `GET /api/projects/:slug/tasks/:taskSlug`
 - `POST /api/projects/:slug/tasks/:taskSlug/summarize`
 - `POST /api/projects/:slug/tasks/:taskSlug/validate`
 - `POST /api/projects/:slug/tasks/:taskSlug/apply`

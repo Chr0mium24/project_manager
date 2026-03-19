@@ -9,6 +9,7 @@ import {
   normalizeRuntimeQuery
 } from "./runtime-api.ts";
 import { sendManagedTaskApi } from "./managed-task-api.ts";
+import { sendManagedTaskQueryApi } from "./managed-task-query-api.ts";
 import { sendProjectApi } from "./project-api.ts";
 import { sendProjectFilesApi } from "./project-files-api.ts";
 import { sendProjectVersionsApi } from "./project-versions-api.ts";
@@ -176,6 +177,10 @@ function sendControlApi(
   }
 
   if (sendProjectVersionsApi(rootDir, pathname, request, reply)) {
+    return true;
+  }
+
+  if (sendManagedTaskQueryApi(rootDir, pathname, request.method, reply)) {
     return true;
   }
 

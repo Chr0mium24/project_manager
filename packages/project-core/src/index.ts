@@ -27,6 +27,10 @@ export {
 } from "./project-file-tree.ts";
 export { validateContentRepo, type ContentRepoValidationSummary } from "./content-repo-validation.ts";
 export {
+  listManagedTasks,
+  readManagedTask
+} from "./managed-task-query.ts";
+export {
   getManagedTaskPaths,
   getManagedTasksRoot,
   summarizeManagedTask,

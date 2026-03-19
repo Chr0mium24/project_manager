@@ -68,6 +68,81 @@ void test("createGatewayApp rejects duplicate managed tasks without force", asyn
   await app.close();
 });
 
+void test("createGatewayApp lists managed tasks", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const emptyListResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/tasks"
+  });
+
+  await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks",
+    payload: {
+      taskSlug: "first-task"
+    }
+  });
+  const started = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks",
+    payload: {
+      taskSlug: "second-task",
+      mode: "git-branch"
+    }
+  });
+  const listResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/tasks"
+  });
+  const listPayload: { tasks: Array<{ taskSlug: string }> } = listResponse.json();
+
+  assert.equal(emptyListResponse.statusCode, 200);
+  assert.deepEqual(emptyListResponse.json(), { tasks: [] });
+  assert.equal(started.statusCode, 201);
+  assert.equal(listResponse.statusCode, 200);
+  assert.deepEqual(
+    listPayload.tasks.map((task) => task.taskSlug),
+    ["second-task", "first-task"]
+  );
+
+  await app.close();
+});
+
+void test("createGatewayApp reads a single managed task", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const started = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks",
+    payload: {
+      taskSlug: "second-task",
+      mode: "git-branch"
+    }
+  });
+  const readResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/tasks/second-task"
+  });
+  const missingResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/tasks/missing-task"
+  });
+  const startedPayload: ManagedTaskResponse = started.json();
+  const readPayload: ManagedTaskResponse = readResponse.json();
+
+  assert.equal(started.statusCode, 201);
+  assert.equal(readResponse.statusCode, 200);
+  assert.deepEqual(readPayload.task, startedPayload.task);
+  assert.equal(missingResponse.statusCode, 404);
+
+  await app.close();
+});
+
 void test("createGatewayApp summarizes a managed task workspace", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
