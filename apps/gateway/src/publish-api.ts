@@ -1,5 +1,7 @@
 import {
+  listStaticPublishRecords,
   publishStaticProject,
+  readStaticPublishRecord,
   type StaticPublishResult
 } from "@project-manager/publish-core";
 import { type FastifyReply } from "fastify";
@@ -8,7 +10,44 @@ interface StaticPublishPayload {
   result: StaticPublishResult;
 }
 
+interface StaticPublishRecordPayload {
+  result: StaticPublishResult;
+}
+
+interface StaticPublishListPayload {
+  results: StaticPublishResult[];
+}
+
 export function sendPublishApi(rootDir: string, pathname: string, reply: FastifyReply): boolean {
+  if (pathname === "/api/publish/static") {
+    const payload: StaticPublishListPayload = {
+      results: listStaticPublishRecords(rootDir)
+    };
+    void reply.code(200).send(payload);
+    return true;
+  }
+
+  const readPublishStaticMatch = pathname.match(/^\/api\/publish\/static\/([a-z0-9-]+)$/);
+  if (readPublishStaticMatch) {
+    const slug = readPublishStaticMatch[1] ?? "";
+    const result = readStaticPublishRecord(rootDir, slug);
+    if (result === null) {
+      void reply.code(404).send({
+        error: "static-publish-not-found",
+        slug
+      });
+      return true;
+    }
+
+    const payload: StaticPublishRecordPayload = { result };
+    void reply.code(200).send(payload);
+    return true;
+  }
+
+  return false;
+}
+
+export function sendPublishMutationApi(rootDir: string, pathname: string, reply: FastifyReply): boolean {
   const publishStaticMatch = pathname.match(/^\/api\/publish\/static\/([a-z0-9-]+)$/);
   if (!publishStaticMatch) {
     return false;

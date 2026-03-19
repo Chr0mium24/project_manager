@@ -64,3 +64,54 @@ void test("createGatewayApp rejects publishing a dynamic project as static", asy
 
   await app.close();
 });
+
+void test("createGatewayApp lists and reads static publish records", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const emptyListResponse = await app.inject({
+    method: "GET",
+    url: "/api/publish/static"
+  });
+  const missingRecordResponse = await app.inject({
+    method: "GET",
+    url: "/api/publish/static/landing-a"
+  });
+
+  assert.equal(emptyListResponse.statusCode, 200);
+  assert.deepEqual(emptyListResponse.json(), { results: [] });
+  assert.equal(missingRecordResponse.statusCode, 404);
+  assert.deepEqual(missingRecordResponse.json(), {
+    error: "static-publish-not-found",
+    slug: "landing-a"
+  });
+
+  await app.inject({
+    method: "POST",
+    url: "/api/publish/static/landing-a"
+  });
+
+  const listResponse = await app.inject({
+    method: "GET",
+    url: "/api/publish/static"
+  });
+  const readResponse = await app.inject({
+    method: "GET",
+    url: "/api/publish/static/landing-a"
+  });
+  const listPayload: {
+    results: Array<{ slug: string; runtime: string; outputDir: string; entryPath: string }>;
+  } = listResponse.json();
+  const readPayload: {
+    result: { slug: string; runtime: string; outputDir: string; entryPath: string };
+  } = readResponse.json();
+
+  assert.equal(listResponse.statusCode, 200);
+  assert.equal(listPayload.results.length, 1);
+  assert.equal(listPayload.results[0]?.slug, "landing-a");
+  assert.equal(readResponse.statusCode, 200);
+  assert.equal(readPayload.result.slug, "landing-a");
+
+  await app.close();
+});

@@ -3,7 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {
+  listStaticPublishRecords,
   publishStaticProject,
+  readStaticPublishRecord,
   readPublishedStaticEntry
 } from "./index.ts";
 import {
@@ -38,4 +40,17 @@ void test("publishStaticProject rejects dynamic projects", () => {
     () => publishStaticProject(rootDir, "service-b"),
     /project is not static/
   );
+});
+
+void test("publish records can be listed and read by slug", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  assert.equal(readStaticPublishRecord(rootDir, "landing-a"), null);
+  assert.deepEqual(listStaticPublishRecords(rootDir), []);
+
+  const result = publishStaticProject(rootDir, "landing-a");
+  assert.notEqual(result, null);
+  assert.deepEqual(readStaticPublishRecord(rootDir, "landing-a"), result);
+  assert.deepEqual(listStaticPublishRecords(rootDir), [result]);
 });

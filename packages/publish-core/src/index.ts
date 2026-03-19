@@ -46,6 +46,32 @@ function writePublishMetadata(outputDir: string, result: StaticPublishResult): v
   );
 }
 
+function getPublishMetadataPath(rootDir: string, slug: string): string {
+  return path.join(getStaticBuildDir(rootDir, slug), "publish.json");
+}
+
+export function readStaticPublishRecord(rootDir: string, slug: string): StaticPublishResult | null {
+  const metadataPath = getPublishMetadataPath(rootDir, slug);
+  if (!fs.existsSync(metadataPath) || !fs.statSync(metadataPath).isFile()) {
+    return null;
+  }
+
+  return JSON.parse(fs.readFileSync(metadataPath, "utf8")) as StaticPublishResult;
+}
+
+export function listStaticPublishRecords(rootDir: string): StaticPublishResult[] {
+  const staticBuildRoot = getStaticBuildRoot(rootDir);
+  if (!fs.existsSync(staticBuildRoot) || !fs.statSync(staticBuildRoot).isDirectory()) {
+    return [];
+  }
+
+  return fs.readdirSync(staticBuildRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => readStaticPublishRecord(rootDir, entry.name))
+    .filter((record): record is StaticPublishResult => record !== null)
+    .sort((left, right) => left.slug.localeCompare(right.slug));
+}
+
 export function readPublishedStaticEntry(rootDir: string, slug: string): string | null {
   const entryPath = path.join(getStaticBuildDir(rootDir, slug), "index.html");
   if (!fs.existsSync(entryPath) || !fs.statSync(entryPath).isFile()) {

@@ -16,7 +16,10 @@ import {
 import { sendManagedTaskApi } from "./managed-task-api.ts";
 import { sendProjectApi } from "./project-api.ts";
 import { sendProjectFilesApi } from "./project-files-api.ts";
-import { sendPublishApi } from "./publish-api.ts";
+import {
+  sendPublishApi,
+  sendPublishMutationApi
+} from "./publish-api.ts";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 
@@ -227,7 +230,11 @@ function sendControlApi(
     return true;
   }
 
-  if (request.method === "POST" && sendPublishApi(rootDir, pathname, reply)) {
+  if (request.method === "GET" && sendPublishApi(rootDir, pathname, reply)) {
+    return true;
+  }
+
+  if (request.method === "POST" && sendPublishMutationApi(rootDir, pathname, reply)) {
     return true;
   }
 

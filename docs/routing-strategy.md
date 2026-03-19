@@ -45,6 +45,8 @@ Important:
 - `POST /api/projects/:slug/tasks/:taskSlug/summarize`
 - `POST /api/projects/:slug/tasks/:taskSlug/validate`
 - `POST /api/projects/:slug/tasks/:taskSlug/apply`
+- `GET /api/publish/static`
+- `GET /api/publish/static/:slug`
 - `POST /api/publish/static/:slug`
 - `/api/ai/tasks`
 - `/api/publish`
