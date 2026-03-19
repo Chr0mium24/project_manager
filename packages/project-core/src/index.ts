@@ -15,9 +15,12 @@ export { validateContentRepo, type ContentRepoValidationSummary } from "./conten
 export {
   getManagedTaskPaths,
   getManagedTasksRoot,
+  summarizeManagedTask,
   startManagedTask,
+  type ManagedTaskChange,
   type ManagedTaskManifest,
   type ManagedTaskPaths,
+  type ManagedTaskSummary,
   type StartManagedTaskOptions,
   type StartManagedTaskResult
 } from "./managed-task.ts";

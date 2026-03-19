@@ -9,6 +9,7 @@ import {
   listProjects,
   readProject,
   readProjectEntry,
+  summarizeManagedTask,
   startManagedTask,
   validateContentRepo
 } from "./index.ts";
@@ -280,4 +281,48 @@ void test("startManagedTask with force recreates a clean task directory", () => 
   assert.equal(fs.existsSync(path.join(restarted.taskRoot, "summary.json")), false);
   assert.equal(fs.existsSync(path.join(restarted.taskRoot, "validation.json")), false);
   assert.equal(fs.existsSync(restarted.manifestPath), true);
+});
+
+void test("summarizeManagedTask writes a formal summary artifact without applying changes", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const started = startManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "fix-copy",
+    mode: "workspace"
+  });
+  fs.writeFileSync(
+    path.join(started.workspaceProjectDir, "src", "index.html"),
+    "<!doctype html>\n<html><body><h1>Landing A Updated</h1></body></html>\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(started.workspaceProjectDir, "src", "extra.js"),
+    "console.log('extra');\n",
+    "utf8"
+  );
+
+  const summary = summarizeManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "fix-copy"
+  });
+  const persistedSummary = JSON.parse(fs.readFileSync(started.summaryPath, "utf8")) as {
+    changedFiles: number;
+    changes: Array<{ path: string; kind: string }>;
+  };
+
+  assert.equal(summary.projectSlug, "landing-a");
+  assert.equal(summary.taskSlug, "fix-copy");
+  assert.equal(summary.changedFiles, 2);
+  assert.deepEqual(
+    summary.changes.map((item) => `${item.kind}:${item.path}`),
+    ["added:src/extra.js", "modified:src/index.html"]
+  );
+  assert.equal(persistedSummary.changedFiles, 2);
+  assert.deepEqual(
+    persistedSummary.changes.map((item) => `${item.kind}:${item.path}`),
+    ["added:src/extra.js", "modified:src/index.html"]
+  );
+  assert.match(readProjectEntry(rootDir, "landing-a") ?? "", /Landing A<\/h1>/);
 });

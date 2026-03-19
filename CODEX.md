@@ -103,4 +103,5 @@ Key script:
 ```bash
 node --import tsx scripts/create-project.ts --slug demo-static --name "Demo Static" --runtime static
 node --import tsx scripts/start-managed-task.ts --project landing-a --task fix-copy --mode workspace
+node --import tsx scripts/summarize-managed-task.ts --project landing-a --task fix-copy
 ```

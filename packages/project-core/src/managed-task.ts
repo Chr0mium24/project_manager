@@ -41,10 +41,24 @@ export interface ManagedTaskPaths {
   workspaceRoot: string;
   workspaceProjectDir: string;
   manifestPath: string;
+  summaryPath: string;
 }
 
 export interface StartManagedTaskResult extends ManagedTaskPaths {
   manifest: ManagedTaskManifest;
+}
+
+export interface ManagedTaskChange {
+  path: string;
+  kind: "added" | "deleted" | "modified";
+}
+
+export interface ManagedTaskSummary {
+  projectSlug: string;
+  taskSlug: string;
+  generatedAt: string;
+  changedFiles: number;
+  changes: ManagedTaskChange[];
 }
 
 function nowIso(): string {
@@ -72,13 +86,95 @@ export function getManagedTaskPaths(
   const workspaceRoot = path.join(taskRoot, "workspace");
   const workspaceProjectDir = path.join(workspaceRoot, projectSlug);
   const manifestPath = path.join(taskRoot, "task.json");
+  const summaryPath = path.join(taskRoot, "summary.json");
 
   return {
     taskRoot,
     workspaceRoot,
     workspaceProjectDir,
-    manifestPath
+    manifestPath,
+    summaryPath
   };
+}
+
+function readJson<T>(filePath: string, parser: { parse(value: unknown): T }): T {
+  const rawValue: unknown = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  return parser.parse(rawValue);
+}
+
+function listFiles(rootDir: string, currentDir: string = rootDir, result: string[] = []): string[] {
+  const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(currentDir, entry.name);
+    if (entry.isDirectory()) {
+      listFiles(rootDir, fullPath, result);
+      continue;
+    }
+
+    if (entry.isFile()) {
+      result.push(path.relative(rootDir, fullPath));
+    }
+  }
+
+  return result.sort();
+}
+
+function summarizeProjectDiff(
+  sourceProjectDir: string,
+  workspaceProjectDir: string
+): Pick<ManagedTaskSummary, "changedFiles" | "changes"> {
+  const sourceFiles = new Set(listFiles(sourceProjectDir));
+  const workspaceFiles = new Set(listFiles(workspaceProjectDir));
+  const allFiles = [...new Set([...sourceFiles, ...workspaceFiles])].sort();
+  const changes: ManagedTaskChange[] = [];
+
+  for (const relativePath of allFiles) {
+    const sourceExists = sourceFiles.has(relativePath);
+    const workspaceExists = workspaceFiles.has(relativePath);
+
+    if (!sourceExists && workspaceExists) {
+      changes.push({ path: relativePath, kind: "added" });
+      continue;
+    }
+
+    if (sourceExists && !workspaceExists) {
+      changes.push({ path: relativePath, kind: "deleted" });
+      continue;
+    }
+
+    const sourcePath = path.join(sourceProjectDir, relativePath);
+    const workspacePath = path.join(workspaceProjectDir, relativePath);
+    const sourceContent = fs.readFileSync(sourcePath, "utf8");
+    const workspaceContent = fs.readFileSync(workspacePath, "utf8");
+    if (sourceContent !== workspaceContent) {
+      changes.push({ path: relativePath, kind: "modified" });
+    }
+  }
+
+  return {
+    changedFiles: changes.length,
+    changes
+  };
+}
+
+function readManagedTaskManifest(taskPaths: ManagedTaskPaths): ManagedTaskManifest {
+  return readJson(taskPaths.manifestPath, z.object({
+    schemaVersion: z.literal(1),
+    projectSlug: z.string().regex(slugRe),
+    taskSlug: z.string().regex(slugRe),
+    mode: managedTaskModeSchema,
+    targetCount: z.literal(1),
+    sourceProjectPath: z.string().min(1),
+    workspaceProjectPath: z.string().min(1),
+    runtime: z.enum(["static", "dynamic"]),
+    entry: z.string().min(1),
+    route: z.string().min(1),
+    branchName: z.string().nullable(),
+    commitPolicy: z.literal("final-result-only"),
+    prPolicy: z.literal("forbidden"),
+    createdAt: z.string().min(1)
+  }));
 }
 
 export function startManagedTask(
@@ -148,4 +244,55 @@ export function startManagedTask(
     ...taskPaths,
     manifest
   };
+}
+
+export function summarizeManagedTask(
+  rootDir: string,
+  options: Pick<StartManagedTaskOptions, "projectSlug" | "taskSlug">
+): ManagedTaskSummary {
+  const normalizedOptions = z.object({
+    projectSlug: z.string().regex(slugRe),
+    taskSlug: z.string().regex(slugRe)
+  }).parse(options);
+
+  const contentRepoRoot = getContentRepoRoot(rootDir);
+  validateContentRepo(contentRepoRoot);
+
+  const taskPaths = getManagedTaskPaths(
+    rootDir,
+    normalizedOptions.projectSlug,
+    normalizedOptions.taskSlug
+  );
+  if (!fs.existsSync(taskPaths.manifestPath)) {
+    throw new Error(
+      `managed task manifest not found: ${normalizedOptions.projectSlug}/${normalizedOptions.taskSlug}`
+    );
+  }
+  if (!fs.existsSync(taskPaths.workspaceProjectDir)) {
+    throw new Error(
+      `managed task workspace not found: ${normalizedOptions.projectSlug}/${normalizedOptions.taskSlug}`
+    );
+  }
+
+  const manifest = readManagedTaskManifest(taskPaths);
+  if (
+    manifest.projectSlug !== normalizedOptions.projectSlug ||
+    manifest.taskSlug !== normalizedOptions.taskSlug
+  ) {
+    throw new Error(
+      `managed task manifest mismatch: ${normalizedOptions.projectSlug}/${normalizedOptions.taskSlug}`
+    );
+  }
+
+  const summary: ManagedTaskSummary = {
+    projectSlug: normalizedOptions.projectSlug,
+    taskSlug: normalizedOptions.taskSlug,
+    generatedAt: nowIso(),
+    ...summarizeProjectDiff(
+      getProjectRoot(rootDir, normalizedOptions.projectSlug),
+      taskPaths.workspaceProjectDir
+    )
+  };
+  writeJson(taskPaths.summaryPath, summary);
+  return summary;
 }

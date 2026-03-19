@@ -40,6 +40,12 @@ Formal task bootstrap helper:
 node --import tsx scripts/start-managed-task.ts --project landing-a --task fix-copy --mode workspace
 ```
 
+Formal summary helper:
+
+```bash
+node --import tsx scripts/summarize-managed-task.ts --project landing-a --task fix-copy
+```
+
 Validation prototype helper:
 
 ```bash
@@ -85,7 +91,8 @@ In the validation prototype, `apply-managed-task` also re-runs managed-task vali
 Formal V1 status:
 
 - formal `start-managed-task` now lives in `packages/project-core`
-- summary, validate, and apply remain in `validation/` until their formal replacements land
+- formal `summarize-managed-task` now lives in `packages/project-core`
+- validate and apply remain in `validation/` until their formal replacements land
 
 ## Branch rule
 
