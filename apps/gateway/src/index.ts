@@ -2,9 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import {
+  listProjects,
+  readProject,
+  readProjectEntry
+} from "@project-manager/project-core";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
-import { listProjects, readProject, readProjectEntry } from "./content-repo.ts";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 

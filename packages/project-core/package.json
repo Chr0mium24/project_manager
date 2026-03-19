@@ -2,5 +2,11 @@
   "name": "@project-manager/project-core",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts"
+  "main": "./src/index.ts",
+  "dependencies": {
+    "zod": "4.1.11"
+  },
+  "scripts": {
+    "test": "node --import tsx --test src/index.test.ts"
+  }
 }

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { getProjectsIndexPath } from "./content-repo.ts";
+import { getProjectsIndexPath } from "@project-manager/project-core";
 import {
   createGatewayApp,
   getRouteRegistryPath,
