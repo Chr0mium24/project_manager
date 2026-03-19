@@ -142,3 +142,30 @@ void test("executeDynamicRuntimeRequest rejects missing or invalid handlers", as
     }
   });
 });
+
+void test("executeDynamicRuntimeRequest converts handler exceptions into stable 500 payloads", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-runtime-"));
+  writeDynamicProject(
+    rootDir,
+    "service-b",
+    [
+      "export function handler() {",
+      '  throw new Error("boom");',
+      "}"
+    ].join("\n")
+  );
+
+  const failedHandler = await executeDynamicRuntimeRequest(rootDir, {
+    pathname: "/api/runtime/service-b",
+    method: "GET"
+  });
+
+  assert.deepEqual(failedHandler, {
+    statusCode: 500,
+    body: {
+      error: "dynamic-handler-failed",
+      slug: "service-b",
+      message: "boom"
+    }
+  });
+});

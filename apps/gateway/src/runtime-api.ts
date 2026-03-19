@@ -34,6 +34,16 @@ interface DynamicRuntimeModule {
   handler: (context: DynamicRuntimeRequestContext) => JsonValue | Promise<JsonValue>;
 }
 
+interface ErrorWithMessage {
+  message: string;
+}
+
+interface ResolvedDynamicRuntimeTarget {
+  entryPath: string;
+  route: string;
+  slug: string;
+}
+
 function parseRuntimeRequest(pathname: string): {
   slug: string;
   runtimePath: string;
@@ -55,6 +65,15 @@ function hasDynamicHandlerExport(moduleValue: unknown): moduleValue is DynamicRu
 
   const candidate = moduleValue as { handler?: unknown };
   return typeof candidate.handler === "function";
+}
+
+function hasErrorMessage(errorValue: unknown): errorValue is ErrorWithMessage {
+  if (typeof errorValue !== "object" || errorValue === null) {
+    return false;
+  }
+
+  const candidate = errorValue as { message?: unknown };
+  return typeof candidate.message === "string";
 }
 
 export function normalizeRuntimeQuery(queryValue: unknown): Record<string, string | string[]> {
@@ -86,6 +105,63 @@ async function importDynamicRuntimeModule(entryPath: string): Promise<unknown> {
   return import(entryUrl.href);
 }
 
+function resolveDynamicRuntimeTarget(
+  rootDir: string,
+  slug: string
+): DynamicRuntimeResponse | ResolvedDynamicRuntimeTarget {
+  const project = readProject(rootDir, slug);
+  const entryPath = getProjectEntryPath(rootDir, slug);
+
+  if (project === null || project.runtime !== "dynamic" || entryPath === null || !fs.existsSync(entryPath)) {
+    return {
+      statusCode: 404,
+      body: {
+        error: "dynamic-runtime-not-found",
+        slug
+      }
+    };
+  }
+
+  return {
+    slug: project.slug,
+    route: project.route,
+    entryPath
+  };
+}
+
+async function invokeDynamicRuntimeHandler(
+  moduleValue: DynamicRuntimeModule,
+  target: ResolvedDynamicRuntimeTarget,
+  options: DynamicRuntimeRequestOptions,
+  runtimePath: string
+): Promise<DynamicRuntimeResponse> {
+  try {
+    const body = await moduleValue.handler({
+      slug: target.slug,
+      pathname: options.pathname,
+      runtimePath,
+      method: options.method,
+      route: target.route,
+      query: options.query ?? {},
+      body: options.body ?? null
+    });
+
+    return {
+      statusCode: 200,
+      body
+    };
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: {
+        error: "dynamic-handler-failed",
+        slug: target.slug,
+        message: hasErrorMessage(error) ? error.message : "unknown runtime error"
+      }
+    };
+  }
+}
+
 export async function executeDynamicRuntimeRequest(
   rootDir: string,
   options: DynamicRuntimeRequestOptions
@@ -95,42 +171,21 @@ export async function executeDynamicRuntimeRequest(
     return null;
   }
 
-  const project = readProject(rootDir, runtimeRequest.slug);
-  const entryPath = getProjectEntryPath(rootDir, runtimeRequest.slug);
-
-  if (project === null || project.runtime !== "dynamic" || entryPath === null || !fs.existsSync(entryPath)) {
-    return {
-      statusCode: 404,
-      body: {
-        error: "dynamic-runtime-not-found",
-        slug: runtimeRequest.slug
-      }
-    };
+  const target = resolveDynamicRuntimeTarget(rootDir, runtimeRequest.slug);
+  if ("statusCode" in target) {
+    return target;
   }
 
-  const moduleValue = await importDynamicRuntimeModule(entryPath);
+  const moduleValue = await importDynamicRuntimeModule(target.entryPath);
   if (!hasDynamicHandlerExport(moduleValue)) {
     return {
       statusCode: 500,
       body: {
         error: "invalid-dynamic-handler",
-        slug: runtimeRequest.slug
+        slug: target.slug
       }
     };
   }
 
-  const body = await moduleValue.handler({
-    slug: project.slug,
-    pathname: options.pathname,
-    runtimePath: runtimeRequest.runtimePath,
-    method: options.method,
-    route: project.route,
-    query: options.query ?? {},
-    body: options.body ?? null
-  });
-
-  return {
-    statusCode: 200,
-    body
-  };
+  return invokeDynamicRuntimeHandler(moduleValue, target, options, runtimeRequest.runtimePath);
 }
