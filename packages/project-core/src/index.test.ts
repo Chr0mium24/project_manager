@@ -4,6 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   createProject,
+  deleteManagedProject,
   getProjectsIndexPath,
   listProjects,
   readProject,
@@ -144,4 +145,41 @@ void test("createProject creates a dynamic project and force recreates the direc
   );
   assert.match(readProjectEntry(rootDir, "demo-service") ?? "", /demo-service/);
   assert.deepEqual(validateContentRepo(path.join(rootDir, "content-repo")), { projects: 1 });
+});
+
+void test("deleteManagedProject removes a project and updates the formal index", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const deletedProject = deleteManagedProject(rootDir, "landing-a");
+
+  assert.notEqual(deletedProject, null);
+  assert.equal(deletedProject.slug, "landing-a");
+  assert.equal(readProject(rootDir, "landing-a"), null);
+  assert.equal(fs.existsSync(path.join(rootDir, "content-repo", "projects", "landing-a")), false);
+  assert.deepEqual(listProjects(rootDir), []);
+  assert.deepEqual(validateContentRepo(path.join(rootDir, "content-repo")), { projects: 0 });
+});
+
+void test("deleteManagedProject removes project-owned storage artifacts", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+  fs.mkdirSync(path.join(rootDir, "storage", "managed-tasks", "landing-a"), { recursive: true });
+  fs.mkdirSync(path.join(rootDir, "storage", "project-versions", "landing-a"), { recursive: true });
+  fs.mkdirSync(path.join(rootDir, "storage", "static-builds", "landing-a"), { recursive: true });
+  fs.mkdirSync(path.join(rootDir, "storage", "dynamic-builds", "landing-a"), { recursive: true });
+
+  deleteManagedProject(rootDir, "landing-a");
+
+  assert.equal(fs.existsSync(path.join(rootDir, "storage", "managed-tasks", "landing-a")), false);
+  assert.equal(fs.existsSync(path.join(rootDir, "storage", "project-versions", "landing-a")), false);
+  assert.equal(fs.existsSync(path.join(rootDir, "storage", "static-builds", "landing-a")), false);
+  assert.equal(fs.existsSync(path.join(rootDir, "storage", "dynamic-builds", "landing-a")), false);
+});
+
+void test("deleteManagedProject returns null for missing projects", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  assert.equal(deleteManagedProject(rootDir, "missing-project"), null);
 });

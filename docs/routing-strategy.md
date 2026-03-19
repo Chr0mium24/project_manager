@@ -37,6 +37,7 @@ Important:
 
 - `/api/projects`
 - `/api/projects/:slug`
+- `DELETE /api/projects/:slug`
 - `GET /api/projects/:slug/versions`
 - `GET /api/projects/:slug/versions/:versionId`
 - `GET /api/projects/:slug/versions/:versionId/diff`

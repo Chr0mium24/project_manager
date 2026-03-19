@@ -205,7 +205,7 @@ function sendControlApiRoutes(
     return true;
   }
 
-  return sendProjectApi(rootDir, pathname, reply);
+  return sendProjectApi(rootDir, pathname, request.method, reply);
 }
 
 function sendControlApi(

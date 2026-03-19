@@ -11,6 +11,7 @@ export {
   readProjectsIndex,
   type CreateProjectOptions
 } from "./content-repo.ts";
+export { deleteProject as deleteManagedProject } from "./project-delete.ts";
 export {
   listProjectFiles,
   readProjectFile,
