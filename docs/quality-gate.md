@@ -15,7 +15,7 @@ Canonical command:
 Current implementation detail:
 
 - the gate is executable in this repository today
-- the current runnable lanes are implemented with Node policy scripts, formal `content-repo/` validation, and `validation/` tests
+- the current runnable lanes are implemented with Node policy scripts, formal `content-repo/` validation, and root-level repository tests
 - the `lint` lane now includes real `ESLint`, dependency-boundary checks, and changed-scope enforcement
 - once the product monorepo is bootstrapped, the same lane names stay stable and their implementations can move to `pnpm`, `turbo`, `tsx`, `eslint`, `tsc`, `vitest`, and `playwright`
 
@@ -42,7 +42,7 @@ Current repository implementation:
 - the root quality gate runs these three lanes on every invocation
 - this is intentionally stricter than the eventual optimized monorepo lane selection
 - do not weaken the current root gate by skipping them ad hoc
-- `test:contract` must validate the formal root `content-repo/` before any `validation/`-only contract checks run
+- `test:contract` must validate the formal root `content-repo/`
 
 ## Feature readiness rule
 
