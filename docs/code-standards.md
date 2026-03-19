@@ -31,6 +31,9 @@ Use `ESLint` with hard failures for:
 - overly deep nesting
 - excessive parameter count
 - large public APIs without explicit types
+- runtime compatibility branches
+- package-manager compatibility branches
+- CommonJS fallback paths
 
 ## Enforced structural limits
 
@@ -66,6 +69,32 @@ Preferred tighter limits for core packages:
 - never trust AI output without validation
 - no fire-and-forget promise unless explicitly documented
 - all process execution must capture exit status and stderr
+
+## Compatibility policy
+
+Target the pinned runtime exactly.
+
+Do not write compatibility code for:
+
+- older Node versions
+- alternative runtimes such as `Bun` or `Deno`
+- multiple package managers
+- CommonJS fallback paths inside ESM packages
+- legacy fetch polyfills on the pinned runtime
+
+Forbidden examples:
+
+- branching on `process.versions.node`
+- runtime checks for `Bun` or `Deno`
+- `require()` inside TypeScript or ESM code
+- `module.exports` or `exports.*`
+- package-manager detection through `npm_config_user_agent`
+- `node-fetch` fallback paths
+
+Rule:
+
+- if the target environment is unclear, verify it in `validation/` first
+- do not ship speculative compatibility code
 
 ### Formatting
 
@@ -124,6 +153,12 @@ The following should fail CI:
 - `dependency-cruiser`
 - `lint-staged`
 - `husky` only if local hooks remain simple and fast
+
+Current repository enforcement:
+
+- `scripts/check-no-compat.mjs` enforces exact banned compatibility patterns
+- `eslint.config.mjs` reserves stricter AST-level enforcement for the bootstrapped TypeScript codebase
+- `scripts/check-file-limits.mjs` enforces file-size limits exactly today
 
 ## Exception policy
 

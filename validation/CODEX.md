@@ -1,6 +1,6 @@
 # Codex Guide For Validation Workspace
 
-This directory is a controlled validation workspace for the future project manager.
+This directory is a controlled validation-only workspace for the future project manager.
 
 ## Objective
 

@@ -6,6 +6,18 @@ Every feature must pass the quality gate before it is considered complete.
 
 There is no "merge now, clean up later" path.
 
+Canonical command:
+
+```bash
+./scripts/run-quality-gate.sh
+```
+
+Current implementation detail:
+
+- the gate is executable in this repository today
+- the current runnable lanes are implemented with Node policy scripts plus `validation/` tests
+- once the product monorepo is bootstrapped, the same lane names stay stable and their implementations can move to `pnpm`, `turbo`, `tsx`, `eslint`, `tsc`, `vitest`, and `playwright`
+
 ## Required pipeline
 
 The required order is:
@@ -23,6 +35,12 @@ Conditional stages:
 8. `test:git` for Git-related changes
 9. `test:ai` for Codex or AI-related changes
 10. `test:publish` for static or dynamic publish flow changes
+
+Current repository implementation:
+
+- the root quality gate runs these three lanes on every invocation
+- this is intentionally stricter than the eventual optimized monorepo lane selection
+- do not weaken the current root gate by skipping them ad hoc
 
 ## Feature readiness rule
 

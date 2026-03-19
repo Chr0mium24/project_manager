@@ -21,6 +21,11 @@ If the change touches Git or AI logic, also require:
 8. Git fixture tests
 9. AI task tests
 
+Current repository implementation:
+
+- the root gate runs Git, AI, and publish lanes every time
+- this keeps the current pre-bootstrap repository deterministic
+
 ## Test framework structure
 
 The testing system must itself be modular.
@@ -124,6 +129,13 @@ Already proven in `validation/`:
 - Codex CLI capability checks
 - Codex script-driven create-project flow
 - debug server route smoke
+
+Already enforced at the repository root:
+
+- doc consistency checks
+- no-compatibility-code checks
+- route-registry behavior checks
+- quality-gate stamp checks for safe Git commits
 
 ## False-negative policy
 

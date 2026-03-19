@@ -1,0 +1,6 @@
+{
+  "name": "@project-manager/testkit-contract",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts"
+}

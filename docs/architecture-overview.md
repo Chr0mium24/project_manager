@@ -22,6 +22,13 @@ Build a local-first project manager for many small projects with:
 5. Codex interacts through scripts and contracts, not ad hoc file edits
 6. Every feature must pass the test gate before it can land
 
+## Explicit non-goals for V1
+
+V1 does not support:
+
+- importing arbitrary third-party GitHub repositories for managed deployment
+- running untrusted external repositories as dynamic managed workloads
+
 ## Top-level system model
 
 The system has four major layers:
@@ -38,12 +45,14 @@ The system has four major layers:
 - Published to frontend routes such as `/p/<slug>`
 - Main output is static content
 - Suitable for HTML/CSS/JS projects
+- Internal artifacts should be published into a static-build storage directory, not directly exposed as filesystem routes
 
 ### Dynamic projects
 
-- Published to application routes such as `/app/<slug>` or `/api/<slug>`
+- Published to application routes such as `/app/<slug>` and `/api/runtime/<slug>`
 - Require server-side execution or request handling
 - Suitable for tools, APIs, and service-backed pages
+- Must be dispatched through the main server, not through ad hoc public ports
 
 ## Development rule
 

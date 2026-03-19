@@ -1,0 +1,6 @@
+{
+  "name": "@project-manager/git-core",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts"
+}

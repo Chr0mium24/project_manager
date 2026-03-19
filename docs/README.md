@@ -19,10 +19,18 @@ These docs are the source of truth for:
 - [Quality Gate](./quality-gate.md)
 - [Code Standards](./code-standards.md)
 - [Routing Strategy](./routing-strategy.md)
+- [Codex Development](./codex-development.md)
+- [Sandbox And Git Policy](./sandbox-and-git.md)
 
 ## Status
 
 These docs are based on the validation work already completed in `validation/`.
+
+Scope rule:
+
+- `docs/` is the formal source of truth for the main repository
+- `validation/` may contain narrower validation-only rules for experiments
+- if there is a conflict, `docs/` wins for the main product architecture
 
 Confirmed from validation:
 

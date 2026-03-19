@@ -6,6 +6,7 @@ Use:
 
 - `Volta` for toolchain pinning
 - `Node 20` as the runtime
+- `tsx` for development execution
 - `pnpm` as the package manager
 - `turbo` for monorepo orchestration
 
@@ -36,8 +37,25 @@ Reasons:
 
 1. Current validation and Codex workflow already run on Node
 2. Test and monorepo tooling are more predictable on Node
-3. We need compatibility and low surprise more than raw speed
+3. We need exact runtime behavior and low surprise more than raw speed
 4. The main project risk is architecture drift, not runtime throughput
+
+## Why `tsx`
+
+`tsx` is the right V1 execution model for this project.
+
+Use it for:
+
+- local backend development
+- local worker development
+- scripts during active development
+
+Why:
+
+1. It keeps TypeScript execution simple
+2. It works well with normal Node tooling
+3. It avoids over-relying on Node's limited native TypeScript mode
+4. It is a cleaner default than introducing Bun as the runtime
 
 ## Recommended core stack
 
@@ -54,6 +72,7 @@ Backend:
 - `TypeScript`
 - `Fastify`
 - `zod`
+- `tsx`
 
 Monorepo:
 
@@ -84,3 +103,4 @@ Not allowed in V1:
 
 - replacing the primary Node runtime with Bun
 - mixing multiple package managers
+- using third-party GitHub project deployment as a core platform feature

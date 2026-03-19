@@ -1,0 +1,6 @@
+{
+  "name": "@project-manager/project-core",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts"
+}

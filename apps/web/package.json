@@ -1,0 +1,6 @@
+{
+  "name": "@project-manager/web",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts"
+}

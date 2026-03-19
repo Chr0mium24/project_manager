@@ -1,0 +1,6 @@
+{
+  "name": "@project-manager/test-runner",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts"
+}

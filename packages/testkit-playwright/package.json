@@ -1,0 +1,6 @@
+{
+  "name": "@project-manager/testkit-playwright",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts"
+}

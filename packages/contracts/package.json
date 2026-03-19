@@ -1,0 +1,6 @@
+{
+  "name": "@project-manager/contracts",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts"
+}

@@ -2,6 +2,10 @@
 
 This workspace validates the minimum architecture assumptions before building the full product.
 
+This is a validation-only workspace.
+
+It is not the source of truth for the main repository architecture.
+
 Current scope:
 
 - `content-repo/` directory shape

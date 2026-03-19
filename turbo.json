@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "format:check": {
+      "outputs": []
+    },
+    "lint": {
+      "dependsOn": ["^lint"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": []
+    },
+    "test:unit": {
+      "dependsOn": ["lint", "typecheck"],
+      "outputs": []
+    },
+    "test:integration": {
+      "dependsOn": ["test:unit"],
+      "outputs": []
+    },
+    "test:contract": {
+      "dependsOn": ["test:integration"],
+      "outputs": []
+    },
+    "test:e2e:smoke": {
+      "dependsOn": ["test:contract"],
+      "outputs": []
+    }
+  }
+}
