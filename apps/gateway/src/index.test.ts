@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
+  createGatewayApp,
   getRouteRegistryPath,
   readRouteRegistry,
   resolveGatewayRequest
@@ -74,4 +75,62 @@ test("resolveGatewayRequest matches the longest managed route prefix", () => {
   });
   assert.equal(landingRoute.targetKind, "static-build");
   assert.equal(missingRoute.kind, "not-found");
+});
+
+test("createGatewayApp serves healthz and control API routes", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeRegistry(rootDir, [
+    {
+      routePrefix: "/app/demo",
+      targetKind: "dynamic-handler",
+      targetRef: "demo-runtime"
+    }
+  ]);
+
+  const app = createGatewayApp(rootDir);
+
+  const healthz = await app.inject({ method: "GET", url: "/healthz" });
+  const apiProjects = await app.inject({ method: "GET", url: "/api/projects" });
+
+  assert.equal(healthz.statusCode, 200);
+  assert.deepEqual(healthz.json(), {
+    ok: true,
+    service: "@project-manager/gateway"
+  });
+
+  assert.equal(apiProjects.statusCode, 200);
+  assert.deepEqual(apiProjects.json(), {
+    kind: "control-api",
+    pathname: "/api/projects",
+    routePrefix: null,
+    targetKind: null,
+    targetRef: null,
+    registryVersion: 1,
+    routeCount: 1
+  });
+
+  await app.close();
+});
+
+test("createGatewayApp serves managed routes and 404s", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeRegistry(rootDir, [
+    {
+      routePrefix: "/p/landing-a",
+      targetKind: "static-build",
+      targetRef: "landing-a"
+    }
+  ]);
+
+  const app = createGatewayApp(rootDir);
+
+  const managedRoute = await app.inject({ method: "GET", url: "/p/landing-a" });
+  const missingRoute = await app.inject({ method: "GET", url: "/missing" });
+
+  assert.equal(managedRoute.statusCode, 200);
+  assert.equal(managedRoute.json().targetKind, "static-build");
+  assert.equal(missingRoute.statusCode, 404);
+  assert.equal(missingRoute.json().kind, "not-found");
+
+  await app.close();
 });

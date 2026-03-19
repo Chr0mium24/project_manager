@@ -1,8 +1,9 @@
 import fs from "node:fs";
-import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
+import { z } from "zod";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 
@@ -27,6 +28,21 @@ export interface GatewayResolution {
   targetRef: string | null;
 }
 
+const routeRecordSchema = z.object({
+  routePrefix: z.string().min(1),
+  targetKind: z.enum(["internal-handler", "static-build", "dynamic-handler"]),
+  targetRef: z.string().min(1),
+  updatedAt: z.string().optional()
+});
+
+const routeRegistrySchema = z.object({
+  version: z.number().int().positive(),
+  updatedAt: z.string().nullable(),
+  routes: z.array(routeRecordSchema)
+});
+
+const portSchema = z.coerce.number().int().min(1).max(65535);
+
 export const moduleName = "@project-manager/gateway";
 export const REGISTRY_VERSION = 1;
 
@@ -40,7 +56,8 @@ export function readRouteRegistry(rootDir: string): RouteRegistry {
     return { version: REGISTRY_VERSION, updatedAt: null, routes: [] };
   }
 
-  return JSON.parse(fs.readFileSync(registryPath, "utf8")) as RouteRegistry;
+  const rawValue = JSON.parse(fs.readFileSync(registryPath, "utf8"));
+  return routeRegistrySchema.parse(rawValue);
 }
 
 function matchesRoutePrefix(pathname: string, routePrefix: string): boolean {
@@ -115,48 +132,114 @@ export function resolveGatewayRequest(rootDir: string, pathname: string): Gatewa
   };
 }
 
-function sendJson(res: ServerResponse, statusCode: number, body: unknown): void {
-  res.statusCode = statusCode;
-  res.setHeader("content-type", "application/json; charset=utf-8");
-  res.end(`${JSON.stringify(body, null, 2)}\n`);
+function resolveRequestPath(request: FastifyRequest): string {
+  return request.url.split("?")[0] ?? "/";
 }
 
-export function createGatewayHandler(rootDir: string) {
-  return (req: IncomingMessage, res: ServerResponse): void => {
-    const pathname = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
-    const resolution = resolveGatewayRequest(rootDir, pathname);
+function sendResolution(
+  rootDir: string,
+  request: FastifyRequest,
+  reply: FastifyReply
+): void {
+  const resolution = resolveGatewayRequest(rootDir, resolveRequestPath(request));
 
-    if (resolution.kind === "healthz") {
-      sendJson(res, 200, { ok: true, service: moduleName });
-      return;
-    }
+  if (resolution.kind === "not-found") {
+    void reply.code(404).send(resolution);
+    return;
+  }
 
-    if (resolution.kind === "not-found") {
-      sendJson(res, 404, resolution);
-      return;
-    }
+  if (resolution.kind === "healthz") {
+    void reply.code(200).send({ ok: true, service: moduleName });
+    return;
+  }
 
-    sendJson(res, 200, resolution);
-  };
+  if (resolution.kind === "control-api") {
+    const registry = readRouteRegistry(rootDir);
+    void reply.code(200).send({
+      ...resolution,
+      registryVersion: registry.version,
+      routeCount: registry.routes.length
+    });
+    return;
+  }
+
+  void reply.code(200).send(resolution);
 }
 
-export function startGatewayServer(rootDir: string, port: number) {
-  const server = http.createServer(createGatewayHandler(rootDir));
-  server.listen(port);
-  return server;
-}
+export function createGatewayApp(rootDir: string): FastifyInstance {
+  const app = Fastify({ logger: false });
 
-function main(): void {
-  const rootDir = process.cwd();
-  const port = Number(process.env.PORT ?? "3100");
-  const server = startGatewayServer(rootDir, port);
-
-  server.on("listening", () => {
-    process.stdout.write(`${JSON.stringify({ service: moduleName, port }, null, 2)}\n`);
+  app.get("/healthz", (request, reply) => {
+    sendResolution(rootDir, request, reply);
   });
+
+  app.get("/", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.get("/projects/*", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.get("/assets/*", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.get("/api/projects", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.get("/api/projects/*", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.get("/api/ai/*", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.get("/api/publish/*", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.get("/p/*", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.get("/app/*", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.get("/api/runtime/*", (request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  app.setNotFoundHandler((request, reply) => {
+    sendResolution(rootDir, request, reply);
+  });
+
+  return app;
+}
+
+export async function startGatewayServer(rootDir: string, port: number): Promise<FastifyInstance> {
+  const app = createGatewayApp(rootDir);
+  await app.listen({ host: "127.0.0.1", port });
+  return app;
+}
+
+function resolvePortFromEnv(): number {
+  return portSchema.parse(process.env.PORT ?? "3100");
+}
+
+async function main(): Promise<void> {
+  const rootDir = process.cwd();
+  const port = resolvePortFromEnv();
+  const app = await startGatewayServer(rootDir, port);
+
+  app.log.info({ service: moduleName, port }, "gateway listening");
+  process.stdout.write(`${JSON.stringify({ service: moduleName, port }, null, 2)}\n`);
 }
 
 const entryHref = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : null;
 if (entryHref !== null && import.meta.url === entryHref) {
-  main();
+  await main();
 }
