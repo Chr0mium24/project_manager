@@ -23,6 +23,13 @@ async function startGatewayOrSkip(t) {
   }
 }
 
+function resolveBaseUrl(running) {
+  const address = running.server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+  return `http://${address.address}:${String(address.port)}`;
+}
+
 test("gateway server serves healthz, projects, static, and dynamic routes", async (t) => {
   const running = await startGatewayOrSkip(t);
   if (running === null) {
@@ -30,7 +37,7 @@ test("gateway server serves healthz, projects, static, and dynamic routes", asyn
   }
 
   try {
-    const baseUrl = `http://${running.host}:${String(running.port)}`;
+    const baseUrl = resolveBaseUrl(running);
     const health = await fetchJson(`${baseUrl}/healthz`);
     const projects = await fetchJson(`${baseUrl}/api/projects`);
     const staticHtml = await fetchText(`${baseUrl}/p/landing-a`);

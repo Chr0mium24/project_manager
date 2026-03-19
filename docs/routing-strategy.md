@@ -62,6 +62,9 @@ Important:
 - `GET /api/publish/dynamic`
 - `GET /api/publish/dynamic/:slug`
 - `POST /api/publish/dynamic/:slug`
+- `GET /api/ai/tasks`
+- `GET /api/ai/tasks/:taskId`
+- `POST /api/ai/tasks`
 - `/api/ai/tasks`
 - `/api/publish`
 

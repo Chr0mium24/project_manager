@@ -4,6 +4,8 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
+import { type CodexExecutor } from "@project-manager/ai-core";
+import { sendAiTaskApi, type GatewayAiOptions } from "./ai-api.ts";
 import {
   sendAdminAuthRejection,
   resolveGatewayAuthConfig,
@@ -27,22 +29,18 @@ import {
   sendPublishApi,
   sendPublishMutationApi
 } from "./publish-api.ts";
-
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
-
 export interface RouteRecord {
   routePrefix: string;
   targetKind: RouteTargetKind;
   targetRef: string;
   updatedAt?: string | undefined;
 }
-
 export interface RouteRegistry {
   version: number;
   updatedAt: string | null;
   routes: RouteRecord[];
 }
-
 export interface GatewayResolution {
   kind: "healthz" | "platform-ui" | "control-api" | "runtime-api" | "managed-route" | "not-found";
   pathname: string;
@@ -50,16 +48,22 @@ export interface GatewayResolution {
   targetKind: RouteTargetKind | null;
   targetRef: string | null;
 }
-
 interface ControlApiRequest {
   rootDir: string;
   pathname: string;
   request: FastifyRequest;
 }
-
+interface GatewayRequestContext {
+  authConfig: GatewayAuthConfig;
+  rootDir: string;
+  aiOptions: GatewayAiOptions;
+}
 interface ResolutionRouteRegistration {
   method: "get" | "post" | "put" | "delete" | "all";
   routePath: string;
+}
+export interface GatewayAppOptions extends GatewayAuthOptions {
+  aiExecutor?: CodexExecutor;
 }
 
 const routeRecordSchema = z.object({
@@ -181,7 +185,8 @@ function resolveRequestPath(request: FastifyRequest): string {
 
 function sendControlApiRoutes(
   controlRequest: ControlApiRequest,
-  reply: FastifyReply
+  reply: FastifyReply,
+  context: GatewayRequestContext
 ): boolean {
   const { rootDir, pathname, request } = controlRequest;
 
@@ -205,11 +210,15 @@ function sendControlApiRoutes(
     return true;
   }
 
+  if (sendAiTaskApi(context, pathname, request, reply)) {
+    return true;
+  }
+
   return sendProjectApi(rootDir, pathname, request.method, reply);
 }
 
 function sendControlApi(
-  authConfig: GatewayAuthConfig,
+  context: GatewayRequestContext,
   controlRequest: ControlApiRequest,
   reply: FastifyReply
 ): boolean {
@@ -218,11 +227,11 @@ function sendControlApi(
     return false;
   }
 
-  if (sendAdminAuthRejection(authConfig, pathname, request, reply)) {
+  if (sendAdminAuthRejection(context.authConfig, pathname, request, reply)) {
     return true;
   }
 
-  if (sendControlApiRoutes(controlRequest, reply)) {
+  if (sendControlApiRoutes(controlRequest, reply, context)) {
     return true;
   }
 
@@ -281,11 +290,11 @@ async function sendRuntimeApi(
   return true;
 }
 async function sendResolution(
-  authConfig: GatewayAuthConfig,
-  rootDir: string,
+  context: GatewayRequestContext,
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
+  const { rootDir } = context;
   const pathname = resolveRequestPath(request);
   if (sendStaticProject(rootDir, pathname, reply)) {
     return;
@@ -296,7 +305,7 @@ async function sendResolution(
   if (await sendRuntimeApi(rootDir, pathname, request, reply)) {
     return;
   }
-  if (sendControlApi(authConfig, { rootDir, pathname, request }, reply)) {
+  if (sendControlApi(context, { rootDir, pathname, request }, reply)) {
     return;
   }
 
@@ -315,17 +324,22 @@ async function sendResolution(
 function registerResolutionRoute(
   app: FastifyInstance,
   registration: ResolutionRouteRegistration,
-  authConfig: GatewayAuthConfig,
-  rootDir: string
+  context: GatewayRequestContext
 ): void {
   app[registration.method](registration.routePath, (request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
+    return sendResolution(context, request, reply);
   });
 }
 
-export function createGatewayApp(rootDir: string, authOptions?: GatewayAuthOptions): FastifyInstance {
+export function createGatewayApp(rootDir: string, options?: GatewayAppOptions): FastifyInstance {
   const app = Fastify({ logger: false });
-  const authConfig = resolveGatewayAuthConfig(authOptions);
+  const context: GatewayRequestContext = {
+    authConfig: resolveGatewayAuthConfig(options),
+    rootDir,
+    aiOptions: {
+      executor: options?.aiExecutor
+    }
+  };
   const routes: ResolutionRouteRegistration[] = [
     { method: "get", routePath: "/healthz" },
     { method: "get", routePath: "/" },
@@ -348,11 +362,11 @@ export function createGatewayApp(rootDir: string, authOptions?: GatewayAuthOptio
   ];
 
   for (const route of routes) {
-    registerResolutionRoute(app, route, authConfig, rootDir);
+    registerResolutionRoute(app, route, context);
   }
 
   app.setNotFoundHandler((request, reply) => {
-    return sendResolution(authConfig, rootDir, request, reply);
+    return sendResolution(context, request, reply);
   });
 
   return app;

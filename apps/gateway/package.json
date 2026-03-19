@@ -4,6 +4,7 @@
   "type": "module",
   "main": "./src/index.ts",
   "dependencies": {
+    "@project-manager/ai-core": "workspace:*",
     "@project-manager/git-core": "workspace:*",
     "@project-manager/publish-core": "workspace:*",
     "@project-manager/project-core": "workspace:*",

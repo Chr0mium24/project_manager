@@ -43,6 +43,9 @@ importers:
 
   apps/gateway:
     dependencies:
+      '@project-manager/ai-core':
+        specifier: workspace:*
+        version: link:../../packages/ai-core
       '@project-manager/git-core':
         specifier: workspace:*
         version: link:../../packages/git-core
@@ -63,7 +66,14 @@ importers:
 
   apps/web: {}
 
-  packages/ai-core: {}
+  packages/ai-core:
+    dependencies:
+      '@project-manager/project-core':
+        specifier: workspace:*
+        version: link:../project-core
+      zod:
+        specifier: 4.1.11
+        version: 4.1.11
 
   packages/contracts: {}
 

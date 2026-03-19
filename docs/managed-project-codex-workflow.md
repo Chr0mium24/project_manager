@@ -80,6 +80,8 @@ Formal V1 status:
 - formal `summarize-managed-task` now lives in `packages/project-core`
 - formal `validate-managed-task` now lives in `packages/project-core`
 - formal `apply-managed-task` now lives in `packages/project-core`
+- formal `POST /api/ai/tasks` now runs `start -> codex exec -> summarize -> validate`
+- the formal AI control-plane flow stops at a validated workspace and does not auto-apply
 
 ## Branch rule
 
