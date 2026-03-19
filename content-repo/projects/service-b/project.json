@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "name": "Service B",
+  "slug": "service-b",
+  "description": "Official sample dynamic project",
+  "runtime": "dynamic",
+  "entry": "src/server.ts",
+  "route": "/app/service-b",
+  "visibility": "private",
+  "tags": [
+    "service",
+    "sample"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "typescript",
+  "framework": "fastify",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T00:00:00.000Z",
+  "updatedAt": "2026-03-20T00:00:00.000Z"
+}

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { getProjectsIndexPath } from "./content-repo.ts";
 import {
   createGatewayApp,
   getRouteRegistryPath,
@@ -22,6 +23,82 @@ function writeRegistry(rootDir: string, routes: Array<{
     updatedAt: "2026-03-20T00:00:00.000Z",
     routes
   }, null, 2)}\n`, "utf8");
+}
+
+function writeContentRepo(rootDir: string): void {
+  const contentRepoRoot = path.join(rootDir, "content-repo");
+  fs.mkdirSync(path.join(contentRepoRoot, "projects", "landing-a", "src"), { recursive: true });
+  fs.mkdirSync(path.join(contentRepoRoot, "projects", "service-b", "src"), { recursive: true });
+
+  fs.writeFileSync(getProjectsIndexPath(rootDir), `${JSON.stringify({
+    version: 1,
+    generatedAt: "2026-03-20T00:00:00.000Z",
+    projects: [
+      {
+        slug: "landing-a",
+        path: "projects/landing-a",
+        name: "Landing A",
+        runtime: "static",
+        visibility: "private",
+        entry: "src/index.html",
+        route: "/p/landing-a",
+        updatedAt: "2026-03-20T00:00:00.000Z"
+      },
+      {
+        slug: "service-b",
+        path: "projects/service-b",
+        name: "Service B",
+        runtime: "dynamic",
+        visibility: "private",
+        entry: "src/server.ts",
+        route: "/app/service-b",
+        updatedAt: "2026-03-20T00:00:00.000Z"
+      }
+    ]
+  }, null, 2)}\n`, "utf8");
+
+  fs.writeFileSync(
+    path.join(contentRepoRoot, "projects", "landing-a", "project.json"),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      name: "Landing A",
+      slug: "landing-a",
+      description: "Official sample static project",
+      runtime: "static",
+      entry: "src/index.html",
+      route: "/p/landing-a",
+      visibility: "private",
+      tags: ["landing", "sample"],
+      latestVersion: "v1",
+      mainLanguage: "html",
+      framework: "vanilla",
+      owner: "project-manager",
+      createdAt: "2026-03-20T00:00:00.000Z",
+      updatedAt: "2026-03-20T00:00:00.000Z"
+    }, null, 2)}\n`,
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(contentRepoRoot, "projects", "service-b", "project.json"),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      name: "Service B",
+      slug: "service-b",
+      description: "Official sample dynamic project",
+      runtime: "dynamic",
+      entry: "src/server.ts",
+      route: "/app/service-b",
+      visibility: "private",
+      tags: ["service", "sample"],
+      latestVersion: "v1",
+      mainLanguage: "typescript",
+      framework: "fastify",
+      owner: "project-manager",
+      createdAt: "2026-03-20T00:00:00.000Z",
+      updatedAt: "2026-03-20T00:00:00.000Z"
+    }, null, 2)}\n`,
+    "utf8"
+  );
 }
 
 test("readRouteRegistry falls back to an empty registry", () => {
@@ -79,6 +156,7 @@ test("resolveGatewayRequest matches the longest managed route prefix", () => {
 
 test("createGatewayApp serves healthz and control API routes", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
   writeRegistry(rootDir, [
     {
       routePrefix: "/app/demo",
@@ -100,13 +178,49 @@ test("createGatewayApp serves healthz and control API routes", async () => {
 
   assert.equal(apiProjects.statusCode, 200);
   assert.deepEqual(apiProjects.json(), {
-    kind: "control-api",
-    pathname: "/api/projects",
-    routePrefix: null,
-    targetKind: null,
-    targetRef: null,
-    registryVersion: 1,
-    routeCount: 1
+    projects: [
+      {
+        slug: "landing-a",
+        path: "projects/landing-a",
+        name: "Landing A",
+        runtime: "static",
+        visibility: "private",
+        entry: "src/index.html",
+        route: "/p/landing-a",
+        updatedAt: "2026-03-20T00:00:00.000Z"
+      },
+      {
+        slug: "service-b",
+        path: "projects/service-b",
+        name: "Service B",
+        runtime: "dynamic",
+        visibility: "private",
+        entry: "src/server.ts",
+        route: "/app/service-b",
+        updatedAt: "2026-03-20T00:00:00.000Z"
+      }
+    ]
+  });
+
+  await app.close();
+});
+
+test("createGatewayApp serves a single project document and 404 for missing slug", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const existingProject = await app.inject({ method: "GET", url: "/api/projects/landing-a" });
+  const missingProject = await app.inject({ method: "GET", url: "/api/projects/missing-project" });
+
+  assert.equal(existingProject.statusCode, 200);
+  assert.equal(existingProject.json().slug, "landing-a");
+  assert.equal(existingProject.json().runtime, "static");
+
+  assert.equal(missingProject.statusCode, 404);
+  assert.deepEqual(missingProject.json(), {
+    error: "project-not-found",
+    slug: "missing-project"
   });
 
   await app.close();
@@ -114,6 +228,7 @@ test("createGatewayApp serves healthz and control API routes", async () => {
 
 test("createGatewayApp serves managed routes and 404s", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
   writeRegistry(rootDir, [
     {
       routePrefix: "/p/landing-a",

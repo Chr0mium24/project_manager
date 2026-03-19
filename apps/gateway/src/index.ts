@@ -4,6 +4,7 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
+import { listProjects, readProject } from "./content-repo.ts";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 
@@ -141,7 +142,8 @@ function sendResolution(
   request: FastifyRequest,
   reply: FastifyReply
 ): void {
-  const resolution = resolveGatewayRequest(rootDir, resolveRequestPath(request));
+  const pathname = resolveRequestPath(request);
+  const resolution = resolveGatewayRequest(rootDir, pathname);
 
   if (resolution.kind === "not-found") {
     void reply.code(404).send(resolution);
@@ -154,6 +156,28 @@ function sendResolution(
   }
 
   if (resolution.kind === "control-api") {
+    if (pathname === "/api/projects") {
+      void reply.code(200).send({
+        projects: listProjects(rootDir)
+      });
+      return;
+    }
+
+    const projectSlugMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)$/);
+    if (projectSlugMatch) {
+      const project = readProject(rootDir, projectSlugMatch[1] ?? "");
+      if (project === null) {
+        void reply.code(404).send({
+          error: "project-not-found",
+          slug: projectSlugMatch[1]
+        });
+        return;
+      }
+
+      void reply.code(200).send(project);
+      return;
+    }
+
     const registry = readRouteRegistry(rootDir);
     void reply.code(200).send({
       ...resolution,

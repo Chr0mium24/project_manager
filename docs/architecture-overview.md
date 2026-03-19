@@ -38,6 +38,10 @@ The system has four major layers:
 3. Git-backed content repository
 4. Codex automation layer
 
+Formal runtime content must live under the repository root `content-repo/`.
+
+The `validation/` directory is for experiments only and must not be used as a runtime dependency by product code.
+
 ## Runtime split
 
 ### Static projects
