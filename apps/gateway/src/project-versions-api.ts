@@ -1,6 +1,7 @@
 import {
   createProjectVersion,
   listProjectVersions,
+  readProjectVersion,
   type ProjectVersionRecord
 } from "@project-manager/git-core";
 import { type FastifyReply, type FastifyRequest } from "fastify";
@@ -12,6 +13,10 @@ interface VersionCreateBody {
 
 interface ProjectVersionListPayload {
   versions: ProjectVersionRecord[];
+}
+
+interface ProjectVersionReadPayload {
+  version: ProjectVersionRecord;
 }
 
 interface ProjectVersionCreatePayload {
@@ -26,6 +31,27 @@ function sendProjectVersionList(rootDir: string, slug: string, reply: FastifyRep
   const payload: ProjectVersionListPayload = {
     versions: listProjectVersions(rootDir, slug)
   };
+  void reply.code(200).send(payload);
+  return true;
+}
+
+function sendProjectVersionRead(
+  rootDir: string,
+  slug: string,
+  versionId: string,
+  reply: FastifyReply
+): boolean {
+  const version = readProjectVersion(rootDir, slug, versionId);
+  if (version === null) {
+    void reply.code(404).send({
+      error: "project-version-not-found",
+      slug,
+      versionId
+    });
+    return true;
+  }
+
+  const payload: ProjectVersionReadPayload = { version };
   void reply.code(200).send(payload);
   return true;
 }
@@ -65,6 +91,15 @@ export function sendProjectVersionsApi(
   request: FastifyRequest<{ Body: VersionCreateBody }>,
   reply: FastifyReply
 ): boolean {
+  const versionMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/versions\/([^/]+)$/);
+  if (versionMatch) {
+    if (request.method !== "GET") {
+      return false;
+    }
+
+    return sendProjectVersionRead(rootDir, versionMatch[1] ?? "", versionMatch[2] ?? "", reply);
+  }
+
   const versionsMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/versions$/);
   if (!versionsMatch) {
     return false;

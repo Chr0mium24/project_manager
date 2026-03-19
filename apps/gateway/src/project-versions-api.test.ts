@@ -44,6 +44,41 @@ void test("createGatewayApp creates and lists project versions", async () => {
   await app.close();
 });
 
+void test("createGatewayApp reads a single project version", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const createResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/versions",
+    payload: {
+      message: "snapshot for read"
+    }
+  });
+  const createPayload: { version: { versionId: string } } = createResponse.json();
+  const readResponse = await app.inject({
+    method: "GET",
+    url: `/api/projects/landing-a/versions/${createPayload.version.versionId}`
+  });
+  const readPayload: {
+    version: { slug: string; versionId: string; message: string };
+  } = readResponse.json();
+
+  assert.equal(readResponse.statusCode, 200);
+  assert.equal(readPayload.version.slug, "landing-a");
+  assert.equal(readPayload.version.versionId, createPayload.version.versionId);
+  assert.equal(readPayload.version.message, "snapshot for read");
+
+  const missingResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/versions/missing-version"
+  });
+  assert.equal(missingResponse.statusCode, 404);
+
+  await app.close();
+});
+
 void test("createGatewayApp rejects invalid version payloads", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);

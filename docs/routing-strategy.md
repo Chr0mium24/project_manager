@@ -38,6 +38,7 @@ Important:
 - `/api/projects`
 - `/api/projects/:slug`
 - `GET /api/projects/:slug/versions`
+- `GET /api/projects/:slug/versions/:versionId`
 - `POST /api/projects/:slug/versions`
 - `/api/projects/:slug/files`
 - `/api/projects/:slug/file-tree`
