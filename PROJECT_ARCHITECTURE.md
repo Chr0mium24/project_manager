@@ -300,37 +300,302 @@ Rule:
 
 ## 7. Content Model
 
+The managed content repository is a product-level contract. The directory shape, naming rules, and metadata schema must be stable and testable.
+
+## 7.1 `content-repo/` directory specification
+
+Required layout:
+
+```text
+content-repo/
+  projects/
+    <project-slug>/
+      project.json
+      src/
+        ...
+      assets/
+        ...
+      drafts/
+        ...
+  projects-index.json
+```
+
+Rules:
+
+- All managed projects must live under `content-repo/projects/`
+- Each project directory name must equal the project `slug`
+- Each project directory must contain exactly one `project.json`
+- `src/` contains source files that are part of the official project content
+- `assets/` is optional and contains static assets
+- `drafts/` is optional in V1 and stores unpublished local work products
+- `projects-index.json` is the only global index file
+
+Forbidden:
+
+- Nested project directories
+- Extra global index files
+- Per-project `.git` directories
+- Project names that differ from directory slug
+
+## 7.2 Project slug rules
+
+Project slug is the stable primary identifier at the content layer.
+
+Rules:
+
+- Lowercase only
+- Characters allowed: `a-z`, `0-9`, `-`
+- Must start with a letter or digit
+- Must not end with `-`
+- Length: `3-64`
+- Must be unique inside `content-repo/projects/`
+
+Regex:
+
+```text
+^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$
+```
+
+## 7.3 `project.json` contract
+
 Each managed project must contain a `project.json`.
+
+Required fields:
+
+- `schemaVersion`
+- `name`
+- `slug`
+- `runtime`
+- `entry`
+- `route`
+- `visibility`
+- `createdAt`
+- `updatedAt`
+
+Optional fields:
+
+- `description`
+- `tags`
+- `latestVersion`
+- `mainLanguage`
+- `framework`
+- `owner`
+
+Supported `runtime` values in V1:
+
+- `static`
+- `dynamic`
+
+Supported `visibility` values in V1:
+
+- `private`
+- `unlisted`
 
 Example:
 
 ```json
 {
-  "name": "landing-a",
+  "schemaVersion": 1,
+  "name": "Landing A",
   "slug": "landing-a",
-  "type": "static-html",
+  "description": "Marketing landing page",
+  "runtime": "static",
   "entry": "src/index.html",
+  "route": "/p/landing-a",
+  "visibility": "private",
   "tags": ["landing", "promo"],
   "latestVersion": "v3",
-  "visibility": "private"
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "local",
+  "createdAt": "2026-03-19T00:00:00.000Z",
+  "updatedAt": "2026-03-19T00:00:00.000Z"
 }
 ```
+
+## 7.4 `project.json` JSON Schema
+
+The validation workspace must enforce this schema.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "name",
+    "slug",
+    "runtime",
+    "entry",
+    "route",
+    "visibility",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["static", "dynamic"]
+    },
+    "entry": {
+      "type": "string",
+      "pattern": "^src\\/.+"
+    },
+    "route": {
+      "type": "string",
+      "pattern": "^\\/[A-Za-z0-9._\\/-]+$"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["private", "unlisted"]
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32
+      },
+      "uniqueItems": true
+    },
+    "latestVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "mainLanguage": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "framework": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "owner": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
+```
+
+## 7.5 `projects-index.json` contract
 
 Global project index:
 
 ```json
 {
   "version": 1,
+  "generatedAt": "2026-03-19T00:00:00.000Z",
   "projects": [
     {
       "slug": "landing-a",
       "path": "projects/landing-a",
-      "name": "landing-a",
-      "updatedAt": "2026-03-19T00:00:00Z"
+      "name": "Landing A",
+      "runtime": "static",
+      "visibility": "private",
+      "entry": "src/index.html",
+      "route": "/p/landing-a",
+      "updatedAt": "2026-03-19T00:00:00.000Z"
     }
   ]
 }
 ```
+
+Rules:
+
+- `version` is currently `1`
+- `generatedAt` must be valid ISO datetime
+- `projects` must be sorted by `slug`
+- `projects[].path` must equal `projects/<slug>`
+- `projects[].slug` must match the `project.json` slug
+- `projects[].runtime` must match the `project.json` runtime
+- `projects[].entry` must match the `project.json` entry
+- `projects[].route` must match the `project.json` route
+- The index must not contain a project missing on disk
+- A project on disk must not be missing from the index
+
+## 7.6 Draft handling rule
+
+V1 draft rule:
+
+- Official source remains under `src/`
+- Temporary unpublished content may live under `drafts/`
+- Draft files must never be treated as publishable entry files
+- `project.json.entry` must never point into `drafts/`
+
+## 7.7 Runtime rules
+
+The product UI may present both as "projects", but runtime behavior must split into exactly two classes in V1.
+
+### `runtime = static`
+
+Rules:
+
+- Published output is a frontend route
+- Default route prefix: `/p/<slug>`
+- `entry` should normally be `src/index.html`
+- Preview is served as static content
+
+### `runtime = dynamic`
+
+Rules:
+
+- Published output is an application or service route
+- Default route prefix: `/app/<slug>`
+- `entry` points to a runtime entry file such as `src/main.ts` or `src/server.ts`
+- Preview may require a backend runtime
+
+## 7.8 Project bootstrap script
+
+Project creation must be script-driven.
+
+Do not create project directories by hand.
+
+Reasons:
+
+- Prevent schema drift
+- Keep routes and slugs consistent
+- Keep `projects-index.json` synchronized
+- Allow future template selection and Codex integration
+
+Minimum script responsibilities:
+
+1. Validate `slug`
+2. Validate `runtime`
+3. Create project directory
+4. Create `project.json`
+5. Create starter files under `src/`
+6. Update `projects-index.json`
+7. Refuse overwrite unless explicitly forced
 
 ## 8. Git and GitHub Workflow
 

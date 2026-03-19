@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "generatedAt": "2026-03-19T00:30:00.000Z",
+  "projects": [
+    {
+      "slug": "landing-a",
+      "path": "projects/landing-a",
+      "name": "Landing A",
+      "runtime": "static",
+      "visibility": "private",
+      "entry": "src/index.html",
+      "route": "/p/landing-a",
+      "updatedAt": "2026-03-19T00:00:00.000Z"
+    },
+    {
+      "slug": "service-b",
+      "path": "projects/service-b",
+      "name": "Service B",
+      "runtime": "dynamic",
+      "visibility": "unlisted",
+      "entry": "src/server.ts",
+      "route": "/app/service-b",
+      "updatedAt": "2026-03-19T00:10:00.000Z"
+    }
+  ]
+}

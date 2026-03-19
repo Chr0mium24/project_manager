@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "name": "Landing A",
+  "slug": "landing-a",
+  "description": "Marketing landing page",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/landing-a",
+  "visibility": "private",
+  "tags": [
+    "landing",
+    "promo"
+  ],
+  "latestVersion": "v3",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "local",
+  "createdAt": "2026-03-19T00:00:00.000Z",
+  "updatedAt": "2026-03-19T00:00:00.000Z"
+}

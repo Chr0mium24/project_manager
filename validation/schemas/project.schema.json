@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "name",
+    "slug",
+    "runtime",
+    "entry",
+    "route",
+    "visibility",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["static", "dynamic"]
+    },
+    "entry": {
+      "type": "string",
+      "pattern": "^src\\/.+"
+    },
+    "route": {
+      "type": "string",
+      "pattern": "^\\/[A-Za-z0-9._\\/-]+$"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["private", "unlisted"]
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32
+      },
+      "uniqueItems": true
+    },
+    "latestVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "mainLanguage": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "framework": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "owner": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

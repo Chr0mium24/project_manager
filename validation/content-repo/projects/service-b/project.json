@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "name": "Service B",
+  "slug": "service-b",
+  "description": "Dynamic service-style project",
+  "runtime": "dynamic",
+  "entry": "src/server.ts",
+  "route": "/app/service-b",
+  "visibility": "unlisted",
+  "tags": [
+    "service"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "ts",
+  "framework": "node",
+  "owner": "local",
+  "createdAt": "2026-03-19T00:10:00.000Z",
+  "updatedAt": "2026-03-19T00:10:00.000Z"
+}
