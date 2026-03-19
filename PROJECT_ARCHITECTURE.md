@@ -1,5 +1,16 @@
 # Project Manager Architecture
 
+Formal development rules now live under `docs/`.
+
+Start with:
+
+- `docs/README.md`
+- `docs/tech-stack.md`
+- `docs/development-architecture.md`
+- `docs/testing-strategy.md`
+- `docs/code-standards.md`
+- `docs/routing-strategy.md`
+
 ## 1. Project Goal
 
 Build a local-first project manager for many small web projects.

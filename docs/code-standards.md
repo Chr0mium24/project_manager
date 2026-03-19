@@ -1,0 +1,136 @@
+# Code Standards
+
+## Rule
+
+Code quality rules are mandatory and enforced by tooling.
+
+## Required standards
+
+### TypeScript
+
+- `strict: true`
+- no implicit any
+- no unchecked JSON use without validation
+- public interfaces must be typed
+- `noUncheckedIndexedAccess: true`
+- `exactOptionalPropertyTypes: true`
+
+### Linting
+
+Use `ESLint` with hard failures for:
+
+- unused variables
+- accidental any
+- shadowed variables
+- unreachable code
+- floating promises
+- inconsistent imports
+- circular dependencies
+- overly complex functions
+- overgrown files
+- overly deep nesting
+- excessive parameter count
+- large public APIs without explicit types
+
+## Enforced structural limits
+
+These limits should be enforced by lint unless there is an approved exception.
+
+Default limits:
+
+- file length: `<= 400` lines
+- function length: `<= 80` lines
+- max nesting depth: `<= 3`
+- cyclomatic complexity: `<= 10`
+- max parameters per function: `<= 4`
+- max statements per function: `<= 20`
+
+Preferred tighter limits for core packages:
+
+- file length: `<= 300` lines
+- function length: `<= 60` lines
+- cyclomatic complexity: `<= 8`
+
+## Required dependency rules
+
+- no circular imports
+- no deep imports into another module's private folders
+- no cross-layer imports that violate architecture direction
+- no default export in shared core packages unless there is a strong reason
+- no wildcard exports for large mixed-responsibility barrels
+
+## Required runtime safety rules
+
+- validate all external input with `zod` or equivalent
+- never trust filesystem content without validation
+- never trust AI output without validation
+- no fire-and-forget promise unless explicitly documented
+- all process execution must capture exit status and stderr
+
+### Formatting
+
+Use `Prettier` as the default formatter.
+
+Formatting is not a style suggestion. It is part of the gate.
+
+### Imports
+
+- prefer explicit imports
+- avoid giant utility barrels
+- avoid deep relative imports across module boundaries
+
+### Files
+
+- one file should have one clear responsibility
+- avoid large grab-bag modules
+- prefer pure functions in core packages
+- split feature files before they become "manager" or "helper" dumping grounds
+
+### Functions
+
+- keep functions shallow
+- keep branch count low
+- prefer extracted private helpers over deeply nested logic
+- prefer data transformation pipelines over imperative branching when readable
+- if a function needs comments to explain every branch, it is too large
+
+### Comments
+
+- comments should explain non-obvious intent
+- do not add commentary that restates syntax
+
+## Hard failures
+
+The following should fail CI:
+
+- lint errors
+- typecheck errors
+- formatting drift
+- missing contract validation on external input
+- architecture-boundary violations
+- circular dependencies
+- file or function complexity above approved limits
+
+## Suggested tooling
+
+- `eslint`
+- `@typescript-eslint/eslint-plugin`
+- `eslint-plugin-import`
+- `eslint-plugin-promise`
+- `eslint-plugin-boundaries`
+- `eslint-plugin-sonarjs`
+- `prettier`
+- `typescript`
+- `dependency-cruiser`
+- `lint-staged`
+- `husky` only if local hooks remain simple and fast
+
+## Exception policy
+
+If a file or function must exceed limits temporarily:
+
+1. document why
+2. add a follow-up task
+3. keep the exception narrow
+
+Do not normalize complexity drift.

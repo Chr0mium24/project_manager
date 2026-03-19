@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "codex-create-response.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "slug",
+    "runtime",
+    "method"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["created", "failed"]
+    },
+    "slug": {
+      "type": "string"
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["static", "dynamic"]
+    },
+    "method": {
+      "type": "string"
+    }
+  }
+}

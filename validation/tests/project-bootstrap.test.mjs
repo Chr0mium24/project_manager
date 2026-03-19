@@ -15,6 +15,7 @@ test("createProject creates a static project and updates index", () => {
   const sourceRepo = path.resolve("content-repo");
   const repo = path.join(tempRoot, "content-repo");
   copyDir(sourceRepo, repo);
+  const baseline = validateContentRepo(repo).projects;
 
   const result = createProject(repo, {
     slug: "demo-static",
@@ -28,7 +29,7 @@ test("createProject creates a static project and updates index", () => {
   assert.equal(fs.existsSync(path.join(repo, "projects/demo-static/src/index.html")), true);
 
   const validation = validateContentRepo(repo);
-  assert.equal(validation.projects, 3);
+  assert.equal(validation.projects, baseline + 1);
 });
 
 test("createProject creates a dynamic project and updates index", () => {
@@ -36,6 +37,7 @@ test("createProject creates a dynamic project and updates index", () => {
   const sourceRepo = path.resolve("content-repo");
   const repo = path.join(tempRoot, "content-repo");
   copyDir(sourceRepo, repo);
+  const baseline = validateContentRepo(repo).projects;
 
   const result = createProject(repo, {
     slug: "demo-service",
@@ -50,5 +52,5 @@ test("createProject creates a dynamic project and updates index", () => {
   assert.equal(fs.existsSync(path.join(repo, "projects/demo-service/src/server.ts")), true);
 
   const validation = validateContentRepo(repo);
-  assert.equal(validation.projects, 3);
+  assert.equal(validation.projects, baseline + 1);
 });
