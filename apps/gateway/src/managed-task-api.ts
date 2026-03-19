@@ -1,4 +1,9 @@
-import { startManagedTask, type ManagedTaskManifest } from "@project-manager/project-core";
+import {
+  startManagedTask,
+  summarizeManagedTask,
+  type ManagedTaskManifest,
+  type ManagedTaskSummary
+} from "@project-manager/project-core";
 import { type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
 
@@ -10,6 +15,10 @@ interface StartManagedTaskBody {
 
 interface ManagedTaskPayload {
   task: ManagedTaskManifest;
+}
+
+interface ManagedTaskSummaryPayload {
+  summary: ManagedTaskSummary;
 }
 
 const startManagedTaskBodySchema = z.object({
@@ -73,12 +82,51 @@ function sendManagedTaskStart(
   }
 }
 
+function sendManagedTaskSummary(
+  rootDir: string,
+  slug: string,
+  taskSlug: string,
+  reply: FastifyReply
+): boolean {
+  try {
+    const summary = summarizeManagedTask(rootDir, {
+      projectSlug: slug,
+      taskSlug
+    });
+    const payload: ManagedTaskSummaryPayload = { summary };
+    void reply.code(200).send(payload);
+    return true;
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+
+    if (error.message.startsWith("managed task manifest not found:")) {
+      void reply.code(404).send({
+        error: "managed-task-not-found",
+        slug,
+        taskSlug
+      });
+      return true;
+    }
+
+    throw error;
+  }
+}
+
 export function sendManagedTaskApi(
   rootDir: string,
   pathname: string,
   request: FastifyRequest<{ Body: StartManagedTaskBody }>,
   reply: FastifyReply
 ): boolean {
+  const summaryMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)\/summarize$/);
+  if (summaryMatch && request.method === "POST") {
+    const slug = summaryMatch[1] ?? "";
+    const taskSlug = summaryMatch[2] ?? "";
+    return sendManagedTaskSummary(rootDir, slug, taskSlug, reply);
+  }
+
   const taskMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/tasks$/);
   if (!taskMatch || request.method !== "POST") {
     return false;

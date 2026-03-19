@@ -67,3 +67,53 @@ void test("createGatewayApp rejects duplicate managed tasks without force", asyn
 
   await app.close();
 });
+
+void test("createGatewayApp summarizes a managed task workspace", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const startResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks",
+    payload: {
+      taskSlug: "fix-copy"
+    }
+  });
+  assert.equal(startResponse.statusCode, 201);
+
+  fs.writeFileSync(
+    path.join(
+      rootDir,
+      "storage",
+      "managed-tasks",
+      "landing-a",
+      "fix-copy",
+      "workspace",
+      "landing-a",
+      "src",
+      "index.html"
+    ),
+    "<!doctype html>\n<html><body><h1>Landing A Updated</h1></body></html>\n",
+    "utf8"
+  );
+
+  const summaryResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks/fix-copy/summarize"
+  });
+  const payload: {
+    summary: { changedFiles: number; changes: Array<{ path: string; kind: string }> };
+  } = summaryResponse.json();
+
+  assert.equal(summaryResponse.statusCode, 200);
+  assert.equal(payload.summary.changedFiles, 1);
+  assert.deepEqual(payload.summary.changes, [
+    {
+      path: "src/index.html",
+      kind: "modified"
+    }
+  ]);
+
+  await app.close();
+});

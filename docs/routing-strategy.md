@@ -42,6 +42,7 @@ Important:
 - `/api/projects/:slug/file?path=...`
 - `PUT /api/projects/:slug/file`
 - `POST /api/projects/:slug/tasks`
+- `POST /api/projects/:slug/tasks/:taskSlug/summarize`
 - `/api/ai/tasks`
 - `/api/publish`
 
