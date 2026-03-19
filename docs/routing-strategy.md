@@ -49,6 +49,13 @@ Important:
 - `/app/:slug`
 - `/api/runtime/:slug/*` if the project exposes API-style handlers
 
+V1 runtime handler contract:
+
+- first-party dynamic project only
+- entry module exports `handler(context)`
+- `context` contains `slug`, `pathname`, `runtimePath`, `method`, and `route`
+- handler response is returned as JSON through the main server
+
 ## Final public route contract
 
 This is the final V1 route contract.

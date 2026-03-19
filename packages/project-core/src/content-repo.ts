@@ -55,10 +55,12 @@ function renderStaticTemplate(name: string): string {
 }
 
 function renderDynamicTemplate(slug: string): string {
-  return `export function handler() {
+  return `export function handler(context) {
   return {
     ok: true,
-    service: "${slug}"
+    service: "${slug}",
+    runtimePath: context.runtimePath,
+    method: context.method
   };
 }
 `;

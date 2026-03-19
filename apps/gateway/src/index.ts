@@ -9,6 +9,7 @@ import {
 } from "@project-manager/project-core";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
+import { executeDynamicRuntimeRequest } from "./runtime-api.ts";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 
@@ -26,7 +27,7 @@ export interface RouteRegistry {
 }
 
 export interface GatewayResolution {
-  kind: "healthz" | "platform-ui" | "control-api" | "managed-route" | "not-found";
+  kind: "healthz" | "platform-ui" | "control-api" | "runtime-api" | "managed-route" | "not-found";
   pathname: string;
   routePrefix: string | null;
   targetKind: RouteTargetKind | null;
@@ -77,6 +78,23 @@ function findBestManagedRoute(pathname: string, routes: RouteRecord[]): RouteRec
   return matches[0] ?? null;
 }
 
+function isPlatformUiPath(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname === "/projects" ||
+    pathname.startsWith("/projects/") ||
+    pathname.startsWith("/assets/")
+  );
+}
+
+function isControlApiPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/api/projects") ||
+    pathname.startsWith("/api/ai") ||
+    pathname.startsWith("/api/publish")
+  );
+}
+
 export function resolveGatewayRequest(rootDir: string, pathname: string): GatewayResolution {
   if (pathname === "/healthz") {
     return {
@@ -88,12 +106,7 @@ export function resolveGatewayRequest(rootDir: string, pathname: string): Gatewa
     };
   }
 
-  if (
-    pathname === "/" ||
-    pathname === "/projects" ||
-    pathname.startsWith("/projects/") ||
-    pathname.startsWith("/assets/")
-  ) {
+  if (isPlatformUiPath(pathname)) {
     return {
       kind: "platform-ui",
       pathname,
@@ -103,13 +116,19 @@ export function resolveGatewayRequest(rootDir: string, pathname: string): Gatewa
     };
   }
 
-  if (
-    pathname.startsWith("/api/projects") ||
-    pathname.startsWith("/api/ai") ||
-    pathname.startsWith("/api/publish")
-  ) {
+  if (isControlApiPath(pathname)) {
     return {
       kind: "control-api",
+      pathname,
+      routePrefix: null,
+      targetKind: null,
+      targetRef: null
+    };
+  }
+
+  if (pathname.startsWith("/api/runtime/")) {
+    return {
+      kind: "runtime-api",
       pathname,
       routePrefix: null,
       targetKind: null,
@@ -242,12 +261,34 @@ function sendControlApi(rootDir: string, pathname: string, reply: FastifyReply):
   return true;
 }
 
-function sendResolution(rootDir: string, request: FastifyRequest, reply: FastifyReply): void {
+async function sendRuntimeApi(
+  rootDir: string,
+  pathname: string,
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<boolean> {
+  if (!pathname.startsWith("/api/runtime/")) {
+    return false;
+  }
+
+  const response = await executeDynamicRuntimeRequest(rootDir, pathname, request.method);
+  if (response === null) {
+    return false;
+  }
+
+  void reply.code(response.statusCode).send(response.body);
+  return true;
+}
+
+async function sendResolution(rootDir: string, request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const pathname = resolveRequestPath(request);
   if (sendStaticProject(rootDir, pathname, reply)) {
     return;
   }
   if (sendDynamicProject(rootDir, pathname, reply)) {
+    return;
+  }
+  if (await sendRuntimeApi(rootDir, pathname, request, reply)) {
     return;
   }
   if (sendControlApi(rootDir, pathname, reply)) {
@@ -270,51 +311,51 @@ export function createGatewayApp(rootDir: string): FastifyInstance {
   const app = Fastify({ logger: false });
 
   app.get("/healthz", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/projects/*", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/assets/*", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/api/projects", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/api/projects/*", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/api/ai/*", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/api/publish/*", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/p/*", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/app/*", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.get("/api/runtime/*", (request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   app.setNotFoundHandler((request, reply) => {
-    sendResolution(rootDir, request, reply);
+    return sendResolution(rootDir, request, reply);
   });
 
   return app;

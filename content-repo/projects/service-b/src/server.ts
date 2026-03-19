@@ -1,6 +1,8 @@
-export function handler() {
+export function handler(context) {
   return {
     ok: true,
-    service: "service-b"
+    service: "service-b",
+    runtimePath: context.runtimePath,
+    method: context.method
   };
 }
