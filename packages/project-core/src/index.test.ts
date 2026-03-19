@@ -9,6 +9,7 @@ import {
   listProjects,
   readProject,
   readProjectEntry,
+  startManagedTask,
   validateContentRepo
 } from "./index.ts";
 
@@ -196,4 +197,86 @@ test("createProject creates a dynamic project and force recreates the directory"
   );
   assert.match(readProjectEntry(rootDir, "demo-service") ?? "", /demo-service/);
   assert.deepEqual(validateContentRepo(path.join(rootDir, "content-repo")), { projects: 1 });
+});
+
+test("startManagedTask creates an isolated formal workspace and manifest", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const result = startManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "fix-copy",
+    mode: "workspace"
+  });
+
+  assert.equal(result.manifest.projectSlug, "landing-a");
+  assert.equal(result.manifest.taskSlug, "fix-copy");
+  assert.equal(result.manifest.targetCount, 1);
+  assert.equal(result.manifest.commitPolicy, "final-result-only");
+  assert.equal(result.manifest.prPolicy, "forbidden");
+  assert.equal(result.manifest.branchName, null);
+  assert.equal(fs.existsSync(result.manifestPath), true);
+  assert.equal(
+    fs.existsSync(path.join(rootDir, result.manifest.workspaceProjectPath, "project.json")),
+    true
+  );
+});
+
+test("startManagedTask produces branch metadata for git-branch mode", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+  createProject(rootDir, {
+    slug: "service-b",
+    name: "Service B",
+    runtime: "dynamic"
+  });
+
+  const result = startManagedTask(rootDir, {
+    projectSlug: "service-b",
+    taskSlug: "fix-handler",
+    mode: "git-branch"
+  });
+
+  assert.equal(result.manifest.branchName, "task/service-b--fix-handler");
+  assert.equal(result.manifest.prPolicy, "forbidden");
+});
+
+test("startManagedTask rejects unknown managed projects", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  assert.throws(
+    () =>
+      startManagedTask(rootDir, {
+        projectSlug: "missing-project",
+        taskSlug: "fix-copy",
+        mode: "workspace"
+      }),
+    /managed project not found/
+  );
+});
+
+test("startManagedTask with force recreates a clean task directory", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const started = startManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "redo-copy",
+    mode: "workspace"
+  });
+
+  fs.writeFileSync(path.join(started.taskRoot, "summary.json"), "{\"stale\":true}\n", "utf8");
+  fs.writeFileSync(path.join(started.taskRoot, "validation.json"), "{\"stale\":true}\n", "utf8");
+
+  const restarted = startManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "redo-copy",
+    mode: "workspace",
+    force: true
+  });
+
+  assert.equal(fs.existsSync(path.join(restarted.taskRoot, "summary.json")), false);
+  assert.equal(fs.existsSync(path.join(restarted.taskRoot, "validation.json")), false);
+  assert.equal(fs.existsSync(restarted.manifestPath), true);
 });

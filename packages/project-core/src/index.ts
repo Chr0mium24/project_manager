@@ -10,6 +10,15 @@ import {
 } from "./schemas.ts";
 
 export { validateContentRepo, type ContentRepoValidationSummary } from "./content-repo-validation.ts";
+export {
+  getManagedTaskPaths,
+  getManagedTasksRoot,
+  startManagedTask,
+  type ManagedTaskManifest,
+  type ManagedTaskPaths,
+  type StartManagedTaskOptions,
+  type StartManagedTaskResult
+} from "./managed-task.ts";
 export type { ManagedProject, ProjectIndexEntry, ProjectsIndex };
 
 export interface CreateProjectOptions {

@@ -34,6 +34,12 @@ The goal is:
 7. create one result commit if the managed project uses Git-backed task branches
 8. stop without creating a PR
 
+Formal task bootstrap helper:
+
+```bash
+node --import tsx scripts/start-managed-task.ts --project landing-a --task fix-copy --mode workspace
+```
+
 Validation prototype helper:
 
 ```bash
@@ -75,6 +81,11 @@ Instead:
 - apply the validated workspace back to the target project through an explicit step
 
 In the validation prototype, `apply-managed-task` also re-runs managed-task validation internally.
+
+Formal V1 status:
+
+- formal `start-managed-task` now lives in `packages/project-core`
+- summary, validate, and apply remain in `validation/` until their formal replacements land
 
 ## Branch rule
 
