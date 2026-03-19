@@ -52,6 +52,9 @@ Important:
 - `GET /api/publish/static`
 - `GET /api/publish/static/:slug`
 - `POST /api/publish/static/:slug`
+- `GET /api/publish/dynamic`
+- `GET /api/publish/dynamic/:slug`
+- `POST /api/publish/dynamic/:slug`
 - `/api/ai/tasks`
 - `/api/publish`
 

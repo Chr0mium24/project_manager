@@ -16,6 +16,17 @@ interface StaticPublishPayload {
   };
 }
 
+interface DynamicPublishPayload {
+  result: {
+    slug: string;
+    runtime: "dynamic";
+    outputDir: string;
+    entryPath: string;
+    route: string;
+    publishedAt: string;
+  };
+}
+
 void test("createGatewayApp publishes a static project", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
@@ -112,6 +123,115 @@ void test("createGatewayApp lists and reads static publish records", async () =>
   assert.equal(listPayload.results[0]?.slug, "landing-a");
   assert.equal(readResponse.statusCode, 200);
   assert.equal(readPayload.result.slug, "landing-a");
+
+  await app.close();
+});
+
+void test("createGatewayApp publishes a dynamic project", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const publishResponse = await app.inject({
+    method: "POST",
+    url: "/api/publish/dynamic/service-b"
+  });
+  const publishPayload: DynamicPublishPayload = publishResponse.json();
+
+  assert.equal(publishResponse.statusCode, 200);
+  assert.deepEqual(publishPayload, {
+    result: {
+      slug: "service-b",
+      runtime: "dynamic",
+      outputDir: "storage/dynamic-builds/service-b",
+      entryPath: "project/src/server.ts",
+      route: "/app/service-b",
+      publishedAt: publishPayload.result.publishedAt
+    }
+  });
+  assert.match(
+    fs.readFileSync(path.join(rootDir, "storage", "dynamic-builds", "service-b", "project", "src", "server.ts"), "utf8"),
+    /service-b/
+  );
+
+  await app.close();
+});
+
+void test("createGatewayApp lists and reads dynamic publish records", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const emptyListResponse = await app.inject({
+    method: "GET",
+    url: "/api/publish/dynamic"
+  });
+  const missingRecordResponse = await app.inject({
+    method: "GET",
+    url: "/api/publish/dynamic/service-b"
+  });
+
+  assert.equal(emptyListResponse.statusCode, 200);
+  assert.deepEqual(emptyListResponse.json(), { results: [] });
+  assert.equal(missingRecordResponse.statusCode, 404);
+  assert.deepEqual(missingRecordResponse.json(), {
+    error: "dynamic-publish-not-found",
+    slug: "service-b"
+  });
+
+  await app.close();
+});
+
+void test("createGatewayApp reads dynamic publish records after publish", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  await app.inject({
+    method: "POST",
+    url: "/api/publish/dynamic/service-b"
+  });
+
+  const listResponse = await app.inject({
+    method: "GET",
+    url: "/api/publish/dynamic"
+  });
+  const readResponse = await app.inject({
+    method: "GET",
+    url: "/api/publish/dynamic/service-b"
+  });
+  const listPayload: {
+    results: Array<{ slug: string; runtime: string; outputDir: string; route: string }>;
+  } = listResponse.json();
+  const readPayload: {
+    result: { slug: string; runtime: string; outputDir: string; route: string };
+  } = readResponse.json();
+
+  assert.equal(listResponse.statusCode, 200);
+  assert.equal(listPayload.results.length, 1);
+  assert.equal(listPayload.results[0]?.slug, "service-b");
+  assert.equal(readResponse.statusCode, 200);
+  assert.equal(readPayload.result.slug, "service-b");
+  assert.equal(readPayload.result.route, "/app/service-b");
+
+  await app.close();
+});
+
+void test("createGatewayApp rejects publishing a static project as dynamic", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const invalidResponse = await app.inject({
+    method: "POST",
+    url: "/api/publish/dynamic/landing-a"
+  });
+  assert.equal(invalidResponse.statusCode, 400);
+  assert.deepEqual(invalidResponse.json(), {
+    error: "invalid-dynamic-publish-target",
+    slug: "landing-a",
+    message: "project is not dynamic: landing-a"
+  });
 
   await app.close();
 });

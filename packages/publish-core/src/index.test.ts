@@ -3,10 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {
+  listDynamicPublishRecords,
   listStaticPublishRecords,
+  publishDynamicProject,
   publishStaticProject,
-  readStaticPublishRecord,
-  readPublishedStaticEntry
+  readDynamicPublishRecord,
+  readPublishedStaticEntry,
+  readStaticPublishRecord
 } from "./index.ts";
 import {
   createTempRoot,
@@ -53,4 +56,37 @@ void test("publish records can be listed and read by slug", () => {
   assert.notEqual(result, null);
   assert.deepEqual(readStaticPublishRecord(rootDir, "landing-a"), result);
   assert.deepEqual(listStaticPublishRecords(rootDir), [result]);
+});
+
+void test("publishDynamicProject writes a dynamic build artifact", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const result = publishDynamicProject(rootDir, "service-b");
+
+  assert.notEqual(result, null);
+  assert.equal(result.slug, "service-b");
+  assert.equal(result.runtime, "dynamic");
+  assert.equal(result.route, "/app/service-b");
+  assert.equal(result.outputDir, "storage/dynamic-builds/service-b");
+  assert.match(result.entryPath, /project\/src\/server\.ts$/);
+  assert.match(
+    fs.readFileSync(path.join(rootDir, "storage", "dynamic-builds", "service-b", "project", "src", "server.ts"), "utf8"),
+    /handler/
+  );
+});
+
+void test("dynamic publish records can be listed and read by slug", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  assert.equal(readDynamicPublishRecord(rootDir, "service-b"), null);
+  assert.deepEqual(listDynamicPublishRecords(rootDir), []);
+
+  const result = publishDynamicProject(rootDir, "service-b");
+
+  assert.notEqual(result, null);
+  assert.deepEqual(readDynamicPublishRecord(rootDir, "service-b"), result);
+  assert.deepEqual(listDynamicPublishRecords(rootDir), [result]);
+  assert.throws(() => publishDynamicProject(rootDir, "landing-a"), /project is not dynamic/);
 });
