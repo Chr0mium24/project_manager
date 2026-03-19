@@ -13,6 +13,7 @@ import {
   executeDynamicRuntimeRequest,
   normalizeRuntimeQuery
 } from "./runtime-api.ts";
+import { sendProjectFilesApi } from "./project-files-api.ts";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 
@@ -82,20 +83,11 @@ function findBestManagedRoute(pathname: string, routes: RouteRecord[]): RouteRec
 }
 
 function isPlatformUiPath(pathname: string): boolean {
-  return (
-    pathname === "/" ||
-    pathname === "/projects" ||
-    pathname.startsWith("/projects/") ||
-    pathname.startsWith("/assets/")
-  );
+  return pathname === "/" || pathname === "/projects" || pathname.startsWith("/projects/") || pathname.startsWith("/assets/");
 }
 
 function isControlApiPath(pathname: string): boolean {
-  return (
-    pathname.startsWith("/api/projects") ||
-    pathname.startsWith("/api/ai") ||
-    pathname.startsWith("/api/publish")
-  );
+  return pathname.startsWith("/api/projects") || pathname.startsWith("/api/ai") || pathname.startsWith("/api/publish");
 }
 
 export function resolveGatewayRequest(rootDir: string, pathname: string): GatewayResolution {
@@ -241,9 +233,18 @@ function sendProjectApi(rootDir: string, pathname: string, reply: FastifyReply):
   return true;
 }
 
-function sendControlApi(rootDir: string, pathname: string, reply: FastifyReply): boolean {
+function sendControlApi(
+  rootDir: string,
+  pathname: string,
+  request: FastifyRequest,
+  reply: FastifyReply
+): boolean {
   if (!pathname.startsWith("/api/")) {
     return false;
+  }
+
+  if (sendProjectFilesApi(rootDir, pathname, request, reply)) {
+    return true;
   }
 
   if (sendProjectApi(rootDir, pathname, reply)) {
@@ -298,7 +299,7 @@ async function sendResolution(rootDir: string, request: FastifyRequest, reply: F
   if (await sendRuntimeApi(rootDir, pathname, request, reply)) {
     return;
   }
-  if (sendControlApi(rootDir, pathname, reply)) {
+  if (sendControlApi(rootDir, pathname, request, reply)) {
     return;
   }
 

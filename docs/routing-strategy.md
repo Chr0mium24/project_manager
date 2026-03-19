@@ -37,6 +37,8 @@ Important:
 
 - `/api/projects`
 - `/api/projects/:slug`
+- `/api/projects/:slug/files`
+- `/api/projects/:slug/file?path=...`
 - `/api/ai/tasks`
 - `/api/publish`
 

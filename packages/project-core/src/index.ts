@@ -11,6 +11,11 @@ export {
   readProjectsIndex,
   type CreateProjectOptions
 } from "./content-repo.ts";
+export {
+  listProjectFiles,
+  readProjectFile,
+  type ProjectFileRecord
+} from "./project-files.ts";
 export { validateContentRepo, type ContentRepoValidationSummary } from "./content-repo-validation.ts";
 export {
   getManagedTaskPaths,
