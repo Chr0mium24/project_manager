@@ -1,10 +1,21 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getProjectRoot, readProject } from "./content-repo.ts";
+import {
+  getProjectJsonPath,
+  getProjectRoot,
+  readProject
+} from "./content-repo.ts";
+import { projectJsonSchema } from "./schemas.ts";
 
 export interface ProjectFileRecord {
   path: string;
   size: number;
+}
+
+export interface ProjectFileWriteResult {
+  path: string;
+  size: number;
+  updatedAt: string;
 }
 
 function normalizeProjectFilePath(filePath: string): string {
@@ -76,4 +87,53 @@ export function readProjectFile(rootDir: string, slug: string, relativePath: str
   }
 
   return fs.readFileSync(absolutePath, "utf8");
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function updateProjectTimestamp(rootDir: string, slug: string, updatedAt: string): void {
+  const project = readProject(rootDir, slug);
+  if (project === null) {
+    throw new Error(`project not found: ${slug}`);
+  }
+
+  const nextProject = projectJsonSchema.parse({
+    ...project,
+    updatedAt
+  });
+
+  fs.writeFileSync(
+    getProjectJsonPath(rootDir, slug),
+    `${JSON.stringify(nextProject, null, 2)}\n`,
+    "utf8"
+  );
+}
+
+export function writeProjectFile(
+  rootDir: string,
+  slug: string,
+  relativePath: string,
+  content: string
+): ProjectFileWriteResult | null {
+  const project = readProject(rootDir, slug);
+  if (project === null) {
+    return null;
+  }
+
+  const safeRelativePath = assertSafeRelativePath(relativePath);
+  const projectRoot = getProjectRoot(rootDir, slug);
+  const absolutePath = path.join(projectRoot, safeRelativePath);
+  fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+  fs.writeFileSync(absolutePath, content, "utf8");
+
+  const updatedAt = nowIso();
+  updateProjectTimestamp(rootDir, slug, updatedAt);
+
+  return {
+    path: safeRelativePath,
+    size: Buffer.byteLength(content, "utf8"),
+    updatedAt
+  };
 }

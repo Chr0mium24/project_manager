@@ -15,6 +15,12 @@ interface FileContentPayload {
   content: string;
 }
 
+interface FileWritePayload {
+  path: string;
+  size: number;
+  updatedAt: string;
+}
+
 void test("createGatewayApp serves project file listings and file content", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
@@ -47,6 +53,46 @@ void test("createGatewayApp serves project file listings and file content", asyn
   assert.match(filePayload.content, /Landing A/);
   assert.equal(missingPathResponse.statusCode, 400);
   assert.equal(invalidPathResponse.statusCode, 400);
+
+  await app.close();
+});
+
+void test("createGatewayApp writes project file content", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const writeResponse = await app.inject({
+    method: "PUT",
+    url: "/api/projects/landing-a/file",
+    payload: {
+      path: "src/app.js",
+      content: 'console.log("saved");\n'
+    }
+  });
+  const readBackResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/file?path=src/app.js"
+  });
+  const invalidWriteResponse = await app.inject({
+    method: "PUT",
+    url: "/api/projects/landing-a/file",
+    payload: {
+      path: "../outside.txt",
+      content: "bad"
+    }
+  });
+
+  const writePayload: FileWritePayload = writeResponse.json();
+  const readBackPayload: FileContentPayload = readBackResponse.json();
+
+  assert.equal(writeResponse.statusCode, 200);
+  assert.equal(writePayload.path, "src/app.js");
+  assert.equal(writePayload.size, Buffer.byteLength('console.log("saved");\n', "utf8"));
+  assert.match(writePayload.updatedAt, /\d{4}-\d{2}-\d{2}T/);
+  assert.equal(readBackResponse.statusCode, 200);
+  assert.equal(readBackPayload.content, 'console.log("saved");\n');
+  assert.equal(invalidWriteResponse.statusCode, 400);
 
   await app.close();
 });

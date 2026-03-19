@@ -7,6 +7,7 @@ import {
   listProjectFiles,
   readProjectFile
 } from "./index.ts";
+import { writeProjectFile } from "./index.ts";
 import { writeContentRepo } from "./test-fixtures.ts";
 
 void test("listProjectFiles returns sorted relative file paths for a managed project", () => {
@@ -47,5 +48,25 @@ void test("readProjectFile returns file content and rejects unsafe paths", () =>
   assert.throws(
     () => readProjectFile(rootDir, "landing-a", "../outside.txt"),
     /unsafe project file path/
+  );
+});
+
+void test("writeProjectFile writes content and updates project metadata", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "project-files-"));
+  writeContentRepo(rootDir);
+
+  const beforeProjectJson = fs.readFileSync(
+    path.join(rootDir, "content-repo", "projects", "landing-a", "project.json"),
+    "utf8"
+  );
+
+  const result = writeProjectFile(rootDir, "landing-a", "src/app.js", 'console.log("saved");\n');
+
+  assert.equal(readProjectFile(rootDir, "landing-a", "src/app.js"), 'console.log("saved");\n');
+  assert.equal(result.path, "src/app.js");
+  assert.equal(result.size, Buffer.byteLength('console.log("saved");\n', "utf8"));
+  assert.notEqual(
+    fs.readFileSync(path.join(rootDir, "content-repo", "projects", "landing-a", "project.json"), "utf8"),
+    beforeProjectJson
   );
 });

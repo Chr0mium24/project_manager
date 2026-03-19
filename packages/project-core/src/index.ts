@@ -14,8 +14,10 @@ export {
 export {
   listProjectFiles,
   readProjectFile,
+  writeProjectFile,
   type ProjectFileRecord
 } from "./project-files.ts";
+export type { ProjectFileWriteResult } from "./project-files.ts";
 export { validateContentRepo, type ContentRepoValidationSummary } from "./content-repo-validation.ts";
 export {
   getManagedTaskPaths,

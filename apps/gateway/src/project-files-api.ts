@@ -1,13 +1,25 @@
 import {
   listProjectFiles,
   readProject,
-  readProjectFile
+  readProjectFile,
+  writeProjectFile
 } from "@project-manager/project-core";
 import { type FastifyReply, type FastifyRequest } from "fastify";
+import { z } from "zod";
 
 interface FileQuery {
   path?: string;
 }
+
+interface FileWriteBody {
+  path?: string;
+  content?: string;
+}
+
+const fileWriteBodySchema = z.object({
+  path: z.string().min(1),
+  content: z.string()
+}).strict();
 
 function sendProjectFiles(rootDir: string, slug: string, reply: FastifyReply): boolean {
   const project = readProject(rootDir, slug);
@@ -81,14 +93,60 @@ function sendProjectFileContent(
   }
 }
 
+function sendProjectFileWrite(
+  rootDir: string,
+  slug: string,
+  request: FastifyRequest<{ Body: FileWriteBody }>,
+  reply: FastifyReply
+): boolean {
+  const parsedBody = fileWriteBodySchema.safeParse(request.body);
+  if (!parsedBody.success) {
+    void reply.code(400).send({
+      error: "invalid-project-file-write-body",
+      slug
+    });
+    return true;
+  }
+
+  try {
+    const writeResult = writeProjectFile(rootDir, slug, parsedBody.data.path, parsedBody.data.content);
+    if (writeResult === null) {
+      void reply.code(404).send({
+        error: "project-not-found",
+        slug
+      });
+      return true;
+    }
+
+    void reply.code(200).send({
+      slug,
+      path: writeResult.path,
+      size: writeResult.size,
+      updatedAt: writeResult.updatedAt
+    });
+    return true;
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+
+    void reply.code(400).send({
+      error: "invalid-project-file-path",
+      slug,
+      message: error.message
+    });
+    return true;
+  }
+}
+
 export function sendProjectFilesApi(
   rootDir: string,
   pathname: string,
-  request: FastifyRequest<{ Querystring: FileQuery }>,
+  request: FastifyRequest<{ Querystring: FileQuery; Body: FileWriteBody }>,
   reply: FastifyReply
 ): boolean {
   const filesMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/files$/);
-  if (filesMatch) {
+  if (filesMatch && request.method === "GET") {
     const slug = filesMatch[1] ?? "";
     return sendProjectFiles(rootDir, slug, reply);
   }
@@ -99,5 +157,13 @@ export function sendProjectFilesApi(
   }
 
   const slug = fileMatch[1] ?? "";
-  return sendProjectFileContent(rootDir, slug, request, reply);
+  if (request.method === "GET") {
+    return sendProjectFileContent(rootDir, slug, request, reply);
+  }
+
+  if (request.method === "PUT") {
+    return sendProjectFileWrite(rootDir, slug, request, reply);
+  }
+
+  return false;
 }

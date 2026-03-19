@@ -342,6 +342,10 @@ export function createGatewayApp(rootDir: string): FastifyInstance {
     return sendResolution(rootDir, request, reply);
   });
 
+  app.put("/api/projects/*", (request, reply) => {
+    return sendResolution(rootDir, request, reply);
+  });
+
   app.get("/api/ai/*", (request, reply) => {
     return sendResolution(rootDir, request, reply);
   });
