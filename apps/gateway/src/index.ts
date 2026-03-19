@@ -2,12 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
-import {
-  readProject,
-  readProjectEntry
-} from "@project-manager/project-core";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
-import { readPublishedStaticEntry } from "@project-manager/publish-core";
 import { z } from "zod";
 import {
   executeDynamicRuntimeRequest,
@@ -16,6 +11,11 @@ import {
 import { sendManagedTaskApi } from "./managed-task-api.ts";
 import { sendProjectApi } from "./project-api.ts";
 import { sendProjectFilesApi } from "./project-files-api.ts";
+import { sendProjectVersionsApi } from "./project-versions-api.ts";
+import {
+  sendDynamicProject,
+  sendStaticProject
+} from "./project-runtime-routes.ts";
 import {
   sendPublishApi,
   sendPublishMutationApi
@@ -161,57 +161,6 @@ function resolveRequestPath(request: FastifyRequest): string {
   return request.url.split("?")[0] ?? "/";
 }
 
-function sendStaticProject(rootDir: string, pathname: string, reply: FastifyReply): boolean {
-  const staticProjectMatch = pathname.match(/^\/p\/([a-z0-9-]+)(?:\/.*)?$/);
-  if (!staticProjectMatch) {
-    return false;
-  }
-
-  const slug = staticProjectMatch[1] ?? "";
-  const project = readProject(rootDir, slug);
-  const entryContent = readPublishedStaticEntry(rootDir, slug) ?? readProjectEntry(rootDir, slug);
-
-  if (project === null || project.runtime !== "static" || entryContent === null) {
-    void reply.code(404).send({
-      error: "static-project-not-found",
-      slug
-    });
-    return true;
-  }
-
-  void reply
-    .code(200)
-    .header("content-type", "text/html; charset=utf-8")
-    .send(entryContent);
-  return true;
-}
-
-function sendDynamicProject(rootDir: string, pathname: string, reply: FastifyReply): boolean {
-  const dynamicProjectMatch = pathname.match(/^\/app\/([a-z0-9-]+)(?:\/.*)?$/);
-  if (!dynamicProjectMatch) {
-    return false;
-  }
-
-  const slug = dynamicProjectMatch[1] ?? "";
-  const project = readProject(rootDir, slug);
-  if (project === null || project.runtime !== "dynamic") {
-    void reply.code(404).send({
-      error: "dynamic-project-not-found",
-      slug
-    });
-    return true;
-  }
-
-  void reply.code(200).send({
-    slug: project.slug,
-    runtime: project.runtime,
-    route: project.route,
-    entry: project.entry,
-    framework: project.framework
-  });
-  return true;
-}
-
 function sendControlApi(
   rootDir: string,
   pathname: string,
@@ -226,15 +175,15 @@ function sendControlApi(
     return true;
   }
 
+  if (sendProjectVersionsApi(rootDir, pathname, request, reply)) {
+    return true;
+  }
+
   if (sendManagedTaskApi(rootDir, pathname, request, reply)) {
     return true;
   }
 
-  if (request.method === "GET" && sendPublishApi(rootDir, pathname, reply)) {
-    return true;
-  }
-
-  if (request.method === "POST" && sendPublishMutationApi(rootDir, pathname, reply)) {
+  if (sendPublishRoutes(rootDir, pathname, request.method, reply)) {
     return true;
   }
 
@@ -254,6 +203,23 @@ function sendControlApi(
     routeCount: registry.routes.length
   });
   return true;
+}
+
+function sendPublishRoutes(
+  rootDir: string,
+  pathname: string,
+  method: string,
+  reply: FastifyReply
+): boolean {
+  if (method === "GET") {
+    return sendPublishApi(rootDir, pathname, reply);
+  }
+
+  if (method === "POST") {
+    return sendPublishMutationApi(rootDir, pathname, reply);
+  }
+
+  return false;
 }
 
 async function sendRuntimeApi(
@@ -330,6 +296,10 @@ export function createGatewayApp(rootDir: string): FastifyInstance {
   });
 
   app.get("/api/projects/*", (request, reply) => {
+    return sendResolution(rootDir, request, reply);
+  });
+
+  app.post("/api/projects/*", (request, reply) => {
     return sendResolution(rootDir, request, reply);
   });
 

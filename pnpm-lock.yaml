@@ -43,6 +43,9 @@ importers:
 
   apps/gateway:
     dependencies:
+      '@project-manager/git-core':
+        specifier: workspace:*
+        version: link:../../packages/git-core
       '@project-manager/project-core':
         specifier: workspace:*
         version: link:../../packages/project-core
@@ -64,7 +67,11 @@ importers:
 
   packages/contracts: {}
 
-  packages/git-core: {}
+  packages/git-core:
+    dependencies:
+      '@project-manager/project-core':
+        specifier: workspace:*
+        version: link:../project-core
 
   packages/preview-core: {}
 
