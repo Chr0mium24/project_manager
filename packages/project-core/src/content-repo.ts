@@ -60,7 +60,9 @@ function renderDynamicTemplate(slug: string): string {
     ok: true,
     service: "${slug}",
     runtimePath: context.runtimePath,
-    method: context.method
+    method: context.method,
+    query: context.query,
+    body: context.body
   };
 }
 `;

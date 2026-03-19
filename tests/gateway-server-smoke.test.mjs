@@ -3,25 +3,39 @@ import process from "node:process";
 import test from "node:test";
 import { startGatewayServer } from "../apps/gateway/src/index.ts";
 
-test("gateway server serves healthz, projects, static, and dynamic routes", async (t) => {
-  let running;
+async function fetchJson(url) {
+  return fetch(url).then(async (response) => response.json());
+}
 
+async function fetchText(url) {
+  return fetch(url).then(async (response) => response.text());
+}
+
+async function startGatewayOrSkip(t) {
   try {
-    running = await startGatewayServer(process.cwd(), 0);
+    return await startGatewayServer(process.cwd(), 0);
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "EPERM") {
       t.skip("socket bind unavailable in current sandbox");
-      return;
+      return null;
     }
     throw error;
+  }
+}
+
+test("gateway server serves healthz, projects, static, and dynamic routes", async (t) => {
+  const running = await startGatewayOrSkip(t);
+  if (running === null) {
+    return;
   }
 
   try {
     const baseUrl = `http://${running.host}:${String(running.port)}`;
-    const health = await fetch(`${baseUrl}/healthz`).then(async (response) => response.json());
-    const projects = await fetch(`${baseUrl}/api/projects`).then(async (response) => response.json());
-    const staticHtml = await fetch(`${baseUrl}/p/landing-a`).then(async (response) => response.text());
-    const dynamicInfo = await fetch(`${baseUrl}/app/service-b`).then(async (response) => response.json());
+    const health = await fetchJson(`${baseUrl}/healthz`);
+    const projects = await fetchJson(`${baseUrl}/api/projects`);
+    const staticHtml = await fetchText(`${baseUrl}/p/landing-a`);
+    const dynamicInfo = await fetchJson(`${baseUrl}/app/service-b`);
+    const runtimeResult = await fetchJson(`${baseUrl}/api/runtime/service-b?mode=smoke`);
 
     assert.equal(health.ok, true);
     assert.ok(Array.isArray(projects.projects));
@@ -29,6 +43,8 @@ test("gateway server serves healthz, projects, static, and dynamic routes", asyn
     assert.match(staticHtml, /Landing A/);
     assert.equal(dynamicInfo.slug, "service-b");
     assert.equal(dynamicInfo.runtime, "dynamic");
+    assert.equal(runtimeResult.service, "service-b");
+    assert.equal(runtimeResult.query.mode, "smoke");
   } finally {
     await running.close();
   }

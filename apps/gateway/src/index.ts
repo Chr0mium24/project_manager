@@ -9,7 +9,10 @@ import {
 } from "@project-manager/project-core";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
-import { executeDynamicRuntimeRequest } from "./runtime-api.ts";
+import {
+  executeDynamicRuntimeRequest,
+  normalizeRuntimeQuery
+} from "./runtime-api.ts";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 
@@ -271,7 +274,12 @@ async function sendRuntimeApi(
     return false;
   }
 
-  const response = await executeDynamicRuntimeRequest(rootDir, pathname, request.method);
+  const response = await executeDynamicRuntimeRequest(rootDir, {
+    pathname,
+    method: request.method,
+    query: normalizeRuntimeQuery(request.query),
+    body: request.body
+  });
   if (response === null) {
     return false;
   }
@@ -279,7 +287,6 @@ async function sendRuntimeApi(
   void reply.code(response.statusCode).send(response.body);
   return true;
 }
-
 async function sendResolution(rootDir: string, request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const pathname = resolveRequestPath(request);
   if (sendStaticProject(rootDir, pathname, reply)) {
@@ -350,7 +357,7 @@ export function createGatewayApp(rootDir: string): FastifyInstance {
     return sendResolution(rootDir, request, reply);
   });
 
-  app.get("/api/runtime/*", (request, reply) => {
+  app.all("/api/runtime/*", (request, reply) => {
     return sendResolution(rootDir, request, reply);
   });
 

@@ -11,11 +11,20 @@ export interface DynamicRuntimeRequestContext {
   runtimePath: string;
   method: string;
   route: string;
+  query: Record<string, string | string[]>;
+  body: unknown;
 }
 
 export interface DynamicRuntimeResponse {
   statusCode: number;
   body: unknown;
+}
+
+export interface DynamicRuntimeRequestOptions {
+  pathname: string;
+  method: string;
+  query?: Record<string, string | string[]>;
+  body?: unknown;
 }
 
 type JsonPrimitive = boolean | null | number | string;
@@ -48,6 +57,28 @@ function hasDynamicHandlerExport(moduleValue: unknown): moduleValue is DynamicRu
   return typeof candidate.handler === "function";
 }
 
+export function normalizeRuntimeQuery(queryValue: unknown): Record<string, string | string[]> {
+  if (typeof queryValue !== "object" || queryValue === null) {
+    return {};
+  }
+
+  const normalizedQuery: Record<string, string | string[]> = {};
+
+  for (const [key, value] of Object.entries(queryValue)) {
+    if (typeof value === "string") {
+      normalizedQuery[key] = value;
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      const stringValues = value.filter((item): item is string => typeof item === "string");
+      normalizedQuery[key] = stringValues;
+    }
+  }
+
+  return normalizedQuery;
+}
+
 async function importDynamicRuntimeModule(entryPath: string): Promise<unknown> {
   const modifiedAt = fs.statSync(entryPath).mtimeMs;
   const entryUrl = new URL(pathToFileURL(entryPath).href);
@@ -57,10 +88,9 @@ async function importDynamicRuntimeModule(entryPath: string): Promise<unknown> {
 
 export async function executeDynamicRuntimeRequest(
   rootDir: string,
-  pathname: string,
-  method: string
+  options: DynamicRuntimeRequestOptions
 ): Promise<DynamicRuntimeResponse | null> {
-  const runtimeRequest = parseRuntimeRequest(pathname);
+  const runtimeRequest = parseRuntimeRequest(options.pathname);
   if (runtimeRequest === null) {
     return null;
   }
@@ -91,10 +121,12 @@ export async function executeDynamicRuntimeRequest(
 
   const body = await moduleValue.handler({
     slug: project.slug,
-    pathname,
+    pathname: options.pathname,
     runtimePath: runtimeRequest.runtimePath,
-    method,
-    route: project.route
+    method: options.method,
+    route: project.route,
+    query: options.query ?? {},
+    body: options.body ?? null
   });
 
   return {

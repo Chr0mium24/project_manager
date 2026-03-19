@@ -60,6 +60,7 @@ Product runtime code must not depend on ad hoc experimental directories or one-o
 - Suitable for tools, APIs, and service-backed pages
 - Must be dispatched through the main server, not through ad hoc public ports
 - V1 runtime contract is a local entry module exporting `handler(context)` that returns JSON
+- `context` includes `method`, `runtimePath`, `query`, and `body`
 
 ## Development rule
 

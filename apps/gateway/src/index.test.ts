@@ -139,7 +139,18 @@ function writeContentRepo(rootDir: string): void {
   );
   fs.writeFileSync(
     path.join(contentRepoRoot, "projects", "service-b", "src", "server.ts"),
-    'export function handler() {\n  return { ok: true, service: "service-b" };\n}\n',
+    [
+      "export function handler(context) {",
+      "  return {",
+      '    ok: true,',
+      '    service: "service-b",',
+      '    runtimePath: context.runtimePath,',
+      '    method: context.method,',
+      '    query: context.query,',
+      '    body: context.body',
+      "  };",
+      "}"
+    ].join("\n") + "\n",
     "utf8"
   );
 }
@@ -318,6 +329,36 @@ void test("createGatewayApp serves dynamic project metadata from the formal cont
   assert.deepEqual(wrongRuntime.json(), {
     error: "dynamic-project-not-found",
     slug: "landing-a"
+  });
+
+  await app.close();
+});
+
+void test("createGatewayApp forwards runtime query and body to dynamic handlers", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const runtimeResponse = await app.inject({
+    method: "POST",
+    url: "/api/runtime/service-b/status?mode=test",
+    payload: {
+      count: 1
+    }
+  });
+
+  assert.equal(runtimeResponse.statusCode, 200);
+  assert.deepEqual(runtimeResponse.json(), {
+    ok: true,
+    service: "service-b",
+    runtimePath: "/status",
+    method: "POST",
+    query: {
+      mode: "test"
+    },
+    body: {
+      count: 1
+    }
   });
 
   await app.close();

@@ -75,13 +75,25 @@ void test("executeDynamicRuntimeRequest invokes the dynamic project handler", as
       '    ok: true,',
       '    slug: context.slug,',
       '    runtimePath: context.runtimePath,',
-      '    method: context.method',
+      '    method: context.method,',
+      '    query: context.query,',
+      '    body: context.body',
       "  };",
       "}"
     ].join("\n")
   );
 
-  const response = await executeDynamicRuntimeRequest(rootDir, "/api/runtime/service-b/status", "GET");
+  const response = await executeDynamicRuntimeRequest(rootDir, {
+    pathname: "/api/runtime/service-b/status",
+    method: "POST",
+    query: {
+      mode: "test",
+      tag: ["a", "b"]
+    },
+    body: {
+      count: 1
+    }
+  });
 
   assert.deepEqual(response, {
     statusCode: 200,
@@ -89,7 +101,14 @@ void test("executeDynamicRuntimeRequest invokes the dynamic project handler", as
       ok: true,
       slug: "service-b",
       runtimePath: "/status",
-      method: "GET"
+      method: "POST",
+      query: {
+        mode: "test",
+        tag: ["a", "b"]
+      },
+      body: {
+        count: 1
+      }
     }
   });
 });
@@ -98,8 +117,14 @@ void test("executeDynamicRuntimeRequest rejects missing or invalid handlers", as
   const missingRootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-runtime-"));
   writeDynamicProject(missingRootDir, "service-b", "export const version = 1;");
 
-  const missingHandler = await executeDynamicRuntimeRequest(missingRootDir, "/api/runtime/service-b", "GET");
-  const missingProject = await executeDynamicRuntimeRequest(missingRootDir, "/api/runtime/landing-a", "GET");
+  const missingHandler = await executeDynamicRuntimeRequest(missingRootDir, {
+    pathname: "/api/runtime/service-b",
+    method: "GET"
+  });
+  const missingProject = await executeDynamicRuntimeRequest(missingRootDir, {
+    pathname: "/api/runtime/landing-a",
+    method: "GET"
+  });
 
   assert.deepEqual(missingHandler, {
     statusCode: 500,

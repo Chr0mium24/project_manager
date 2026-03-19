@@ -53,7 +53,7 @@ V1 runtime handler contract:
 
 - first-party dynamic project only
 - entry module exports `handler(context)`
-- `context` contains `slug`, `pathname`, `runtimePath`, `method`, and `route`
+- `context` contains `slug`, `pathname`, `runtimePath`, `method`, `route`, `query`, and `body`
 - handler response is returned as JSON through the main server
 
 ## Final public route contract
