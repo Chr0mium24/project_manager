@@ -117,3 +117,49 @@ void test("createGatewayApp summarizes a managed task workspace", async () => {
 
   await app.close();
 });
+
+void test("createGatewayApp validates a managed task workspace", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const startResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks",
+    payload: {
+      taskSlug: "fix-copy"
+    }
+  });
+  assert.equal(startResponse.statusCode, 201);
+
+  fs.writeFileSync(
+    path.join(
+      rootDir,
+      "storage",
+      "managed-tasks",
+      "landing-a",
+      "fix-copy",
+      "workspace",
+      "landing-a",
+      "src",
+      "index.html"
+    ),
+    "<!doctype html>\n<html><body><h1>Landing A Validated</h1></body></html>\n",
+    "utf8"
+  );
+
+  const validationResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/tasks/fix-copy/validate"
+  });
+  const payload: {
+    validation: { status: "validated"; changedFiles: number; summaryPath: string };
+  } = validationResponse.json();
+
+  assert.equal(validationResponse.statusCode, 200);
+  assert.equal(payload.validation.status, "validated");
+  assert.equal(payload.validation.changedFiles, 1);
+  assert.match(payload.validation.summaryPath, /summary\.json$/);
+
+  await app.close();
+});

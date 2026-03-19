@@ -43,6 +43,7 @@ Important:
 - `PUT /api/projects/:slug/file`
 - `POST /api/projects/:slug/tasks`
 - `POST /api/projects/:slug/tasks/:taskSlug/summarize`
+- `POST /api/projects/:slug/tasks/:taskSlug/validate`
 - `/api/ai/tasks`
 - `/api/publish`
 

@@ -1,8 +1,10 @@
 import {
   startManagedTask,
   summarizeManagedTask,
+  validateManagedTask,
   type ManagedTaskManifest,
-  type ManagedTaskSummary
+  type ManagedTaskSummary,
+  type ManagedTaskValidation
 } from "@project-manager/project-core";
 import { type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -19,6 +21,10 @@ interface ManagedTaskPayload {
 
 interface ManagedTaskSummaryPayload {
   summary: ManagedTaskSummary;
+}
+
+interface ManagedTaskValidationPayload {
+  validation: ManagedTaskValidation;
 }
 
 const startManagedTaskBodySchema = z.object({
@@ -114,19 +120,80 @@ function sendManagedTaskSummary(
   }
 }
 
+function sendManagedTaskValidation(
+  rootDir: string,
+  slug: string,
+  taskSlug: string,
+  reply: FastifyReply
+): boolean {
+  try {
+    const validation = validateManagedTask(rootDir, {
+      projectSlug: slug,
+      taskSlug
+    });
+    const payload: ManagedTaskValidationPayload = { validation };
+    void reply.code(200).send(payload);
+    return true;
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+
+    if (error.message.startsWith("managed task manifest not found:")) {
+      void reply.code(404).send({
+        error: "managed-task-not-found",
+        slug,
+        taskSlug
+      });
+      return true;
+    }
+
+    throw error;
+  }
+}
+
 export function sendManagedTaskApi(
   rootDir: string,
   pathname: string,
   request: FastifyRequest<{ Body: StartManagedTaskBody }>,
   reply: FastifyReply
 ): boolean {
+  if (sendManagedTaskLifecycleApi(rootDir, pathname, request.method, reply)) {
+    return true;
+  }
+
+  return sendManagedTaskCreateApi(rootDir, pathname, request, reply);
+}
+
+function sendManagedTaskLifecycleApi(
+  rootDir: string,
+  pathname: string,
+  method: string,
+  reply: FastifyReply
+): boolean {
+  const validateMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)\/validate$/);
+  if (validateMatch && method === "POST") {
+    const slug = validateMatch[1] ?? "";
+    const taskSlug = validateMatch[2] ?? "";
+    return sendManagedTaskValidation(rootDir, slug, taskSlug, reply);
+  }
+
   const summaryMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)\/summarize$/);
-  if (summaryMatch && request.method === "POST") {
+  if (summaryMatch && method === "POST") {
     const slug = summaryMatch[1] ?? "";
     const taskSlug = summaryMatch[2] ?? "";
     return sendManagedTaskSummary(rootDir, slug, taskSlug, reply);
   }
 
+  return false;
+}
+
+function sendManagedTaskCreateApi(
+  rootDir: string,
+  pathname: string,
+  request: FastifyRequest<{ Body: StartManagedTaskBody }>,
+  reply: FastifyReply
+): boolean {
   const taskMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/tasks$/);
   if (!taskMatch || request.method !== "POST") {
     return false;
