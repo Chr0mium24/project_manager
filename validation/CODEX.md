@@ -12,12 +12,15 @@ When working here, Codex must follow the workspace rules and prefer script-drive
 2. Do not create project directories by hand
 3. Use `node scripts/create-project.mjs` for any new project creation
 4. Keep project shape consistent with `project.json` and `projects-index.json`
-5. Run these checks after any structural change:
+5. Use `node scripts/start-managed-task.mjs` to start a managed-project task workspace
+6. One managed-project task targets one project by default
+7. Run these checks after any structural change:
    - `npm test`
    - `npm run validate`
-6. Do not touch unrelated projects when asked to operate on one target project
-7. The main repository's one-slice-one-commit rule does not apply inside this validation workspace
-8. If a managed-project task later becomes Git-backed, prefer one final result commit, not many intermediate commits
+8. Do not touch unrelated projects when asked to operate on one target project
+9. The main repository's one-slice-one-commit rule does not apply inside this validation workspace
+10. If a managed-project task later becomes Git-backed, prefer one final result commit, not many intermediate commits
+11. Do not create PRs for managed-project tasks
 
 ## Project model
 
@@ -44,6 +47,12 @@ Dynamic project:
 node scripts/create-project.mjs --content-repo ./content-repo --slug demo-service --name "Demo Service" --runtime dynamic
 ```
 
+Managed-project task workspace:
+
+```bash
+node scripts/start-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy --mode workspace
+```
+
 ## Debug server
 
 Run:
@@ -68,3 +77,10 @@ If instructed to create a project, Codex should:
 2. Use the bootstrap script
 3. Avoid manual index edits
 4. Re-run validation if requested
+
+If instructed to modify one managed project, Codex should:
+
+1. Start a managed-project task workspace
+2. Keep the task scoped to the single requested project
+3. Avoid PR-oriented workflow
+4. Produce one validated end result

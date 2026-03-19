@@ -2,6 +2,7 @@ export const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/;
 export const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 export const PROJECT_RUNTIMES = new Set(["static", "dynamic"]);
 export const VISIBILITY_VALUES = new Set(["private", "unlisted"]);
+export const MANAGED_TASK_MODES = new Set(["workspace", "git-branch"]);
 export const ROUTE_RE = /^\/[A-Za-z0-9._/-]+$/;
 
 export function isIsoDateTime(value) {

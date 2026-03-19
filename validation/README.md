@@ -27,6 +27,7 @@ npm run probe:codex-create
 npm run dev
 node scripts/create-project.mjs --content-repo ./content-repo --slug demo-static --name "Demo Static" --runtime static
 node scripts/create-project.mjs --content-repo ./content-repo --slug demo-service --name "Demo Service" --runtime dynamic
+node scripts/start-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy --mode workspace
 ```
 
 ## Notes
@@ -38,6 +39,7 @@ node scripts/create-project.mjs --content-repo ./content-repo --slug demo-servic
 - `probe:codex` can optionally run a live non-interactive Codex execution when `RUN_CODEX_LIVE=1`
 - `probe:codex-create` can optionally ask Codex to create a project through the bootstrap script and then verifies the result
 - `create-project.mjs` is the canonical project bootstrap path for new projects
+- `start-managed-task.mjs` is the canonical single-target managed-project task bootstrap path in validation
 - `dev-server.mjs` serves a minimal local debug surface for static and dynamic routes
 
 ## Environment

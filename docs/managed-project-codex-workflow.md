@@ -33,6 +33,12 @@ The goal is:
 6. create one result commit if the managed project uses Git-backed task branches
 7. stop without creating a PR
 
+Validation prototype helper:
+
+```bash
+node validation/scripts/start-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy --mode workspace
+```
+
 ## Important distinction
 
 For managed projects:

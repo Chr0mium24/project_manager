@@ -16,7 +16,7 @@
     "lint": "node scripts/check-repo-lint.mjs",
     "typecheck": "node scripts/check-typecheck-readiness.mjs",
     "test:unit": "node --test tests/doc-consistency.test.mjs tests/no-compat-policy.test.mjs && cd validation && node --test tests/project-schema.test.mjs tests/index-consistency.test.mjs tests/filesystem-layout.test.mjs tests/codex-cli-capabilities.test.mjs",
-    "test:integration": "node --test tests/route-registry.test.mjs tests/quality-gate-stamp.test.mjs tests/branch-policy.test.mjs tests/no-pr-policy.test.mjs && cd validation && node --test tests/project-bootstrap.test.mjs tests/debug-server.test.mjs",
+    "test:integration": "node --test tests/route-registry.test.mjs tests/quality-gate-stamp.test.mjs tests/branch-policy.test.mjs tests/no-pr-policy.test.mjs && cd validation && node --test tests/project-bootstrap.test.mjs tests/managed-task.test.mjs tests/debug-server.test.mjs",
     "test:contract": "cd validation && npm run validate",
     "test:e2e:smoke": "node --test tests/route-registry.test.mjs && cd validation && node --test tests/debug-server.test.mjs",
     "test:git": "node --test tests/quality-gate-stamp.test.mjs tests/branch-policy.test.mjs tests/no-pr-policy.test.mjs",
