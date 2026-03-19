@@ -2,5 +2,8 @@
   "name": "@project-manager/publish-core",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts"
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@project-manager/project-core": "workspace:*"
+  }
 }

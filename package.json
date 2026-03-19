@@ -22,13 +22,13 @@
     "format:check": "node scripts/check-format.mjs",
     "lint": "node scripts/check-repo-lint.mjs",
     "typecheck": "node scripts/check-typecheck-readiness.mjs",
-    "test:unit": "node --test tests/doc-consistency.test.mjs tests/no-compat-policy.test.mjs tests/changed-scope.test.mjs tests/module-boundaries.test.mjs && node --import tsx --test packages/project-core/src/*.test.ts apps/gateway/src/*.test.ts",
+    "test:unit": "node --test tests/doc-consistency.test.mjs tests/no-compat-policy.test.mjs tests/changed-scope.test.mjs tests/module-boundaries.test.mjs && node --import tsx --test packages/project-core/src/*.test.ts packages/publish-core/src/*.test.ts apps/gateway/src/*.test.ts",
     "test:integration": "node --test tests/route-registry.test.mjs tests/quality-gate-stamp.test.mjs tests/branch-policy.test.mjs tests/no-pr-policy.test.mjs",
     "test:contract": "npm run validate:content-repo",
     "test:e2e:smoke": "node --test tests/route-registry.test.mjs && node --import tsx --test tests/gateway-server-smoke.test.mjs",
     "test:git": "node --test tests/quality-gate-stamp.test.mjs tests/branch-policy.test.mjs tests/no-pr-policy.test.mjs",
     "test:ai": "node --test tests/codex-cli-capabilities.test.mjs tests/codex-live-probe.test.mjs",
-    "test:publish": "node --test tests/route-registry.test.mjs",
+    "test:publish": "node --test tests/route-registry.test.mjs && node --import tsx --test packages/publish-core/src/*.test.ts apps/gateway/src/publish-api.test.ts",
     "quality-gate": "./scripts/run-quality-gate.sh"
   },
   "devDependencies": {

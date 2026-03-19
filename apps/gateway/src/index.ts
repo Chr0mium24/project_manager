@@ -7,6 +7,7 @@ import {
   readProjectEntry
 } from "@project-manager/project-core";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
+import { readPublishedStaticEntry } from "@project-manager/publish-core";
 import { z } from "zod";
 import {
   executeDynamicRuntimeRequest,
@@ -15,6 +16,7 @@ import {
 import { sendManagedTaskApi } from "./managed-task-api.ts";
 import { sendProjectApi } from "./project-api.ts";
 import { sendProjectFilesApi } from "./project-files-api.ts";
+import { sendPublishApi } from "./publish-api.ts";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 
@@ -164,7 +166,7 @@ function sendStaticProject(rootDir: string, pathname: string, reply: FastifyRepl
 
   const slug = staticProjectMatch[1] ?? "";
   const project = readProject(rootDir, slug);
-  const entryContent = readProjectEntry(rootDir, slug);
+  const entryContent = readPublishedStaticEntry(rootDir, slug) ?? readProjectEntry(rootDir, slug);
 
   if (project === null || project.runtime !== "static" || entryContent === null) {
     void reply.code(404).send({
@@ -222,6 +224,10 @@ function sendControlApi(
   }
 
   if (sendManagedTaskApi(rootDir, pathname, request, reply)) {
+    return true;
+  }
+
+  if (request.method === "POST" && sendPublishApi(rootDir, pathname, reply)) {
     return true;
   }
 
@@ -329,6 +335,10 @@ export function createGatewayApp(rootDir: string): FastifyInstance {
   });
 
   app.get("/api/publish/*", (request, reply) => {
+    return sendResolution(rootDir, request, reply);
+  });
+
+  app.post("/api/publish/*", (request, reply) => {
     return sendResolution(rootDir, request, reply);
   });
 
