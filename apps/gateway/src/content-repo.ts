@@ -66,6 +66,10 @@ export function getProjectJsonPath(rootDir: string, slug: string): string {
   return path.join(getContentRepoRoot(rootDir), "projects", slug, "project.json");
 }
 
+export function getProjectRoot(rootDir: string, slug: string): string {
+  return path.join(getContentRepoRoot(rootDir), "projects", slug);
+}
+
 export function readProject(rootDir: string, slug: string): ManagedProject | null {
   const projectPath = getProjectJsonPath(rootDir, slug);
   if (!fs.existsSync(projectPath)) {
@@ -73,4 +77,22 @@ export function readProject(rootDir: string, slug: string): ManagedProject | nul
   }
 
   return readJson(projectPath, projectJsonSchema);
+}
+
+export function getProjectEntryPath(rootDir: string, slug: string): string | null {
+  const project = readProject(rootDir, slug);
+  if (project === null) {
+    return null;
+  }
+
+  return path.join(getProjectRoot(rootDir, slug), project.entry);
+}
+
+export function readProjectEntry(rootDir: string, slug: string): string | null {
+  const entryPath = getProjectEntryPath(rootDir, slug);
+  if (entryPath === null || !fs.existsSync(entryPath)) {
+    return null;
+  }
+
+  return fs.readFileSync(entryPath, "utf8");
 }

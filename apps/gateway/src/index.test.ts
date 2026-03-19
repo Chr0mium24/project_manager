@@ -99,6 +99,16 @@ function writeContentRepo(rootDir: string): void {
     }, null, 2)}\n`,
     "utf8"
   );
+  fs.writeFileSync(
+    path.join(contentRepoRoot, "projects", "landing-a", "src", "index.html"),
+    "<!doctype html>\n<html><body><h1>Landing A</h1></body></html>\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(contentRepoRoot, "projects", "service-b", "src", "server.ts"),
+    'export function handler() {\n  return { ok: true, service: "service-b" };\n}\n',
+    "utf8"
+  );
 }
 
 test("readRouteRegistry falls back to an empty registry", () => {
@@ -243,9 +253,36 @@ test("createGatewayApp serves managed routes and 404s", async () => {
   const missingRoute = await app.inject({ method: "GET", url: "/missing" });
 
   assert.equal(managedRoute.statusCode, 200);
-  assert.equal(managedRoute.json().targetKind, "static-build");
+  assert.match(managedRoute.body, /Landing A/);
+  assert.match(String(managedRoute.headers["content-type"]), /^text\/html/);
   assert.equal(missingRoute.statusCode, 404);
   assert.equal(missingRoute.json().kind, "not-found");
+
+  await app.close();
+});
+
+test("createGatewayApp serves dynamic project metadata from the formal content repo", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const dynamicRoute = await app.inject({ method: "GET", url: "/app/service-b" });
+  const wrongRuntime = await app.inject({ method: "GET", url: "/app/landing-a" });
+
+  assert.equal(dynamicRoute.statusCode, 200);
+  assert.deepEqual(dynamicRoute.json(), {
+    slug: "service-b",
+    runtime: "dynamic",
+    route: "/app/service-b",
+    entry: "src/server.ts",
+    framework: "fastify"
+  });
+
+  assert.equal(wrongRuntime.statusCode, 404);
+  assert.deepEqual(wrongRuntime.json(), {
+    error: "dynamic-project-not-found",
+    slug: "landing-a"
+  });
 
   await app.close();
 });

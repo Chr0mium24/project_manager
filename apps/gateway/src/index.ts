@@ -4,7 +4,7 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
-import { listProjects, readProject } from "./content-repo.ts";
+import { listProjects, readProject, readProjectEntry } from "./content-repo.ts";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 
@@ -143,6 +143,47 @@ function sendResolution(
   reply: FastifyReply
 ): void {
   const pathname = resolveRequestPath(request);
+  const staticProjectMatch = pathname.match(/^\/p\/([a-z0-9-]+)(?:\/.*)?$/);
+  if (staticProjectMatch) {
+    const project = readProject(rootDir, staticProjectMatch[1] ?? "");
+    const entryContent = readProjectEntry(rootDir, staticProjectMatch[1] ?? "");
+
+    if (project === null || project.runtime !== "static" || entryContent === null) {
+      void reply.code(404).send({
+        error: "static-project-not-found",
+        slug: staticProjectMatch[1]
+      });
+      return;
+    }
+
+    void reply
+      .code(200)
+      .header("content-type", "text/html; charset=utf-8")
+      .send(entryContent);
+    return;
+  }
+
+  const dynamicProjectMatch = pathname.match(/^\/app\/([a-z0-9-]+)(?:\/.*)?$/);
+  if (dynamicProjectMatch) {
+    const project = readProject(rootDir, dynamicProjectMatch[1] ?? "");
+    if (project === null || project.runtime !== "dynamic") {
+      void reply.code(404).send({
+        error: "dynamic-project-not-found",
+        slug: dynamicProjectMatch[1]
+      });
+      return;
+    }
+
+    void reply.code(200).send({
+      slug: project.slug,
+      runtime: project.runtime,
+      route: project.route,
+      entry: project.entry,
+      framework: project.framework
+    });
+    return;
+  }
+
   const resolution = resolveGatewayRequest(rootDir, pathname);
 
   if (resolution.kind === "not-found") {
