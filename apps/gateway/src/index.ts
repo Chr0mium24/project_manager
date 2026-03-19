@@ -3,7 +3,6 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import {
-  listProjects,
   readProject,
   readProjectEntry
 } from "@project-manager/project-core";
@@ -13,6 +12,8 @@ import {
   executeDynamicRuntimeRequest,
   normalizeRuntimeQuery
 } from "./runtime-api.ts";
+import { sendManagedTaskApi } from "./managed-task-api.ts";
+import { sendProjectApi } from "./project-api.ts";
 import { sendProjectFilesApi } from "./project-files-api.ts";
 
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
@@ -206,33 +207,6 @@ function sendDynamicProject(rootDir: string, pathname: string, reply: FastifyRep
   return true;
 }
 
-function sendProjectApi(rootDir: string, pathname: string, reply: FastifyReply): boolean {
-  if (pathname === "/api/projects") {
-    void reply.code(200).send({
-      projects: listProjects(rootDir)
-    });
-    return true;
-  }
-
-  const projectSlugMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)$/);
-  if (!projectSlugMatch) {
-    return false;
-  }
-
-  const slug = projectSlugMatch[1] ?? "";
-  const project = readProject(rootDir, slug);
-  if (project === null) {
-    void reply.code(404).send({
-      error: "project-not-found",
-      slug
-    });
-    return true;
-  }
-
-  void reply.code(200).send(project);
-  return true;
-}
-
 function sendControlApi(
   rootDir: string,
   pathname: string,
@@ -244,6 +218,10 @@ function sendControlApi(
   }
 
   if (sendProjectFilesApi(rootDir, pathname, request, reply)) {
+    return true;
+  }
+
+  if (sendManagedTaskApi(rootDir, pathname, request, reply)) {
     return true;
   }
 

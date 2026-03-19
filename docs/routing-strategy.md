@@ -41,6 +41,7 @@ Important:
 - `/api/projects/:slug/file-tree`
 - `/api/projects/:slug/file?path=...`
 - `PUT /api/projects/:slug/file`
+- `POST /api/projects/:slug/tasks`
 - `/api/ai/tasks`
 - `/api/publish`
 
