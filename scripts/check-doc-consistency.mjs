@@ -12,16 +12,6 @@ const checks = [
     reason: 'root architecture document must be clearly downgraded from source of truth',
   },
   {
-    file: 'validation/README.md',
-    mustContain: 'validation-only',
-    reason: 'validation workspace docs must be explicitly scoped',
-  },
-  {
-    file: 'validation/CODEX.md',
-    mustContain: 'validation-only',
-    reason: 'validation Codex guide must be explicitly scoped',
-  },
-  {
     file: 'docs/codex-development.md',
     mustContain: 'main repository only',
     reason: 'main repository commit cadence must be explicitly scoped',

@@ -40,9 +40,9 @@ The system has four major layers:
 
 Formal runtime content must live under the repository root `content-repo/`.
 
-The `validation/` directory is for experiments only and must not be used as a runtime dependency by product code.
+The formal `content-repo/` must be validated by product code in `packages/project-core`.
 
-The formal `content-repo/` must be validated by product code in `packages/project-core`, not by importing helpers from `validation/`.
+Product runtime code must not depend on ad hoc experimental directories or one-off local prototypes.
 
 ## Runtime split
 

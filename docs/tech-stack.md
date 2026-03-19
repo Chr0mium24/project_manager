@@ -35,7 +35,7 @@ Why this matters:
 
 Reasons:
 
-1. Current validation and Codex workflow already run on Node
+1. Current formal scripts and Codex workflow already run on Node
 2. Test and monorepo tooling are more predictable on Node
 3. We need exact runtime behavior and low surprise more than raw speed
 4. The main project risk is architecture drift, not runtime throughput

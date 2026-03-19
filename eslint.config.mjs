@@ -35,8 +35,7 @@ export default tseslint.config(
       "tmp/**",
       "node_modules/**",
       ".cache/**",
-      ".corepack/**",
-      "validation/**"
+      ".corepack/**"
     ]
   },
   {

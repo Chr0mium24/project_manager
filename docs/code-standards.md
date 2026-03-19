@@ -93,7 +93,7 @@ Forbidden examples:
 
 Rule:
 
-- if the target environment is unclear, verify it in `validation/` first
+- if the target environment is unclear, verify it in a narrow root-level test or fixture first
 - do not ship speculative compatibility code
 
 ### Formatting

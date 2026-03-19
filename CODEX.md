@@ -1,6 +1,6 @@
 # Codex Development Rules
 
-This repository is the planning and validation workspace for the project manager platform.
+This repository is the active development workspace for the project manager platform.
 
 This file governs the `project_manager` repository itself.
 
@@ -92,11 +92,9 @@ Scope note:
 - One public port only; route by path prefix
 - Do not add support for deploying third-party GitHub projects in V1
 
-## Validation workspace
+## Verification rule
 
-For project-content experiments, use `validation/`.
-
-If a runtime or tooling rule is unclear, verify it in `validation/` before changing the main architecture docs or main scripts.
+If a runtime or tooling rule is unclear, verify it in a narrow root-level test or temporary fixture before changing the main architecture docs or scripts.
 
 Key script:
 

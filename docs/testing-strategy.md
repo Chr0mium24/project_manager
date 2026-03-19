@@ -120,15 +120,7 @@ Suggested split:
 - fast lane: format, lint, typecheck, unit
 - full lane: everything in the quality gate
 
-## Validation status
-
-Already proven in `validation/`:
-
-- content repo schema checks
-- project bootstrap checks
-- Codex CLI capability checks
-- Codex script-driven create-project flow
-- debug server route smoke
+## Current status
 
 Already enforced at the repository root:
 
@@ -136,6 +128,11 @@ Already enforced at the repository root:
 - no-compatibility-code checks
 - route-registry behavior checks
 - quality-gate stamp checks for safe Git commits
+- content repo schema checks
+- project bootstrap checks
+- Codex CLI capability checks
+- script-driven create-project flow
+- gateway route smoke
 
 ## False-negative policy
 

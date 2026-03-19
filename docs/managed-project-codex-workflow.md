@@ -58,30 +58,6 @@ Formal apply helper:
 node --import tsx scripts/apply-managed-task.ts --project landing-a --task fix-copy
 ```
 
-Validation prototype helper:
-
-```bash
-node validation/scripts/start-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy --mode workspace
-```
-
-Summary helper:
-
-```bash
-node validation/scripts/summarize-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy
-```
-
-Validation helper:
-
-```bash
-node validation/scripts/validate-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy
-```
-
-Apply helper:
-
-```bash
-node validation/scripts/apply-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy
-```
-
 ## Important distinction
 
 For managed projects:
@@ -97,8 +73,6 @@ Instead:
 - keep intermediate edits local to the task workspace
 - commit once when the task outcome is complete and validated
 - apply the validated workspace back to the target project through an explicit step
-
-In the validation prototype, `apply-managed-task` also re-runs managed-task validation internally.
 
 Formal V1 status:
 

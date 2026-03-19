@@ -25,18 +25,18 @@ These docs are the source of truth for:
 
 ## Status
 
-These docs are based on the validation work already completed in `validation/`.
+These docs describe the current formal repository code and root-level test suite.
 
 Scope rule:
 
 - `docs/` is the formal source of truth for the main repository
-- `validation/` may contain narrower validation-only rules for experiments
+- historical validation work does not override these docs
 - if there is a conflict, `docs/` wins for the main product architecture
 
-Confirmed from validation:
+Confirmed in the formal repository:
 
 - script-driven project creation works
 - Codex can read docs and use the bootstrap script
 - static and dynamic project runtime split is workable
-- local debug server shape is valid
+- local gateway server shape is valid
 - test gate can be enforced before feature expansion
