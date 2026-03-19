@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {
+  applyManagedTask,
   createProject,
   readProjectEntry,
   startManagedTask,
@@ -223,5 +224,55 @@ void test("validateManagedTask rejects invalid workspace project shape", () => {
         taskSlug: "invalid-workspace"
       }),
     /static project route must start with \/p\/|static project route must equal \/p\/<slug>/
+  );
+});
+
+void test("applyManagedTask writes validated workspace changes back to the source project", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const started = startManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "apply-copy",
+    mode: "workspace"
+  });
+  fs.writeFileSync(
+    path.join(started.workspaceProjectDir, "src", "index.html"),
+    "<!doctype html>\n<html><body><h1>Landing A Applied</h1></body></html>\n",
+    "utf8"
+  );
+
+  const applied = applyManagedTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "apply-copy"
+  });
+  const persistedManifest = JSON.parse(fs.readFileSync(started.manifestPath, "utf8")) as {
+    status?: string;
+    lastValidatedAt?: string;
+    lastAppliedAt?: string;
+  };
+
+  assert.equal(applied.projectSlug, "landing-a");
+  assert.equal(applied.taskSlug, "apply-copy");
+  assert.equal(applied.changedFiles, 1);
+  assert.equal(applied.status, "applied");
+  assert.notEqual(applied.lastAppliedAt, undefined);
+  assert.equal(persistedManifest.status, "applied");
+  assert.notEqual(persistedManifest.lastValidatedAt, undefined);
+  assert.notEqual(persistedManifest.lastAppliedAt, undefined);
+  assert.match(readProjectEntry(rootDir, "landing-a") ?? "", /Landing A Applied/);
+});
+
+void test("applyManagedTask rejects missing managed task manifests", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  assert.throws(
+    () =>
+      applyManagedTask(rootDir, {
+        projectSlug: "landing-a",
+        taskSlug: "missing-task"
+      }),
+    /managed task manifest not found/
   );
 });

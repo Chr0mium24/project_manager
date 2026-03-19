@@ -28,6 +28,10 @@ export {
   validateManagedTask,
   type ManagedTaskValidation
 } from "./managed-task-validation.ts";
+export {
+  applyManagedTask,
+  type ManagedTaskApplyResult
+} from "./managed-task-apply.ts";
 export type {
   ManagedProject,
   ProjectIndexEntry,

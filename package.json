@@ -16,6 +16,7 @@
     "start:managed-task": "node --import tsx scripts/start-managed-task.ts",
     "summarize:managed-task": "node --import tsx scripts/summarize-managed-task.ts",
     "validate:managed-task": "node --import tsx scripts/validate-managed-task.ts",
+    "apply:managed-task": "node --import tsx scripts/apply-managed-task.ts",
     "validate:content-repo": "node --import tsx scripts/validate-content-repo.ts",
     "dev:gateway": "node --import tsx apps/gateway/src/index.ts",
     "format:check": "node scripts/check-format.mjs",
