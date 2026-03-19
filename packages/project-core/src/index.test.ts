@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
@@ -9,63 +8,9 @@ import {
   listProjects,
   readProject,
   readProjectEntry,
-  summarizeManagedTask,
-  startManagedTask,
   validateContentRepo
 } from "./index.ts";
-
-function createTempRoot(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
-}
-
-function writeJson(filePath: string, value: unknown): void {
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-}
-
-function writeContentRepo(rootDir: string): void {
-  const contentRepoRoot = path.join(rootDir, "content-repo");
-  fs.mkdirSync(path.join(contentRepoRoot, "projects", "landing-a", "src"), { recursive: true });
-
-  writeJson(getProjectsIndexPath(rootDir), {
-    version: 1,
-    generatedAt: "2026-03-20T00:00:00.000Z",
-    projects: [
-      {
-        slug: "landing-a",
-        path: "projects/landing-a",
-        name: "Landing A",
-        runtime: "static",
-        visibility: "private",
-        entry: "src/index.html",
-        route: "/p/landing-a",
-        updatedAt: "2026-03-20T00:00:00.000Z"
-      }
-    ]
-  });
-
-  writeJson(path.join(contentRepoRoot, "projects", "landing-a", "project.json"), {
-    schemaVersion: 1,
-    name: "Landing A",
-    slug: "landing-a",
-    description: "Official sample static project",
-    runtime: "static",
-    entry: "src/index.html",
-    route: "/p/landing-a",
-    visibility: "private",
-    tags: ["landing", "sample"],
-    latestVersion: "v1",
-    mainLanguage: "html",
-    framework: "vanilla",
-    owner: "project-manager",
-    createdAt: "2026-03-20T00:00:00.000Z",
-    updatedAt: "2026-03-20T00:00:00.000Z"
-  });
-  fs.writeFileSync(
-    path.join(contentRepoRoot, "projects", "landing-a", "src", "index.html"),
-    "<!doctype html>\n<html><body><h1>Landing A</h1></body></html>\n",
-    "utf8"
-  );
-}
+import { createTempRoot, writeContentRepo, writeJson } from "./test-fixtures.ts";
 
 void test("listProjects reads the formal content repo index", () => {
   const rootDir = createTempRoot();
@@ -199,130 +144,4 @@ void test("createProject creates a dynamic project and force recreates the direc
   );
   assert.match(readProjectEntry(rootDir, "demo-service") ?? "", /demo-service/);
   assert.deepEqual(validateContentRepo(path.join(rootDir, "content-repo")), { projects: 1 });
-});
-
-void test("startManagedTask creates an isolated formal workspace and manifest", () => {
-  const rootDir = createTempRoot();
-  writeContentRepo(rootDir);
-
-  const result = startManagedTask(rootDir, {
-    projectSlug: "landing-a",
-    taskSlug: "fix-copy",
-    mode: "workspace"
-  });
-
-  assert.equal(result.manifest.projectSlug, "landing-a");
-  assert.equal(result.manifest.taskSlug, "fix-copy");
-  assert.equal(result.manifest.targetCount, 1);
-  assert.equal(result.manifest.commitPolicy, "final-result-only");
-  assert.equal(result.manifest.prPolicy, "forbidden");
-  assert.equal(result.manifest.branchName, null);
-  assert.equal(fs.existsSync(result.manifestPath), true);
-  assert.equal(
-    fs.existsSync(path.join(rootDir, result.manifest.workspaceProjectPath, "project.json")),
-    true
-  );
-});
-
-void test("startManagedTask produces branch metadata for git-branch mode", () => {
-  const rootDir = createTempRoot();
-  writeContentRepo(rootDir);
-  createProject(rootDir, {
-    slug: "service-b",
-    name: "Service B",
-    runtime: "dynamic"
-  });
-
-  const result = startManagedTask(rootDir, {
-    projectSlug: "service-b",
-    taskSlug: "fix-handler",
-    mode: "git-branch"
-  });
-
-  assert.equal(result.manifest.branchName, "task/service-b--fix-handler");
-  assert.equal(result.manifest.prPolicy, "forbidden");
-});
-
-void test("startManagedTask rejects unknown managed projects", () => {
-  const rootDir = createTempRoot();
-  writeContentRepo(rootDir);
-
-  assert.throws(
-    () =>
-      startManagedTask(rootDir, {
-        projectSlug: "missing-project",
-        taskSlug: "fix-copy",
-        mode: "workspace"
-      }),
-    /managed project not found/
-  );
-});
-
-void test("startManagedTask with force recreates a clean task directory", () => {
-  const rootDir = createTempRoot();
-  writeContentRepo(rootDir);
-
-  const started = startManagedTask(rootDir, {
-    projectSlug: "landing-a",
-    taskSlug: "redo-copy",
-    mode: "workspace"
-  });
-
-  fs.writeFileSync(path.join(started.taskRoot, "summary.json"), "{\"stale\":true}\n", "utf8");
-  fs.writeFileSync(path.join(started.taskRoot, "validation.json"), "{\"stale\":true}\n", "utf8");
-
-  const restarted = startManagedTask(rootDir, {
-    projectSlug: "landing-a",
-    taskSlug: "redo-copy",
-    mode: "workspace",
-    force: true
-  });
-
-  assert.equal(fs.existsSync(path.join(restarted.taskRoot, "summary.json")), false);
-  assert.equal(fs.existsSync(path.join(restarted.taskRoot, "validation.json")), false);
-  assert.equal(fs.existsSync(restarted.manifestPath), true);
-});
-
-void test("summarizeManagedTask writes a formal summary artifact without applying changes", () => {
-  const rootDir = createTempRoot();
-  writeContentRepo(rootDir);
-
-  const started = startManagedTask(rootDir, {
-    projectSlug: "landing-a",
-    taskSlug: "fix-copy",
-    mode: "workspace"
-  });
-  fs.writeFileSync(
-    path.join(started.workspaceProjectDir, "src", "index.html"),
-    "<!doctype html>\n<html><body><h1>Landing A Updated</h1></body></html>\n",
-    "utf8"
-  );
-  fs.writeFileSync(
-    path.join(started.workspaceProjectDir, "src", "extra.js"),
-    "console.log('extra');\n",
-    "utf8"
-  );
-
-  const summary = summarizeManagedTask(rootDir, {
-    projectSlug: "landing-a",
-    taskSlug: "fix-copy"
-  });
-  const persistedSummary = JSON.parse(fs.readFileSync(started.summaryPath, "utf8")) as {
-    changedFiles: number;
-    changes: Array<{ path: string; kind: string }>;
-  };
-
-  assert.equal(summary.projectSlug, "landing-a");
-  assert.equal(summary.taskSlug, "fix-copy");
-  assert.equal(summary.changedFiles, 2);
-  assert.deepEqual(
-    summary.changes.map((item) => `${item.kind}:${item.path}`),
-    ["added:src/extra.js", "modified:src/index.html"]
-  );
-  assert.equal(persistedSummary.changedFiles, 2);
-  assert.deepEqual(
-    persistedSummary.changes.map((item) => `${item.kind}:${item.path}`),
-    ["added:src/extra.js", "modified:src/index.html"]
-  );
-  assert.match(readProjectEntry(rootDir, "landing-a") ?? "", /Landing A<\/h1>/);
 });

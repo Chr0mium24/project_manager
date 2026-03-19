@@ -24,6 +24,10 @@ export {
   type StartManagedTaskOptions,
   type StartManagedTaskResult
 } from "./managed-task.ts";
+export {
+  validateManagedTask,
+  type ManagedTaskValidation
+} from "./managed-task-validation.ts";
 export type {
   ManagedProject,
   ProjectIndexEntry,

@@ -34,6 +34,9 @@ export interface ManagedTaskManifest {
   commitPolicy: "final-result-only";
   prPolicy: "forbidden";
   createdAt: string;
+  status?: "validated" | "applied" | undefined;
+  lastValidatedAt?: string | undefined;
+  lastAppliedAt?: string | undefined;
 }
 
 export interface ManagedTaskPaths {
@@ -42,6 +45,7 @@ export interface ManagedTaskPaths {
   workspaceProjectDir: string;
   manifestPath: string;
   summaryPath: string;
+  validationPath: string;
 }
 
 export interface StartManagedTaskResult extends ManagedTaskPaths {
@@ -87,13 +91,15 @@ export function getManagedTaskPaths(
   const workspaceProjectDir = path.join(workspaceRoot, projectSlug);
   const manifestPath = path.join(taskRoot, "task.json");
   const summaryPath = path.join(taskRoot, "summary.json");
+  const validationPath = path.join(taskRoot, "validation.json");
 
   return {
     taskRoot,
     workspaceRoot,
     workspaceProjectDir,
     manifestPath,
-    summaryPath
+    summaryPath,
+    validationPath
   };
 }
 
@@ -173,7 +179,10 @@ function readManagedTaskManifest(taskPaths: ManagedTaskPaths): ManagedTaskManife
     branchName: z.string().nullable(),
     commitPolicy: z.literal("final-result-only"),
     prPolicy: z.literal("forbidden"),
-    createdAt: z.string().min(1)
+    createdAt: z.string().min(1),
+    status: z.enum(["validated", "applied"]).optional(),
+    lastValidatedAt: z.string().min(1).optional(),
+    lastAppliedAt: z.string().min(1).optional()
   }));
 }
 

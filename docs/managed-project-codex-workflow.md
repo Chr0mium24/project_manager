@@ -46,6 +46,12 @@ Formal summary helper:
 node --import tsx scripts/summarize-managed-task.ts --project landing-a --task fix-copy
 ```
 
+Formal validation helper:
+
+```bash
+node --import tsx scripts/validate-managed-task.ts --project landing-a --task fix-copy
+```
+
 Validation prototype helper:
 
 ```bash
@@ -92,7 +98,8 @@ Formal V1 status:
 
 - formal `start-managed-task` now lives in `packages/project-core`
 - formal `summarize-managed-task` now lives in `packages/project-core`
-- validate and apply remain in `validation/` until their formal replacements land
+- formal `validate-managed-task` now lives in `packages/project-core`
+- apply remains in `validation/` until its formal replacement lands
 
 ## Branch rule
 
