@@ -12,6 +12,7 @@
   },
   "packageManager": "pnpm@9.15.0",
   "scripts": {
+    "create:project": "node --import tsx scripts/create-project.ts",
     "dev:gateway": "node --import tsx apps/gateway/src/index.ts",
     "format:check": "node scripts/check-format.mjs",
     "lint": "node scripts/check-repo-lint.mjs",

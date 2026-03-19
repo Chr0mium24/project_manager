@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
+  createProject,
   getProjectsIndexPath,
   listProjects,
   readProject,
@@ -96,4 +97,60 @@ test("readProjectEntry returns the project entry file contents", () => {
   const entryContent = readProjectEntry(rootDir, "landing-a");
 
   assert.match(entryContent ?? "", /Landing A/);
+});
+
+test("createProject creates a static project in the formal content repo", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
+  fs.mkdirSync(path.join(rootDir, "content-repo", "projects"), { recursive: true });
+  fs.writeFileSync(getProjectsIndexPath(rootDir), `${JSON.stringify({
+    version: 1,
+    generatedAt: "2026-03-20T00:00:00.000Z",
+    projects: []
+  }, null, 2)}\n`, "utf8");
+
+  const project = createProject(rootDir, {
+    slug: "demo-static",
+    name: "Demo Static",
+    runtime: "static"
+  });
+
+  assert.equal(project.slug, "demo-static");
+  assert.equal(project.route, "/p/demo-static");
+  assert.match(readProjectEntry(rootDir, "demo-static") ?? "", /Demo Static/);
+  assert.deepEqual(listProjects(rootDir).map((item) => item.slug), ["demo-static"]);
+});
+
+test("createProject creates a dynamic project and force recreates the directory", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
+  fs.mkdirSync(path.join(rootDir, "content-repo", "projects"), { recursive: true });
+  fs.writeFileSync(getProjectsIndexPath(rootDir), `${JSON.stringify({
+    version: 1,
+    generatedAt: "2026-03-20T00:00:00.000Z",
+    projects: []
+  }, null, 2)}\n`, "utf8");
+
+  createProject(rootDir, {
+    slug: "demo-service",
+    name: "Demo Service",
+    runtime: "dynamic"
+  });
+  fs.writeFileSync(
+    path.join(rootDir, "content-repo", "projects", "demo-service", "stale.txt"),
+    "stale\n",
+    "utf8"
+  );
+
+  const recreatedProject = createProject(rootDir, {
+    slug: "demo-service",
+    name: "Demo Service",
+    runtime: "dynamic",
+    force: true
+  });
+
+  assert.equal(recreatedProject.route, "/app/demo-service");
+  assert.equal(
+    fs.existsSync(path.join(rootDir, "content-repo", "projects", "demo-service", "stale.txt")),
+    false
+  );
+  assert.match(readProjectEntry(rootDir, "demo-service") ?? "", /demo-service/);
 });

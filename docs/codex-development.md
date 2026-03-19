@@ -152,6 +152,12 @@ If a dev route needs to be exposed, use:
 ./scripts/register-dev-route.sh /app/demo internal-handler demo-runtime
 ```
 
+If a new managed project needs to be created in the formal content repo, use:
+
+```bash
+node --import tsx scripts/create-project.ts --slug demo-static --name "Demo Static" --runtime static
+```
+
 ## Development behavior policy
 
 Codex should:

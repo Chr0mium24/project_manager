@@ -101,5 +101,5 @@ If a runtime or tooling rule is unclear, verify it in `validation/` before chang
 Key script:
 
 ```bash
-node validation/scripts/create-project.mjs --content-repo ./validation/content-repo --slug demo-static --name "Demo Static" --runtime static
+node --import tsx scripts/create-project.ts --slug demo-static --name "Demo Static" --runtime static
 ```

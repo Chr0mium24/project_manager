@@ -40,6 +40,13 @@ const projectJsonSchema = z.object({
 export type ProjectIndexEntry = z.infer<typeof projectIndexEntrySchema>;
 export type ProjectsIndex = z.infer<typeof projectsIndexSchema>;
 export type ManagedProject = z.infer<typeof projectJsonSchema>;
+export interface CreateProjectOptions {
+  slug: string;
+  name: string;
+  runtime: "static" | "dynamic";
+  visibility?: "private" | "public";
+  force?: boolean;
+}
 
 export const moduleName = "@project-manager/project-core";
 
@@ -97,4 +104,119 @@ export function readProjectEntry(rootDir: string, slug: string): string | null {
   }
 
   return fs.readFileSync(entryPath, "utf8");
+}
+
+function writeJson(filePath: string, value: unknown): void {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function defaultEntryForRuntime(runtime: "static" | "dynamic"): string {
+  return runtime === "static" ? "src/index.html" : "src/server.ts";
+}
+
+function defaultRouteForRuntime(runtime: "static" | "dynamic", slug: string): string {
+  return runtime === "static" ? `/p/${slug}` : `/app/${slug}`;
+}
+
+function renderStaticTemplate(name: string): string {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>${name}</title>
+  </head>
+  <body>
+    <main>
+      <h1>${name}</h1>
+    </main>
+  </body>
+</html>
+`;
+}
+
+function renderDynamicTemplate(slug: string): string {
+  return `export function handler() {
+  return {
+    ok: true,
+    service: "${slug}"
+  };
+}
+`;
+}
+
+export function createProject(rootDir: string, options: CreateProjectOptions): ManagedProject {
+  const normalizedOptions = z.object({
+    slug: z.string().min(1),
+    name: z.string().min(1).max(120),
+    runtime: z.enum(["static", "dynamic"]),
+    visibility: z.enum(["private", "public"]).default("private"),
+    force: z.boolean().default(false)
+  }).parse(options);
+
+  const projectRoot = getProjectRoot(rootDir, normalizedOptions.slug);
+  const entry = defaultEntryForRuntime(normalizedOptions.runtime);
+  const route = defaultRouteForRuntime(normalizedOptions.runtime, normalizedOptions.slug);
+  const timestamp = nowIso();
+
+  if (fs.existsSync(projectRoot)) {
+    if (!normalizedOptions.force) {
+      throw new Error(`project already exists: ${normalizedOptions.slug}`);
+    }
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+
+  fs.mkdirSync(path.join(projectRoot, "src"), { recursive: true });
+
+  const project = projectJsonSchema.parse({
+    schemaVersion: 1,
+    name: normalizedOptions.name.trim(),
+    slug: normalizedOptions.slug,
+    description: `Managed ${normalizedOptions.runtime} project`,
+    runtime: normalizedOptions.runtime,
+    entry,
+    route,
+    visibility: normalizedOptions.visibility,
+    tags: [],
+    latestVersion: "v1",
+    mainLanguage: normalizedOptions.runtime === "static" ? "html" : "typescript",
+    framework: normalizedOptions.runtime === "static" ? "vanilla" : "fastify",
+    owner: "project-manager",
+    createdAt: timestamp,
+    updatedAt: timestamp
+  });
+
+  writeJson(getProjectJsonPath(rootDir, normalizedOptions.slug), project);
+  fs.writeFileSync(
+    path.join(projectRoot, entry),
+    normalizedOptions.runtime === "static"
+      ? renderStaticTemplate(project.name)
+      : renderDynamicTemplate(project.slug),
+    "utf8"
+  );
+
+  const index = readProjectsIndex(rootDir);
+  const nextIndex = projectsIndexSchema.parse({
+    version: index.version,
+    generatedAt: timestamp,
+    projects: [
+      ...index.projects.filter((item) => item.slug !== project.slug),
+      {
+        slug: project.slug,
+        path: `projects/${project.slug}`,
+        name: project.name,
+        runtime: project.runtime,
+        visibility: project.visibility,
+        entry: project.entry,
+        route: project.route,
+        updatedAt: project.updatedAt
+      }
+    ].sort((left, right) => left.slug.localeCompare(right.slug))
+  });
+  writeJson(getProjectsIndexPath(rootDir), nextIndex);
+
+  return project;
 }
