@@ -23,18 +23,73 @@ function getBranchName(projectSlug, taskSlug) {
   return `task/${projectSlug}--${taskSlug}`;
 }
 
+function listFiles(rootDir, currentDir = rootDir, result = []) {
+  const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(currentDir, entry.name);
+    if (entry.isDirectory()) {
+      listFiles(rootDir, fullPath, result);
+      continue;
+    }
+
+    if (entry.isFile()) {
+      result.push(path.relative(rootDir, fullPath));
+    }
+  }
+
+  return result.sort();
+}
+
 function getTaskPaths(validationRoot, projectSlug, taskSlug) {
   const tasksRoot = path.join(validationRoot, "tmp", "managed-tasks");
   const taskRoot = path.join(tasksRoot, projectSlug, taskSlug);
   const workspaceRoot = path.join(taskRoot, "workspace");
   const workspaceProjectDir = path.join(workspaceRoot, projectSlug);
   const manifestPath = path.join(taskRoot, "task.json");
+  const summaryPath = path.join(taskRoot, "summary.json");
 
   return {
     taskRoot,
     workspaceRoot,
     workspaceProjectDir,
-    manifestPath
+    manifestPath,
+    summaryPath
+  };
+}
+
+function summarizeProjectDiff(sourceProjectDir, workspaceProjectDir) {
+  const sourceFiles = new Set(listFiles(sourceProjectDir));
+  const workspaceFiles = new Set(listFiles(workspaceProjectDir));
+  const allFiles = [...new Set([...sourceFiles, ...workspaceFiles])].sort();
+  const changes = [];
+
+  for (const relativePath of allFiles) {
+    const sourcePath = path.join(sourceProjectDir, relativePath);
+    const workspacePath = path.join(workspaceProjectDir, relativePath);
+    const sourceExists = sourceFiles.has(relativePath);
+    const workspaceExists = workspaceFiles.has(relativePath);
+
+    if (!sourceExists && workspaceExists) {
+      changes.push({ path: relativePath, kind: "added" });
+      continue;
+    }
+
+    if (sourceExists && !workspaceExists) {
+      changes.push({ path: relativePath, kind: "deleted" });
+      continue;
+    }
+
+    const sourceContent = fs.readFileSync(sourcePath, "utf8");
+    const workspaceContent = fs.readFileSync(workspacePath, "utf8");
+    if (sourceContent !== workspaceContent) {
+      changes.push({ path: relativePath, kind: "modified" });
+    }
+  }
+
+  return {
+    changedFiles: changes.length,
+    changes
   };
 }
 
@@ -113,6 +168,7 @@ export function applyManagedTask(validationRoot, options) {
   const projectDir = path.join(contentRepoRoot, "projects", projectSlug);
   const {
     manifestPath,
+    summaryPath,
     workspaceProjectDir
   } = getTaskPaths(validationRoot, projectSlug, taskSlug);
 
@@ -124,6 +180,9 @@ export function applyManagedTask(validationRoot, options) {
   assert(manifest.taskSlug === taskSlug, "managed task manifest taskSlug mismatch");
   assert(manifest.targetCount === 1, "managed task must target exactly one project");
   assert(manifest.prPolicy === "forbidden", "managed task PR policy must remain forbidden");
+
+  const summary = summarizeProjectDiff(projectDir, workspaceProjectDir);
+  writeJson(summaryPath, summary);
 
   fs.rmSync(projectDir, { recursive: true, force: true });
   fs.cpSync(workspaceProjectDir, projectDir, { recursive: true });
@@ -139,7 +198,44 @@ export function applyManagedTask(validationRoot, options) {
   return {
     projectSlug,
     taskSlug,
+    changedFiles: summary.changedFiles,
     status: appliedManifest.status,
     lastAppliedAt: appliedManifest.lastAppliedAt
   };
+}
+
+export function summarizeManagedTask(validationRoot, options) {
+  const {
+    contentRepoRoot,
+    projectSlug,
+    taskSlug
+  } = options;
+
+  assert(typeof contentRepoRoot === "string" && contentRepoRoot.length > 0, "contentRepoRoot is required");
+  assert(typeof projectSlug === "string" && SLUG_RE.test(projectSlug), "projectSlug is invalid");
+  assert(typeof taskSlug === "string" && SLUG_RE.test(taskSlug), "taskSlug is invalid");
+
+  const projectDir = path.join(contentRepoRoot, "projects", projectSlug);
+  const {
+    manifestPath,
+    summaryPath,
+    workspaceProjectDir
+  } = getTaskPaths(validationRoot, projectSlug, taskSlug);
+
+  assert(fs.existsSync(manifestPath), `managed task manifest not found: ${projectSlug}/${taskSlug}`);
+  assert(fs.existsSync(workspaceProjectDir), `managed task workspace not found: ${projectSlug}/${taskSlug}`);
+
+  const manifest = readJson(manifestPath);
+  assert(manifest.projectSlug === projectSlug, "managed task manifest projectSlug mismatch");
+  assert(manifest.taskSlug === taskSlug, "managed task manifest taskSlug mismatch");
+  assert(manifest.targetCount === 1, "managed task must target exactly one project");
+
+  const summary = {
+    projectSlug,
+    taskSlug,
+    generatedAt: nowIso(),
+    ...summarizeProjectDiff(projectDir, workspaceProjectDir)
+  };
+  writeJson(summaryPath, summary);
+  return summary;
 }

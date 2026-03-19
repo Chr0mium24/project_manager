@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { applyManagedTask, startManagedTask } from "../lib/managed-task.mjs";
+import { applyManagedTask, startManagedTask, summarizeManagedTask } from "../lib/managed-task.mjs";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const fixtureRepo = path.resolve(currentDir, "..", "content-repo");
@@ -109,11 +109,17 @@ test("applyManagedTask copies workspace changes back to the target project", () 
   const targetHtmlPath = path.join(repo, "projects/landing-a/src/index.html");
   const targetHtml = fs.readFileSync(targetHtmlPath, "utf8");
   const manifest = JSON.parse(fs.readFileSync(started.manifestPath, "utf8"));
+  const summary = JSON.parse(
+    fs.readFileSync(path.join(started.taskRoot, "summary.json"), "utf8")
+  );
 
   assert.equal(applied.status, "applied");
+  assert.equal(applied.changedFiles, 1);
   assert.match(targetHtml, /Updated/);
   assert.equal(manifest.status, "applied");
   assert.equal(typeof manifest.lastAppliedAt, "string");
+  assert.equal(summary.changedFiles, 1);
+  assert.deepEqual(summary.changes, [{ path: "src/index.html", kind: "modified" }]);
 });
 
 test("applyManagedTask rejects missing task manifests", () => {
@@ -131,4 +137,42 @@ test("applyManagedTask rejects missing task manifests", () => {
       taskSlug: "missing-task"
     });
   }, /managed task manifest not found/);
+});
+
+test("summarizeManagedTask writes a summary without applying changes", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pm-managed-task-"));
+  const validationRoot = path.join(tempRoot, "validation");
+  const repo = path.join(validationRoot, "content-repo");
+
+  fs.mkdirSync(validationRoot, { recursive: true });
+  copyDir(fixtureRepo, repo);
+
+  const started = startManagedTask(validationRoot, {
+    contentRepoRoot: repo,
+    projectSlug: "service-b",
+    taskSlug: "summarize-handler",
+    mode: "workspace"
+  });
+
+  const workspaceServerPath = path.join(
+    validationRoot,
+    started.manifest.workspaceProjectPath,
+    "src/server.ts"
+  );
+  fs.writeFileSync(
+    workspaceServerPath,
+    'export function handler() {\n  return { ok: true, name: "service-b", version: 2 };\n}\n',
+    "utf8"
+  );
+
+  const summary = summarizeManagedTask(validationRoot, {
+    contentRepoRoot: repo,
+    projectSlug: "service-b",
+    taskSlug: "summarize-handler"
+  });
+
+  assert.equal(summary.changedFiles, 1);
+  assert.deepEqual(summary.changes, [{ path: "src/server.ts", kind: "modified" }]);
+  assert.equal(typeof summary.generatedAt, "string");
+  assert.equal(fs.existsSync(path.join(started.taskRoot, "summary.json")), true);
 });

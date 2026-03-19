@@ -17,6 +17,7 @@
     "probe:codex-create": "node scripts/probe-codex-create-project.mjs",
     "create:project": "node scripts/create-project.mjs",
     "start:managed-task": "node scripts/start-managed-task.mjs",
+    "summarize:managed-task": "node scripts/summarize-managed-task.mjs",
     "apply:managed-task": "node scripts/apply-managed-task.mjs",
     "dev": "node scripts/dev-server.mjs"
   }

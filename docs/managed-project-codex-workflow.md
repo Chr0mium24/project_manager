@@ -39,6 +39,12 @@ Validation prototype helper:
 node validation/scripts/start-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy --mode workspace
 ```
 
+Summary helper:
+
+```bash
+node validation/scripts/summarize-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy
+```
+
 Apply helper:
 
 ```bash
