@@ -5,6 +5,7 @@ import {
   SLUG_RE,
   assert
 } from "./contracts.mjs";
+import { validateContentRepo } from "./validators.mjs";
 
 function nowIso() {
   return new Date().toISOString();
@@ -20,6 +21,21 @@ function writeJson(filePath, value) {
 
 function getBranchName(projectSlug, taskSlug) {
   return `task/${projectSlug}--${taskSlug}`;
+}
+
+function getTaskPaths(validationRoot, projectSlug, taskSlug) {
+  const tasksRoot = path.join(validationRoot, "tmp", "managed-tasks");
+  const taskRoot = path.join(tasksRoot, projectSlug, taskSlug);
+  const workspaceRoot = path.join(taskRoot, "workspace");
+  const workspaceProjectDir = path.join(workspaceRoot, projectSlug);
+  const manifestPath = path.join(taskRoot, "task.json");
+
+  return {
+    taskRoot,
+    workspaceRoot,
+    workspaceProjectDir,
+    manifestPath
+  };
 }
 
 export function startManagedTask(validationRoot, options) {
@@ -41,11 +57,12 @@ export function startManagedTask(validationRoot, options) {
   assert(fs.existsSync(projectJsonPath), `managed project not found: ${projectSlug}`);
 
   const projectJson = readJson(projectJsonPath);
-  const tasksRoot = path.join(validationRoot, "tmp", "managed-tasks");
-  const taskRoot = path.join(tasksRoot, projectSlug, taskSlug);
-  const workspaceRoot = path.join(taskRoot, "workspace");
-  const workspaceProjectDir = path.join(workspaceRoot, projectSlug);
-  const manifestPath = path.join(taskRoot, "task.json");
+  const {
+    taskRoot,
+    workspaceRoot,
+    workspaceProjectDir,
+    manifestPath
+  } = getTaskPaths(validationRoot, projectSlug, taskSlug);
 
   if (!force) {
     assert(!fs.existsSync(taskRoot), `managed task already exists: ${projectSlug}/${taskSlug}`);
@@ -79,5 +96,50 @@ export function startManagedTask(validationRoot, options) {
     taskRoot,
     manifestPath,
     manifest
+  };
+}
+
+export function applyManagedTask(validationRoot, options) {
+  const {
+    contentRepoRoot,
+    projectSlug,
+    taskSlug
+  } = options;
+
+  assert(typeof contentRepoRoot === "string" && contentRepoRoot.length > 0, "contentRepoRoot is required");
+  assert(typeof projectSlug === "string" && SLUG_RE.test(projectSlug), "projectSlug is invalid");
+  assert(typeof taskSlug === "string" && SLUG_RE.test(taskSlug), "taskSlug is invalid");
+
+  const projectDir = path.join(contentRepoRoot, "projects", projectSlug);
+  const {
+    manifestPath,
+    workspaceProjectDir
+  } = getTaskPaths(validationRoot, projectSlug, taskSlug);
+
+  assert(fs.existsSync(manifestPath), `managed task manifest not found: ${projectSlug}/${taskSlug}`);
+  assert(fs.existsSync(workspaceProjectDir), `managed task workspace not found: ${projectSlug}/${taskSlug}`);
+
+  const manifest = readJson(manifestPath);
+  assert(manifest.projectSlug === projectSlug, "managed task manifest projectSlug mismatch");
+  assert(manifest.taskSlug === taskSlug, "managed task manifest taskSlug mismatch");
+  assert(manifest.targetCount === 1, "managed task must target exactly one project");
+  assert(manifest.prPolicy === "forbidden", "managed task PR policy must remain forbidden");
+
+  fs.rmSync(projectDir, { recursive: true, force: true });
+  fs.cpSync(workspaceProjectDir, projectDir, { recursive: true });
+  validateContentRepo(contentRepoRoot);
+
+  const appliedManifest = {
+    ...manifest,
+    lastAppliedAt: nowIso(),
+    status: "applied"
+  };
+  writeJson(manifestPath, appliedManifest);
+
+  return {
+    projectSlug,
+    taskSlug,
+    status: appliedManifest.status,
+    lastAppliedAt: appliedManifest.lastAppliedAt
   };
 }

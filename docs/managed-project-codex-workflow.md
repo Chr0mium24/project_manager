@@ -39,6 +39,12 @@ Validation prototype helper:
 node validation/scripts/start-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy --mode workspace
 ```
 
+Apply helper:
+
+```bash
+node validation/scripts/apply-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy
+```
+
 ## Important distinction
 
 For managed projects:
@@ -53,6 +59,7 @@ Instead:
 
 - keep intermediate edits local to the task workspace
 - commit once when the task outcome is complete and validated
+- apply the validated workspace back to the target project through an explicit step
 
 ## Branch rule
 

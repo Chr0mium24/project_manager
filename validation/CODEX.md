@@ -53,6 +53,12 @@ Managed-project task workspace:
 node scripts/start-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy --mode workspace
 ```
 
+Apply managed-project task result:
+
+```bash
+node scripts/apply-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy
+```
+
 ## Debug server
 
 Run:
@@ -83,4 +89,4 @@ If instructed to modify one managed project, Codex should:
 1. Start a managed-project task workspace
 2. Keep the task scoped to the single requested project
 3. Avoid PR-oriented workflow
-4. Produce one validated end result
+4. Apply the validated end result back through the apply script when requested

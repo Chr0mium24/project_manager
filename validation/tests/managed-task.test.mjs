@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { startManagedTask } from "../lib/managed-task.mjs";
+import { applyManagedTask, startManagedTask } from "../lib/managed-task.mjs";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const fixtureRepo = path.resolve(currentDir, "..", "content-repo");
@@ -76,4 +76,59 @@ test("startManagedTask rejects unknown managed project", () => {
       mode: "workspace"
     });
   }, /managed project not found/);
+});
+
+test("applyManagedTask copies workspace changes back to the target project", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pm-managed-task-"));
+  const validationRoot = path.join(tempRoot, "validation");
+  const repo = path.join(validationRoot, "content-repo");
+
+  fs.mkdirSync(validationRoot, { recursive: true });
+  copyDir(fixtureRepo, repo);
+
+  const started = startManagedTask(validationRoot, {
+    contentRepoRoot: repo,
+    projectSlug: "landing-a",
+    taskSlug: "fix-copy",
+    mode: "workspace"
+  });
+
+  const workspaceHtmlPath = path.join(
+    validationRoot,
+    started.manifest.workspaceProjectPath,
+    "src/index.html"
+  );
+  fs.writeFileSync(workspaceHtmlPath, "<!doctype html>\n<html><body><h1>Updated</h1></body></html>\n", "utf8");
+
+  const applied = applyManagedTask(validationRoot, {
+    contentRepoRoot: repo,
+    projectSlug: "landing-a",
+    taskSlug: "fix-copy"
+  });
+
+  const targetHtmlPath = path.join(repo, "projects/landing-a/src/index.html");
+  const targetHtml = fs.readFileSync(targetHtmlPath, "utf8");
+  const manifest = JSON.parse(fs.readFileSync(started.manifestPath, "utf8"));
+
+  assert.equal(applied.status, "applied");
+  assert.match(targetHtml, /Updated/);
+  assert.equal(manifest.status, "applied");
+  assert.equal(typeof manifest.lastAppliedAt, "string");
+});
+
+test("applyManagedTask rejects missing task manifests", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pm-managed-task-"));
+  const validationRoot = path.join(tempRoot, "validation");
+  const repo = path.join(validationRoot, "content-repo");
+
+  fs.mkdirSync(validationRoot, { recursive: true });
+  copyDir(fixtureRepo, repo);
+
+  assert.throws(() => {
+    applyManagedTask(validationRoot, {
+      contentRepoRoot: repo,
+      projectSlug: "landing-a",
+      taskSlug: "missing-task"
+    });
+  }, /managed task manifest not found/);
 });
