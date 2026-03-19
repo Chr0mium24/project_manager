@@ -1,7 +1,9 @@
 import {
+  applyManagedTask,
   startManagedTask,
   summarizeManagedTask,
   validateManagedTask,
+  type ManagedTaskApplyResult,
   type ManagedTaskManifest,
   type ManagedTaskSummary,
   type ManagedTaskValidation
@@ -25,6 +27,10 @@ interface ManagedTaskSummaryPayload {
 
 interface ManagedTaskValidationPayload {
   validation: ManagedTaskValidation;
+}
+
+interface ManagedTaskApplyPayload {
+  result: ManagedTaskApplyResult;
 }
 
 const startManagedTaskBodySchema = z.object({
@@ -152,6 +158,38 @@ function sendManagedTaskValidation(
   }
 }
 
+function sendManagedTaskApply(
+  rootDir: string,
+  slug: string,
+  taskSlug: string,
+  reply: FastifyReply
+): boolean {
+  try {
+    const result = applyManagedTask(rootDir, {
+      projectSlug: slug,
+      taskSlug
+    });
+    const payload: ManagedTaskApplyPayload = { result };
+    void reply.code(200).send(payload);
+    return true;
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+
+    if (error.message.startsWith("managed task manifest not found:")) {
+      void reply.code(404).send({
+        error: "managed-task-not-found",
+        slug,
+        taskSlug
+      });
+      return true;
+    }
+
+    throw error;
+  }
+}
+
 export function sendManagedTaskApi(
   rootDir: string,
   pathname: string,
@@ -171,18 +209,34 @@ function sendManagedTaskLifecycleApi(
   method: string,
   reply: FastifyReply
 ): boolean {
-  const validateMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)\/validate$/);
-  if (validateMatch && method === "POST") {
-    const slug = validateMatch[1] ?? "";
-    const taskSlug = validateMatch[2] ?? "";
-    return sendManagedTaskValidation(rootDir, slug, taskSlug, reply);
+  const lifecycleRoutes = [
+    {
+      pattern: /^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)\/apply$/,
+      handler: sendManagedTaskApply
+    },
+    {
+      pattern: /^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)\/validate$/,
+      handler: sendManagedTaskValidation
+    },
+    {
+      pattern: /^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)\/summarize$/,
+      handler: sendManagedTaskSummary
+    }
+  ] as const;
+
+  if (method !== "POST") {
+    return false;
   }
 
-  const summaryMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/tasks\/([a-z0-9-]+)\/summarize$/);
-  if (summaryMatch && method === "POST") {
-    const slug = summaryMatch[1] ?? "";
-    const taskSlug = summaryMatch[2] ?? "";
-    return sendManagedTaskSummary(rootDir, slug, taskSlug, reply);
+  for (const route of lifecycleRoutes) {
+    const match = pathname.match(route.pattern);
+    if (!match) {
+      continue;
+    }
+
+    const slug = match[1] ?? "";
+    const taskSlug = match[2] ?? "";
+    return route.handler(rootDir, slug, taskSlug, reply);
   }
 
   return false;
