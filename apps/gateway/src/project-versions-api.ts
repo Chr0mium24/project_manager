@@ -1,8 +1,10 @@
 import {
   createProjectVersion,
+  diffProjectVersion,
   listProjectVersions,
   readProjectVersion,
   restoreProjectVersion,
+  type ProjectVersionDiff,
   type ProjectVersionRecord
 } from "@project-manager/git-core";
 import { type FastifyReply, type FastifyRequest } from "fastify";
@@ -10,6 +12,10 @@ import { z } from "zod";
 
 interface VersionCreateBody {
   message?: string;
+}
+
+interface VersionDiffQuery {
+  baseVersionId?: string;
 }
 
 interface ProjectVersionListPayload {
@@ -28,8 +34,21 @@ interface ProjectVersionRestorePayload {
   restoredVersion: ProjectVersionRecord;
 }
 
+interface ProjectVersionDiffPayload {
+  diff: ProjectVersionDiff;
+}
+
+interface ProjectVersionDiffRequest {
+  slug: string;
+  versionId: string;
+}
+
 const versionCreateBodySchema = z.object({
   message: z.string().min(1)
+}).strict();
+
+const versionDiffQuerySchema = z.object({
+  baseVersionId: z.string().min(1).optional()
 }).strict();
 
 function sendProjectVersionList(rootDir: string, slug: string, reply: FastifyReply): boolean {
@@ -111,6 +130,43 @@ function sendProjectVersionRestore(
   return true;
 }
 
+function sendProjectVersionDiff(
+  rootDir: string,
+  diffRequest: ProjectVersionDiffRequest,
+  request: FastifyRequest<{ Querystring: VersionDiffQuery }>,
+  reply: FastifyReply
+): boolean {
+  const parsedQuery = versionDiffQuerySchema.safeParse(request.query);
+  if (!parsedQuery.success) {
+    void reply.code(400).send({
+      error: "invalid-project-version-diff-query",
+      slug: diffRequest.slug,
+      versionId: diffRequest.versionId
+    });
+    return true;
+  }
+
+  const diff = diffProjectVersion(
+    rootDir,
+    diffRequest.slug,
+    diffRequest.versionId,
+    parsedQuery.data.baseVersionId
+  );
+  if (diff === null) {
+    void reply.code(404).send({
+      error: "project-version-diff-not-available",
+      slug: diffRequest.slug,
+      versionId: diffRequest.versionId,
+      baseVersionId: parsedQuery.data.baseVersionId ?? null
+    });
+    return true;
+  }
+
+  const payload: ProjectVersionDiffPayload = { diff };
+  void reply.code(200).send(payload);
+  return true;
+}
+
 function sendVersionRestoreRoute(
   rootDir: string,
   pathname: string,
@@ -123,6 +179,28 @@ function sendVersionRestoreRoute(
   }
 
   return sendProjectVersionRestore(rootDir, restoreMatch[1] ?? "", restoreMatch[2] ?? "", reply);
+}
+
+function sendVersionDiffRoute(
+  rootDir: string,
+  pathname: string,
+  request: FastifyRequest<{ Querystring: VersionDiffQuery }>,
+  reply: FastifyReply
+): boolean {
+  const diffMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/versions\/([^/]+)\/diff$/);
+  if (!diffMatch || request.method !== "GET") {
+    return false;
+  }
+
+  return sendProjectVersionDiff(
+    rootDir,
+    {
+      slug: diffMatch[1] ?? "",
+      versionId: diffMatch[2] ?? ""
+    },
+    request,
+    reply
+  );
 }
 
 function sendVersionReadRoute(
@@ -164,10 +242,14 @@ function sendVersionCollectionRoute(
 export function sendProjectVersionsApi(
   rootDir: string,
   pathname: string,
-  request: FastifyRequest<{ Body: VersionCreateBody }>,
+  request: FastifyRequest<{ Body: VersionCreateBody; Querystring: VersionDiffQuery }>,
   reply: FastifyReply
 ): boolean {
   if (sendVersionRestoreRoute(rootDir, pathname, request.method, reply)) {
+    return true;
+  }
+
+  if (sendVersionDiffRoute(rootDir, pathname, request, reply)) {
     return true;
   }
 

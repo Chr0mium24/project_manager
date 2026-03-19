@@ -145,3 +145,110 @@ void test("createGatewayApp restores a previous project version", async () => {
 
   await app.close();
 });
+
+void test("createGatewayApp reads a version diff against the current project", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const createResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/versions",
+    payload: {
+      message: "baseline"
+    }
+  });
+  const createPayload: { version: { versionId: string } } = createResponse.json();
+  fs.writeFileSync(
+    path.join(rootDir, "content-repo", "projects", "landing-a", "src", "index.html"),
+    "<!doctype html>\n<html><body><h1>Changed</h1></body></html>\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(rootDir, "content-repo", "projects", "landing-a", "src", "extra.js"),
+    "console.log('extra');\n",
+    "utf8"
+  );
+
+  const diffResponse = await app.inject({
+    method: "GET",
+    url: `/api/projects/landing-a/versions/${createPayload.version.versionId}/diff`
+  });
+  const diffPayload: {
+    diff: {
+      changedFiles: number;
+      baseVersionId: string | null;
+      changes: Array<{ path: string; kind: string }>;
+    };
+  } = diffResponse.json();
+
+  assert.equal(diffResponse.statusCode, 200);
+  assert.equal(diffPayload.diff.baseVersionId, null);
+  assert.equal(diffPayload.diff.changedFiles, 2);
+  assert.deepEqual(diffPayload.diff.changes, [
+    { path: "src/extra.js", kind: "deleted" },
+    { path: "src/index.html", kind: "modified" }
+  ]);
+
+  await app.close();
+});
+
+void test("createGatewayApp reads a version diff against another version", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const firstResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/versions",
+    payload: {
+      message: "first"
+    }
+  });
+  const firstPayload: { version: { versionId: string } } = firstResponse.json();
+  fs.writeFileSync(
+    path.join(rootDir, "content-repo", "projects", "landing-a", "src", "index.html"),
+    "<!doctype html>\n<html><body><h1>Changed</h1></body></html>\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(rootDir, "content-repo", "projects", "landing-a", "src", "extra.js"),
+    "console.log('extra');\n",
+    "utf8"
+  );
+  const secondResponse = await app.inject({
+    method: "POST",
+    url: "/api/projects/landing-a/versions",
+    payload: {
+      message: "second"
+    }
+  });
+  const secondPayload: { version: { versionId: string } } = secondResponse.json();
+
+  const diffResponse = await app.inject({
+    method: "GET",
+    url: `/api/projects/landing-a/versions/${secondPayload.version.versionId}/diff?baseVersionId=${firstPayload.version.versionId}`
+  });
+  const diffPayload: {
+    diff: {
+      changedFiles: number;
+      baseVersionId: string | null;
+      changes: Array<{ path: string; kind: string }>;
+    };
+  } = diffResponse.json();
+  const missingDiff = await app.inject({
+    method: "GET",
+    url: `/api/projects/landing-a/versions/${secondPayload.version.versionId}/diff?baseVersionId=missing-base`
+  });
+
+  assert.equal(diffResponse.statusCode, 200);
+  assert.equal(diffPayload.diff.baseVersionId, firstPayload.version.versionId);
+  assert.equal(diffPayload.diff.changedFiles, 2);
+  assert.deepEqual(diffPayload.diff.changes, [
+    { path: "src/extra.js", kind: "added" },
+    { path: "src/index.html", kind: "modified" }
+  ]);
+  assert.equal(missingDiff.statusCode, 404);
+
+  await app.close();
+});

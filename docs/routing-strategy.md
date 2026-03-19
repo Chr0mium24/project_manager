@@ -39,6 +39,7 @@ Important:
 - `/api/projects/:slug`
 - `GET /api/projects/:slug/versions`
 - `GET /api/projects/:slug/versions/:versionId`
+- `GET /api/projects/:slug/versions/:versionId/diff`
 - `POST /api/projects/:slug/versions`
 - `POST /api/projects/:slug/versions/:versionId/restore`
 - `/api/projects/:slug/files`
