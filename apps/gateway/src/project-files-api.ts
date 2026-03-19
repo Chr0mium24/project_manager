@@ -1,5 +1,6 @@
 import {
   listProjectFiles,
+  readProjectFileTree,
   readProject,
   readProjectFile,
   writeProjectFile
@@ -34,6 +35,23 @@ function sendProjectFiles(rootDir: string, slug: string, reply: FastifyReply): b
   void reply.code(200).send({
     slug,
     files: listProjectFiles(rootDir, slug) ?? []
+  });
+  return true;
+}
+
+function sendProjectFileTree(rootDir: string, slug: string, reply: FastifyReply): boolean {
+  const tree = readProjectFileTree(rootDir, slug);
+  if (tree === null) {
+    void reply.code(404).send({
+      error: "project-not-found",
+      slug
+    });
+    return true;
+  }
+
+  void reply.code(200).send({
+    slug,
+    tree
   });
   return true;
 }
@@ -145,12 +163,27 @@ export function sendProjectFilesApi(
   request: FastifyRequest<{ Querystring: FileQuery; Body: FileWriteBody }>,
   reply: FastifyReply
 ): boolean {
+  const treeMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/file-tree$/);
+  if (treeMatch && request.method === "GET") {
+    const slug = treeMatch[1] ?? "";
+    return sendProjectFileTree(rootDir, slug, reply);
+  }
+
   const filesMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/files$/);
   if (filesMatch && request.method === "GET") {
     const slug = filesMatch[1] ?? "";
     return sendProjectFiles(rootDir, slug, reply);
   }
 
+  return sendSingleProjectFileApi(rootDir, pathname, request, reply);
+}
+
+function sendSingleProjectFileApi(
+  rootDir: string,
+  pathname: string,
+  request: FastifyRequest<{ Querystring: FileQuery; Body: FileWriteBody }>,
+  reply: FastifyReply
+): boolean {
   const fileMatch = pathname.match(/^\/api\/projects\/([a-z0-9-]+)\/file$/);
   if (!fileMatch) {
     return false;

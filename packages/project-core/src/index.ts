@@ -18,6 +18,13 @@ export {
   type ProjectFileRecord
 } from "./project-files.ts";
 export type { ProjectFileWriteResult } from "./project-files.ts";
+export {
+  buildProjectFileTree,
+  readProjectFileTree,
+  type ProjectFileTreeDirectoryNode,
+  type ProjectFileTreeFileNode,
+  type ProjectFileTreeNode
+} from "./project-file-tree.ts";
 export { validateContentRepo, type ContentRepoValidationSummary } from "./content-repo-validation.ts";
 export {
   getManagedTaskPaths,

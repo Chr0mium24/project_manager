@@ -11,6 +11,15 @@ interface FilesPayload {
   files: Array<{ path: string }>;
 }
 
+interface FileTreePayload {
+  slug: string;
+  tree: {
+    kind: "directory";
+    name: string;
+    children: Array<{ kind: "directory" | "file"; name: string }>;
+  };
+}
+
 interface FileContentPayload {
   content: string;
 }
@@ -53,6 +62,35 @@ void test("createGatewayApp serves project file listings and file content", asyn
   assert.match(filePayload.content, /Landing A/);
   assert.equal(missingPathResponse.statusCode, 400);
   assert.equal(invalidPathResponse.statusCode, 400);
+
+  await app.close();
+});
+
+void test("createGatewayApp serves a project file tree", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  fs.mkdirSync(path.join(rootDir, "content-repo", "projects", "landing-a", "src", "components"), {
+    recursive: true
+  });
+  fs.writeFileSync(
+    path.join(rootDir, "content-repo", "projects", "landing-a", "src", "components", "card.js"),
+    'export const card = "ok";\n',
+    "utf8"
+  );
+  const app = createGatewayApp(rootDir);
+
+  const treeResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/file-tree"
+  });
+  const treePayload: FileTreePayload = treeResponse.json();
+
+  assert.equal(treeResponse.statusCode, 200);
+  assert.equal(treePayload.slug, "landing-a");
+  assert.deepEqual(
+    treePayload.tree.children.map((child) => `${child.kind}:${child.name}`),
+    ["directory:src", "file:project.json"]
+  );
 
   await app.close();
 });
