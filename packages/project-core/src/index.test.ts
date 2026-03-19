@@ -8,14 +8,23 @@ import {
   getProjectsIndexPath,
   listProjects,
   readProject,
-  readProjectEntry
+  readProjectEntry,
+  validateContentRepo
 } from "./index.ts";
+
+function createTempRoot(): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
+}
+
+function writeJson(filePath: string, value: unknown): void {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
 
 function writeContentRepo(rootDir: string): void {
   const contentRepoRoot = path.join(rootDir, "content-repo");
   fs.mkdirSync(path.join(contentRepoRoot, "projects", "landing-a", "src"), { recursive: true });
 
-  fs.writeFileSync(getProjectsIndexPath(rootDir), `${JSON.stringify({
+  writeJson(getProjectsIndexPath(rootDir), {
     version: 1,
     generatedAt: "2026-03-20T00:00:00.000Z",
     projects: [
@@ -30,29 +39,25 @@ function writeContentRepo(rootDir: string): void {
         updatedAt: "2026-03-20T00:00:00.000Z"
       }
     ]
-  }, null, 2)}\n`, "utf8");
+  });
 
-  fs.writeFileSync(
-    path.join(contentRepoRoot, "projects", "landing-a", "project.json"),
-    `${JSON.stringify({
-      schemaVersion: 1,
-      name: "Landing A",
-      slug: "landing-a",
-      description: "Official sample static project",
-      runtime: "static",
-      entry: "src/index.html",
-      route: "/p/landing-a",
-      visibility: "private",
-      tags: ["landing", "sample"],
-      latestVersion: "v1",
-      mainLanguage: "html",
-      framework: "vanilla",
-      owner: "project-manager",
-      createdAt: "2026-03-20T00:00:00.000Z",
-      updatedAt: "2026-03-20T00:00:00.000Z"
-    }, null, 2)}\n`,
-    "utf8"
-  );
+  writeJson(path.join(contentRepoRoot, "projects", "landing-a", "project.json"), {
+    schemaVersion: 1,
+    name: "Landing A",
+    slug: "landing-a",
+    description: "Official sample static project",
+    runtime: "static",
+    entry: "src/index.html",
+    route: "/p/landing-a",
+    visibility: "private",
+    tags: ["landing", "sample"],
+    latestVersion: "v1",
+    mainLanguage: "html",
+    framework: "vanilla",
+    owner: "project-manager",
+    createdAt: "2026-03-20T00:00:00.000Z",
+    updatedAt: "2026-03-20T00:00:00.000Z"
+  });
   fs.writeFileSync(
     path.join(contentRepoRoot, "projects", "landing-a", "src", "index.html"),
     "<!doctype html>\n<html><body><h1>Landing A</h1></body></html>\n",
@@ -61,7 +66,7 @@ function writeContentRepo(rootDir: string): void {
 }
 
 test("listProjects reads the formal content repo index", () => {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
+  const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
   const projects = listProjects(rootDir);
@@ -72,7 +77,7 @@ test("listProjects reads the formal content repo index", () => {
 });
 
 test("readProject returns a full project document", () => {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
+  const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
   const project = readProject(rootDir, "landing-a");
@@ -83,7 +88,7 @@ test("readProject returns a full project document", () => {
 });
 
 test("readProjectEntry returns null for missing projects", () => {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
+  const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
   assert.equal(readProject(rootDir, "missing-project"), null);
@@ -91,7 +96,7 @@ test("readProjectEntry returns null for missing projects", () => {
 });
 
 test("readProjectEntry returns the project entry file contents", () => {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
+  const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
   const entryContent = readProjectEntry(rootDir, "landing-a");
@@ -99,14 +104,50 @@ test("readProjectEntry returns the project entry file contents", () => {
   assert.match(entryContent ?? "", /Landing A/);
 });
 
+test("validateContentRepo succeeds for a valid formal content repo", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const summary = validateContentRepo(path.join(rootDir, "content-repo"));
+
+  assert.deepEqual(summary, { projects: 1 });
+});
+
+test("validateContentRepo rejects a project that diverges from the index", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+  writeJson(path.join(rootDir, "content-repo", "projects", "landing-a", "project.json"), {
+    schemaVersion: 1,
+    name: "Landing A",
+    slug: "landing-a",
+    description: "Official sample static project",
+    runtime: "static",
+    entry: "src/index.html",
+    route: "/p/landing-a-v2",
+    visibility: "private",
+    tags: ["landing", "sample"],
+    latestVersion: "v1",
+    mainLanguage: "html",
+    framework: "vanilla",
+    owner: "project-manager",
+    createdAt: "2026-03-20T00:00:00.000Z",
+    updatedAt: "2026-03-20T00:00:00.000Z"
+  });
+
+  assert.throws(
+    () => validateContentRepo(path.join(rootDir, "content-repo")),
+    /static project route must equal \/p<slug>|static project route must equal \/p\/<slug>|index route does not match project\.json/
+  );
+});
+
 test("createProject creates a static project in the formal content repo", () => {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
+  const rootDir = createTempRoot();
   fs.mkdirSync(path.join(rootDir, "content-repo", "projects"), { recursive: true });
-  fs.writeFileSync(getProjectsIndexPath(rootDir), `${JSON.stringify({
+  writeJson(getProjectsIndexPath(rootDir), {
     version: 1,
     generatedAt: "2026-03-20T00:00:00.000Z",
     projects: []
-  }, null, 2)}\n`, "utf8");
+  });
 
   const project = createProject(rootDir, {
     slug: "demo-static",
@@ -118,16 +159,17 @@ test("createProject creates a static project in the formal content repo", () => 
   assert.equal(project.route, "/p/demo-static");
   assert.match(readProjectEntry(rootDir, "demo-static") ?? "", /Demo Static/);
   assert.deepEqual(listProjects(rootDir).map((item) => item.slug), ["demo-static"]);
+  assert.deepEqual(validateContentRepo(path.join(rootDir, "content-repo")), { projects: 1 });
 });
 
 test("createProject creates a dynamic project and force recreates the directory", () => {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "project-core-"));
+  const rootDir = createTempRoot();
   fs.mkdirSync(path.join(rootDir, "content-repo", "projects"), { recursive: true });
-  fs.writeFileSync(getProjectsIndexPath(rootDir), `${JSON.stringify({
+  writeJson(getProjectsIndexPath(rootDir), {
     version: 1,
     generatedAt: "2026-03-20T00:00:00.000Z",
     projects: []
-  }, null, 2)}\n`, "utf8");
+  });
 
   createProject(rootDir, {
     slug: "demo-service",
@@ -153,4 +195,5 @@ test("createProject creates a dynamic project and force recreates the directory"
     false
   );
   assert.match(readProjectEntry(rootDir, "demo-service") ?? "", /demo-service/);
+  assert.deepEqual(validateContentRepo(path.join(rootDir, "content-repo")), { projects: 1 });
 });

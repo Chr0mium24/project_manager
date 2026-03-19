@@ -1,45 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import {
+  projectJsonSchema,
+  projectsIndexSchema,
+  type ManagedProject,
+  type ProjectIndexEntry,
+  type ProjectsIndex
+} from "./schemas.ts";
 
-const projectIndexEntrySchema = z.object({
-  slug: z.string().min(1),
-  path: z.string().min(1),
-  name: z.string().min(1),
-  runtime: z.enum(["static", "dynamic"]),
-  visibility: z.enum(["private", "public"]),
-  entry: z.string().min(1),
-  route: z.string().min(1),
-  updatedAt: z.string().min(1)
-});
+export { validateContentRepo, type ContentRepoValidationSummary } from "./content-repo-validation.ts";
+export type { ManagedProject, ProjectIndexEntry, ProjectsIndex };
 
-const projectsIndexSchema = z.object({
-  version: z.number().int().positive(),
-  generatedAt: z.string().min(1),
-  projects: z.array(projectIndexEntrySchema)
-});
-
-const projectJsonSchema = z.object({
-  schemaVersion: z.number().int().positive(),
-  name: z.string().min(1),
-  slug: z.string().min(1),
-  description: z.string(),
-  runtime: z.enum(["static", "dynamic"]),
-  entry: z.string().min(1),
-  route: z.string().min(1),
-  visibility: z.enum(["private", "public"]),
-  tags: z.array(z.string()),
-  latestVersion: z.string().min(1),
-  mainLanguage: z.string().min(1),
-  framework: z.string().min(1),
-  owner: z.string().min(1),
-  createdAt: z.string().min(1),
-  updatedAt: z.string().min(1)
-});
-
-export type ProjectIndexEntry = z.infer<typeof projectIndexEntrySchema>;
-export type ProjectsIndex = z.infer<typeof projectsIndexSchema>;
-export type ManagedProject = z.infer<typeof projectJsonSchema>;
 export interface CreateProjectOptions {
   slug: string;
   name: string;
