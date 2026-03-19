@@ -6,8 +6,8 @@ Use:
 
 - `Volta` for toolchain pinning
 - `Node 20` as the runtime
-- `tsx` for development execution
-- `pnpm` as the package manager
+- `node --import tsx` for development execution
+- `pnpm` via `corepack` as the package manager entrypoint
 - `turbo` for monorepo orchestration
 
 Do not use `Bun` as the primary runtime in V1.
@@ -54,8 +54,26 @@ Why:
 
 1. It keeps TypeScript execution simple
 2. It works well with normal Node tooling
-3. It avoids over-relying on Node's limited native TypeScript mode
+3. `node --import tsx` avoids depending on `tsx` CLI IPC behavior in restricted environments
 4. It is a cleaner default than introducing Bun as the runtime
+
+Recommended command shape:
+
+```bash
+node --import tsx path/to/file.ts
+```
+
+Avoid treating the bare `tsx` CLI as the required execution surface.
+
+## Why `corepack pnpm`
+
+The repository standard remains `pnpm`, but the stable entrypoint should be `corepack pnpm`.
+
+Why:
+
+1. it respects the pinned package manager version from the repository
+2. it avoids depending on whichever standalone `pnpm` happens to be installed globally
+3. it keeps the package-manager contract explicit for Codex and humans
 
 ## Recommended core stack
 

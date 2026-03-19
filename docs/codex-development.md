@@ -115,8 +115,8 @@ Forbidden by default:
 ## Runtime/tooling policy
 
 - use `Node`
-- use `tsx` for development execution
-- use `pnpm` as the package manager
+- use `node --import tsx` for development execution
+- use `corepack pnpm` as the package manager entrypoint
 - use `turbo` for workspace orchestration
 - do not migrate the project to `Bun` in V1
 - do not add compatibility shims for other runtimes or package managers

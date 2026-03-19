@@ -73,8 +73,8 @@ Scope note:
 ## Stack rules
 
 - Runtime: `Node`
-- Dev execution: `tsx`
-- Package manager: `pnpm`
+- Dev execution: `node --import tsx`
+- Package manager: `corepack pnpm`
 - Monorepo orchestrator: `turbo`
 - Do not switch the primary runtime to `Bun` in V1
 - Do not add compatibility shims for old runtimes, alternate runtimes, or multiple package managers

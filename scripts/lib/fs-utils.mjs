@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
-const DEFAULT_IGNORES = new Set(['.git', 'node_modules', 'storage', 'tmp']);
+const DEFAULT_IGNORES = new Set(['.git', 'node_modules', 'storage', 'tmp', '.cache', '.corepack']);
 
 export function walkFiles(rootDir, options = {}) {
   const { includeExtensions = null, excludeDirectories = DEFAULT_IGNORES } = options;
