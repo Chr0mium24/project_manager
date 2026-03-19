@@ -20,6 +20,7 @@ These docs are the source of truth for:
 - [Code Standards](./code-standards.md)
 - [Routing Strategy](./routing-strategy.md)
 - [Codex Development](./codex-development.md)
+- [Managed Project Codex Workflow](./managed-project-codex-workflow.md)
 - [Sandbox And Git Policy](./sandbox-and-git.md)
 
 ## Status

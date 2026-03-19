@@ -4,6 +4,12 @@
 
 Codex must be able to help with development without damaging unrelated projects or escaping the intended workspace.
 
+This document defines the Git and sandbox policy for the main `project_manager` repository.
+
+Managed child projects follow a separate workflow document:
+
+- `docs/managed-project-codex-workflow.md`
+
 ## Workspace rule
 
 Codex may operate only inside the current repository workspace unless explicitly instructed otherwise.
@@ -57,6 +63,11 @@ Implementation note:
 - it blocks commits on `main` and `master`
 - it blocks commits on non-`task/<slug>` branches
 - `./scripts/codex-safe-gh.sh` exists only to reject PR creation explicitly
+
+Scope note:
+
+- this safe Git flow is for the main repository
+- managed child projects may use one final result commit instead of one commit per completed slice
 
 ## Sandbox policy
 

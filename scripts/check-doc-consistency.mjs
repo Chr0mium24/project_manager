@@ -21,6 +21,21 @@ const checks = [
     mustContain: 'validation-only',
     reason: 'validation Codex guide must be explicitly scoped',
   },
+  {
+    file: 'docs/codex-development.md',
+    mustContain: 'main repository only',
+    reason: 'main repository commit cadence must be explicitly scoped',
+  },
+  {
+    file: 'docs/managed-project-codex-workflow.md',
+    mustContain: 'does not define the commit cadence for the `project_manager` repository itself',
+    reason: 'managed project workflow must be separated from main repo workflow',
+  },
+  {
+    file: 'CODEX.md',
+    mustContain: 'This file governs the `project_manager` repository itself.',
+    reason: 'root Codex guide must identify its scope',
+  },
 ];
 
 const failures = [];

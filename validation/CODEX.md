@@ -16,6 +16,8 @@ When working here, Codex must follow the workspace rules and prefer script-drive
    - `npm test`
    - `npm run validate`
 6. Do not touch unrelated projects when asked to operate on one target project
+7. The main repository's one-slice-one-commit rule does not apply inside this validation workspace
+8. If a managed-project task later becomes Git-backed, prefer one final result commit, not many intermediate commits
 
 ## Project model
 

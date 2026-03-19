@@ -2,6 +2,12 @@
 
 This repository is the planning and validation workspace for the project manager platform.
 
+This file governs the `project_manager` repository itself.
+
+Managed child projects operated by the platform use a different workflow:
+
+- `docs/managed-project-codex-workflow.md`
+
 ## Source of truth
 
 Read these first:
@@ -58,6 +64,11 @@ Branch rule:
 - Each completed slice must end with one local commit on the task branch
 - Use a narrow commit that includes its tests and doc updates
 - Preferred commit message format: `<type>(<scope>): <summary>`
+
+Scope note:
+
+- the one-slice-one-commit rule is for this repository only
+- do not apply that cadence automatically to managed child projects
 
 ## Stack rules
 

@@ -4,6 +4,8 @@
 
 Codex must follow the same development gate as humans.
 
+This document is about the `project_manager` repository itself.
+
 That means:
 
 - read the architecture docs first
@@ -37,7 +39,7 @@ Do not stop after making code edits without running the gate.
 
 ## Git behavior
 
-Codex may use Git, but only inside this repository and within the safe workflow.
+Codex may use Git, but only inside the main `project_manager` repository and within the safe workflow.
 
 Preferred helper:
 
@@ -65,6 +67,12 @@ Commit cadence rule:
 - do not accumulate many unrelated changes and commit them later as one batch
 - if a task becomes multi-phase, split it into multiple narrow commits on the same task branch
 - do not leave finished work uncommitted
+
+Scope note:
+
+- this commit cadence rule is for the main repository only
+- it does not apply to managed child projects operated on by the platform
+- managed project workflow is defined in `docs/managed-project-codex-workflow.md`
 
 Commit content rule:
 
