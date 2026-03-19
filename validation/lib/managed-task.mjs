@@ -48,13 +48,15 @@ function getTaskPaths(validationRoot, projectSlug, taskSlug) {
   const workspaceProjectDir = path.join(workspaceRoot, projectSlug);
   const manifestPath = path.join(taskRoot, "task.json");
   const summaryPath = path.join(taskRoot, "summary.json");
+  const validationPath = path.join(taskRoot, "validation.json");
 
   return {
     taskRoot,
     workspaceRoot,
     workspaceProjectDir,
     manifestPath,
-    summaryPath
+    summaryPath,
+    validationPath
   };
 }
 
@@ -168,7 +170,6 @@ export function applyManagedTask(validationRoot, options) {
   const projectDir = path.join(contentRepoRoot, "projects", projectSlug);
   const {
     manifestPath,
-    summaryPath,
     workspaceProjectDir
   } = getTaskPaths(validationRoot, projectSlug, taskSlug);
 
@@ -181,8 +182,11 @@ export function applyManagedTask(validationRoot, options) {
   assert(manifest.targetCount === 1, "managed task must target exactly one project");
   assert(manifest.prPolicy === "forbidden", "managed task PR policy must remain forbidden");
 
-  const summary = summarizeProjectDiff(projectDir, workspaceProjectDir);
-  writeJson(summaryPath, summary);
+  const validation = validateManagedTask(validationRoot, {
+    contentRepoRoot,
+    projectSlug,
+    taskSlug
+  });
 
   fs.rmSync(projectDir, { recursive: true, force: true });
   fs.cpSync(workspaceProjectDir, projectDir, { recursive: true });
@@ -198,7 +202,7 @@ export function applyManagedTask(validationRoot, options) {
   return {
     projectSlug,
     taskSlug,
-    changedFiles: summary.changedFiles,
+    changedFiles: validation.changedFiles,
     status: appliedManifest.status,
     lastAppliedAt: appliedManifest.lastAppliedAt
   };
@@ -238,4 +242,86 @@ export function summarizeManagedTask(validationRoot, options) {
   };
   writeJson(summaryPath, summary);
   return summary;
+}
+
+export function validateManagedTask(validationRoot, options) {
+  const {
+    contentRepoRoot,
+    projectSlug,
+    taskSlug
+  } = options;
+
+  assert(typeof contentRepoRoot === "string" && contentRepoRoot.length > 0, "contentRepoRoot is required");
+  assert(typeof projectSlug === "string" && SLUG_RE.test(projectSlug), "projectSlug is invalid");
+  assert(typeof taskSlug === "string" && SLUG_RE.test(taskSlug), "taskSlug is invalid");
+
+  const projectDir = path.join(contentRepoRoot, "projects", projectSlug);
+  const {
+    manifestPath,
+    summaryPath,
+    validationPath,
+    workspaceProjectDir
+  } = getTaskPaths(validationRoot, projectSlug, taskSlug);
+
+  assert(fs.existsSync(manifestPath), `managed task manifest not found: ${projectSlug}/${taskSlug}`);
+  assert(fs.existsSync(workspaceProjectDir), `managed task workspace not found: ${projectSlug}/${taskSlug}`);
+
+  const manifest = readJson(manifestPath);
+  assert(manifest.projectSlug === projectSlug, "managed task manifest projectSlug mismatch");
+  assert(manifest.taskSlug === taskSlug, "managed task manifest taskSlug mismatch");
+  assert(manifest.targetCount === 1, "managed task must target exactly one project");
+
+  const workspaceProjectJsonPath = path.join(workspaceProjectDir, "project.json");
+  assert(fs.existsSync(workspaceProjectJsonPath), `managed task workspace project.json is missing: ${projectSlug}/${taskSlug}`);
+
+  const workspaceProject = readJson(workspaceProjectJsonPath);
+  const summary = {
+    projectSlug,
+    taskSlug,
+    generatedAt: nowIso(),
+    ...summarizeProjectDiff(projectDir, workspaceProjectDir)
+  };
+  writeJson(summaryPath, summary);
+
+  const tempRepoRoot = path.join(validationRoot, "tmp", "managed-tasks", projectSlug, taskSlug, ".validation-repo");
+  fs.rmSync(tempRepoRoot, { recursive: true, force: true });
+  fs.mkdirSync(path.join(tempRepoRoot, "projects"), { recursive: true });
+  fs.cpSync(workspaceProjectDir, path.join(tempRepoRoot, "projects", projectSlug), { recursive: true });
+  writeJson(path.join(tempRepoRoot, "projects-index.json"), {
+    version: 1,
+    generatedAt: nowIso(),
+    projects: [
+      {
+        slug: workspaceProject.slug,
+        path: `projects/${workspaceProject.slug}`,
+        name: workspaceProject.name,
+        runtime: workspaceProject.runtime,
+        visibility: workspaceProject.visibility,
+        entry: workspaceProject.entry,
+        route: workspaceProject.route,
+        updatedAt: workspaceProject.updatedAt
+      }
+    ]
+  });
+  validateContentRepo(tempRepoRoot);
+
+  const validatedManifest = {
+    ...manifest,
+    lastValidatedAt: nowIso(),
+    status: "validated"
+  };
+  writeJson(manifestPath, validatedManifest);
+
+  const validation = {
+    schemaVersion: 1,
+    projectSlug,
+    taskSlug,
+    checkedAt: validatedManifest.lastValidatedAt,
+    status: validatedManifest.status,
+    changedFiles: summary.changedFiles,
+    summaryPath: path.relative(validationRoot, summaryPath)
+  };
+  writeJson(validationPath, validation);
+
+  return validation;
 }

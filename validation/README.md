@@ -29,6 +29,7 @@ node scripts/create-project.mjs --content-repo ./content-repo --slug demo-static
 node scripts/create-project.mjs --content-repo ./content-repo --slug demo-service --name "Demo Service" --runtime dynamic
 node scripts/start-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy --mode workspace
 node scripts/summarize-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy
+node scripts/validate-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy
 node scripts/apply-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy
 ```
 
@@ -43,7 +44,8 @@ node scripts/apply-managed-task.mjs --content-repo ./content-repo --project land
 - `create-project.mjs` is the canonical project bootstrap path for new projects
 - `start-managed-task.mjs` is the canonical single-target managed-project task bootstrap path in validation
 - `summarize-managed-task.mjs` writes the managed-task change summary before apply
-- `apply-managed-task.mjs` is the canonical validation path for applying one managed-task workspace back to its target project
+- `validate-managed-task.mjs` validates one managed-task workspace before apply and writes validation artifacts
+- `apply-managed-task.mjs` applies one managed-task workspace back to its target project and re-runs managed-task validation internally
 - `dev-server.mjs` serves a minimal local debug surface for static and dynamic routes
 
 ## Environment

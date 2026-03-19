@@ -30,8 +30,9 @@ The goal is:
 3. make the required file changes
 4. run the project's required validation
 5. present the diff or result summary
-6. create one result commit if the managed project uses Git-backed task branches
-7. stop without creating a PR
+6. apply the validated result back to the target project through an explicit step
+7. create one result commit if the managed project uses Git-backed task branches
+8. stop without creating a PR
 
 Validation prototype helper:
 
@@ -43,6 +44,12 @@ Summary helper:
 
 ```bash
 node validation/scripts/summarize-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy
+```
+
+Validation helper:
+
+```bash
+node validation/scripts/validate-managed-task.mjs --content-repo ./validation/content-repo --project landing-a --task fix-copy
 ```
 
 Apply helper:
@@ -66,6 +73,8 @@ Instead:
 - keep intermediate edits local to the task workspace
 - commit once when the task outcome is complete and validated
 - apply the validated workspace back to the target project through an explicit step
+
+In the validation prototype, `apply-managed-task` also re-runs managed-task validation internally.
 
 ## Branch rule
 

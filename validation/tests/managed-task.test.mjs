@@ -4,7 +4,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { applyManagedTask, startManagedTask, summarizeManagedTask } from "../lib/managed-task.mjs";
+import {
+  applyManagedTask,
+  startManagedTask,
+  summarizeManagedTask,
+  validateManagedTask
+} from "../lib/managed-task.mjs";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const fixtureRepo = path.resolve(currentDir, "..", "content-repo");
@@ -112,6 +117,9 @@ test("applyManagedTask copies workspace changes back to the target project", () 
   const summary = JSON.parse(
     fs.readFileSync(path.join(started.taskRoot, "summary.json"), "utf8")
   );
+  const validation = JSON.parse(
+    fs.readFileSync(path.join(started.taskRoot, "validation.json"), "utf8")
+  );
 
   assert.equal(applied.status, "applied");
   assert.equal(applied.changedFiles, 1);
@@ -120,6 +128,8 @@ test("applyManagedTask copies workspace changes back to the target project", () 
   assert.equal(typeof manifest.lastAppliedAt, "string");
   assert.equal(summary.changedFiles, 1);
   assert.deepEqual(summary.changes, [{ path: "src/index.html", kind: "modified" }]);
+  assert.equal(validation.status, "validated");
+  assert.equal(validation.changedFiles, 1);
 });
 
 test("applyManagedTask rejects missing task manifests", () => {
@@ -175,4 +185,81 @@ test("summarizeManagedTask writes a summary without applying changes", () => {
   assert.deepEqual(summary.changes, [{ path: "src/server.ts", kind: "modified" }]);
   assert.equal(typeof summary.generatedAt, "string");
   assert.equal(fs.existsSync(path.join(started.taskRoot, "summary.json")), true);
+});
+
+test("validateManagedTask writes validation artifacts before apply", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pm-managed-task-"));
+  const validationRoot = path.join(tempRoot, "validation");
+  const repo = path.join(validationRoot, "content-repo");
+
+  fs.mkdirSync(validationRoot, { recursive: true });
+  copyDir(fixtureRepo, repo);
+
+  const started = startManagedTask(validationRoot, {
+    contentRepoRoot: repo,
+    projectSlug: "service-b",
+    taskSlug: "validate-handler",
+    mode: "workspace"
+  });
+
+  const workspaceServerPath = path.join(
+    validationRoot,
+    started.manifest.workspaceProjectPath,
+    "src/server.ts"
+  );
+  fs.writeFileSync(
+    workspaceServerPath,
+    'export function handler() {\n  return { ok: true, name: "service-b", version: 3 };\n}\n',
+    "utf8"
+  );
+
+  const validation = validateManagedTask(validationRoot, {
+    contentRepoRoot: repo,
+    projectSlug: "service-b",
+    taskSlug: "validate-handler"
+  });
+  const manifest = JSON.parse(fs.readFileSync(started.manifestPath, "utf8"));
+  const summary = JSON.parse(
+    fs.readFileSync(path.join(started.taskRoot, "summary.json"), "utf8")
+  );
+
+  assert.equal(validation.status, "validated");
+  assert.equal(validation.changedFiles, 1);
+  assert.equal(typeof validation.checkedAt, "string");
+  assert.equal(manifest.status, "validated");
+  assert.equal(typeof manifest.lastValidatedAt, "string");
+  assert.equal(summary.changedFiles, 1);
+});
+
+test("validateManagedTask rejects invalid workspace project shape", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pm-managed-task-"));
+  const validationRoot = path.join(tempRoot, "validation");
+  const repo = path.join(validationRoot, "content-repo");
+
+  fs.mkdirSync(validationRoot, { recursive: true });
+  copyDir(fixtureRepo, repo);
+
+  const started = startManagedTask(validationRoot, {
+    contentRepoRoot: repo,
+    projectSlug: "landing-a",
+    taskSlug: "break-route",
+    mode: "workspace"
+  });
+
+  const workspaceProjectJsonPath = path.join(
+    validationRoot,
+    started.manifest.workspaceProjectPath,
+    "project.json"
+  );
+  const projectJson = JSON.parse(fs.readFileSync(workspaceProjectJsonPath, "utf8"));
+  projectJson.route = "/app/landing-a";
+  fs.writeFileSync(workspaceProjectJsonPath, `${JSON.stringify(projectJson, null, 2)}\n`, "utf8");
+
+  assert.throws(() => {
+    validateManagedTask(validationRoot, {
+      contentRepoRoot: repo,
+      projectSlug: "landing-a",
+      taskSlug: "break-route"
+    });
+  }, /static runtime route must start with \/p\//);
 });

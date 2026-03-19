@@ -17,10 +17,12 @@ When working here, Codex must follow the workspace rules and prefer script-drive
 7. Run these checks after any structural change:
    - `npm test`
    - `npm run validate`
-8. Do not touch unrelated projects when asked to operate on one target project
-9. The main repository's one-slice-one-commit rule does not apply inside this validation workspace
-10. If a managed-project task later becomes Git-backed, prefer one final result commit, not many intermediate commits
-11. Do not create PRs for managed-project tasks
+8. Run `node scripts/validate-managed-task.mjs ...` before applying a managed-task workspace back to its target project
+9. `node scripts/apply-managed-task.mjs ...` will re-run managed-task validation internally and must remain safe to call directly
+10. Do not touch unrelated projects when asked to operate on one target project
+11. The main repository's one-slice-one-commit rule does not apply inside this validation workspace
+12. If a managed-project task later becomes Git-backed, prefer one final result commit, not many intermediate commits
+13. Do not create PRs for managed-project tasks
 
 ## Project model
 
@@ -59,6 +61,12 @@ Summarize managed-project task result:
 node scripts/summarize-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy
 ```
 
+Validate managed-project task result:
+
+```bash
+node scripts/validate-managed-task.mjs --content-repo ./content-repo --project landing-a --task fix-copy
+```
+
 Apply managed-project task result:
 
 ```bash
@@ -95,5 +103,6 @@ If instructed to modify one managed project, Codex should:
 1. Start a managed-project task workspace
 2. Keep the task scoped to the single requested project
 3. Produce a summary of changed files when useful
-4. Avoid PR-oriented workflow
-5. Apply the validated end result back through the apply script when requested
+4. Validate the managed-task workspace before apply
+5. Avoid PR-oriented workflow
+6. Apply the validated end result back through the apply script when requested
