@@ -180,6 +180,15 @@ For one-command local startup, use:
 
 This helper installs dependencies on first run, defaults the local admin token if needed, waits for the local health check, and starts the gateway on `127.0.0.1:3100`.
 
+If generated local artifacts need to be cleaned, use repository cleanup scripts instead of ad hoc `rm` commands.
+
+Examples:
+
+```bash
+corepack pnpm clean:web
+corepack pnpm clean:generated
+```
+
 ## Development behavior policy
 
 Codex should:

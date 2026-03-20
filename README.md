@@ -46,6 +46,7 @@ PROJECT_MANAGER_OPEN_BROWSER=0 ./scripts/dev-up.sh
 
 ```bash
 corepack pnpm quality-gate
+corepack pnpm clean:web
 corepack pnpm validate:content-repo
 corepack pnpm dev:gateway
 ```
