@@ -27,5 +27,7 @@ void test("readPlatformAsset returns the platform ui module asset", () => {
   assert.match(asset.body, /requestJson/);
   assert.match(asset.body, /\/api\/projects\/\$\{state\.selectedProject\.slug\}\/file-tree/);
   assert.match(asset.body, /data-file-path/);
+  assert.match(asset.body, /method: 'PUT'/);
+  assert.match(asset.body, /data-save-file/);
   assert.equal(readPlatformAsset("/assets/missing.js"), null);
 });
