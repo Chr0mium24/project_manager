@@ -1,5 +1,5 @@
 import { h, type VNode } from "vue";
-import { renderSectionHeader, renderStatusMessage, renderWriteAccessFields } from "./project-manager-view-shared.ts";
+import { renderStatusMessage, renderWriteAccessFields } from "./project-manager-view-shared.ts";
 
 export interface ProjectVersionsWriteActionsProps {
   adminToken: string;
@@ -63,23 +63,21 @@ export function renderVersionsWriteActions(props: ProjectVersionsWriteActionsPro
         },
         "Required only for creating snapshots and restoring a selected version."
       ),
-      h("div", { class: "pm-stack" }, [
-        renderSectionHeader(
-          "Create snapshot",
-          "Open the composer only when you need a new checkpoint.",
-          h(
-            "button",
-            {
-              type: "button",
-              class: "pm-button pm-button-ghost",
-              onClick: () => {
-                props.toggleComposer();
-              }
-            },
-            props.composeOpen ? "Hide Composer" : "New Snapshot"
-          )
+      h("details", { class: "pm-details", open: props.composeOpen }, [
+        h(
+          "summary",
+          {
+            onClick: (event: Event) => {
+              event.preventDefault();
+              props.toggleComposer();
+            }
+          },
+          props.composeOpen ? "Hide snapshot form" : "Compose snapshot"
         ),
-        renderVersionsComposer(props)
+        h("div", { class: "pm-details-body" }, [
+          h("p", { class: "pm-copy" }, "Use this only when you need a new checkpoint."),
+          renderVersionsComposer(props)
+        ])
       ]),
       props.selectedVersionId.length === 0
         ? renderStatusMessage("Select a snapshot above before attempting restore.")

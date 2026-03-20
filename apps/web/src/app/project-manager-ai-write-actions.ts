@@ -75,25 +75,21 @@ export function renderAiWriteActions(props: ProjectAiWriteActionsProps): VNode {
         },
         "Required only for AI task creation and apply on this route."
       ),
-      h("div", { class: "pm-stack" }, [
-        h("div", { class: "pm-card-head" }, [
-          h("div", { class: "pm-page-copy" }, [
-            h("h3", { class: "pm-section-title" }, "New task"),
-            h("p", { class: "pm-copy" }, "Open the composer only when you need a new prompt.")
-          ]),
-          h(
-            "button",
-            {
-              type: "button",
-              class: "pm-button pm-button-ghost",
-              onClick: () => {
-                props.toggleComposer();
-              }
-            },
-            props.composeOpen ? "Hide Composer" : "New Task"
-          )
-        ]),
-        renderAiComposer(props)
+      h("details", { class: "pm-details", open: props.composeOpen }, [
+        h(
+          "summary",
+          {
+            onClick: (event: Event) => {
+              event.preventDefault();
+              props.toggleComposer();
+            }
+          },
+          props.composeOpen ? "Hide new task form" : "Compose new task"
+        ),
+        h("div", { class: "pm-details-body" }, [
+          h("p", { class: "pm-copy" }, "Use this only when you need to enqueue a new prompt."),
+          renderAiComposer(props)
+        ])
       ]),
       !props.canApplySelectedTask
         ? renderStatusMessage("Select a completed task above before applying it.")

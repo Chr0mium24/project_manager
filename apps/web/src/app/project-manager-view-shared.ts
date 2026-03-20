@@ -15,9 +15,9 @@ export function renderPageHeader(
 ): VNode {
   return h("header", { class: "pm-page-head pm-card pm-page-header-card" }, [
     h("div", { class: "pm-page-copy" }, [
-      h("div", { class: "pm-badge-row" }, [
-        h("span", { class: "pm-badge" }, projectSlug || "project"),
-        h("p", { class: "pm-kicker" }, `Project ${currentView}`)
+      h("div", { class: "pm-page-meta" }, [
+        h("p", { class: "pm-kicker" }, projectSlug || "project"),
+        h("span", { class: "pm-badge" }, currentView)
       ]),
       h("h2", { class: "pm-page-title" }, title),
       h("p", { class: "pm-copy" }, description)
