@@ -2,7 +2,14 @@ import { computed, defineComponent, h, onMounted, ref, watch, type ComputedRef, 
 import { useRoute } from "vue-router";
 import { GatewayProjectApiClient, type ProjectVersionDiff, type ProjectVersionRecord } from "../gateway-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
-import { type ProjectManagerMetric, renderPageHeader, renderMetricGrid, renderSectionHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
+import {
+  type ProjectManagerMetric,
+  renderPageHeader,
+  renderMetricGrid,
+  renderSectionHeader,
+  renderStatusMessage,
+  renderWriteAccessCard
+} from "./project-manager-view-shared.ts";
 
 const client = new GatewayProjectApiClient();
 
@@ -41,7 +48,6 @@ interface VersionMutationContext {
   composeOpen: Ref<boolean>;
   loaders: ReturnType<typeof createVersionLoaders>;
 }
-
 function createVersionLoaders(context: VersionLoaderContext) {
   async function selectVersion(versionId: string) {
     if (!context.projectSlug.value || !versionId) {
@@ -79,13 +85,8 @@ function createVersionLoaders(context: VersionLoaderContext) {
       context.isLoading.value = false;
     }
   }
-
-  return {
-    loadVersions,
-    selectVersion
-  };
+  return { loadVersions, selectVersion };
 }
-
 function createVersionMutations(context: VersionMutationContext) {
   async function createVersion() {
     if (!context.projectSlug.value) {
@@ -142,13 +143,8 @@ function createVersionMutations(context: VersionMutationContext) {
       context.isBusy.value = false;
     }
   }
-
-  return {
-    createVersion,
-    restoreSelectedVersion
-  };
+  return { createVersion, restoreSelectedVersion };
 }
-
 function createVersionsState(projectSlug: ComputedRef<string>, adminToken: ComputedRef<string>): VersionsState {
   const versions = ref<ProjectVersionRecord[]>([]);
   const selectedVersionId = ref("");
@@ -177,7 +173,6 @@ function createVersionsState(projectSlug: ComputedRef<string>, adminToken: Compu
     composeOpen,
     loaders
   });
-
   return {
     versions,
     selectedVersionId,
@@ -193,7 +188,6 @@ function createVersionsState(projectSlug: ComputedRef<string>, adminToken: Compu
     restoreSelectedVersion: mutations.restoreSelectedVersion
   };
 }
-
 function renderVersionsComposer(state: VersionsState): VNode | null {
   if (!state.composeOpen.value) {
     return null;
@@ -225,7 +219,6 @@ function renderVersionsComposer(state: VersionsState): VNode | null {
     ])
   ]);
 }
-
 function renderVersionsBody(state: VersionsState): VNode {
   if (state.isLoading.value) {
     return renderStatusMessage("Loading snapshots...");
@@ -236,7 +229,6 @@ function renderVersionsBody(state: VersionsState): VNode {
     renderVersionDetail(state)
   ]);
 }
-
 function renderVersionsList(state: VersionsState): VNode {
   return h("aside", { class: "pm-card pm-subcard" }, [
     state.versions.value.length === 0
@@ -262,7 +254,6 @@ function renderVersionsList(state: VersionsState): VNode {
         )
   ]);
 }
-
 function renderVersionDetail(state: VersionsState): VNode {
   if (state.selectedVersionId.value.length === 0) {
     return h("section", { class: "pm-card pm-subcard" }, [
@@ -332,19 +323,24 @@ function versionMetrics(state: VersionsState): ProjectManagerMetric[] {
   ];
 }
 
-function renderVersionsView(projectSlug: string, state: VersionsState): VNode {
+function renderVersionsView(
+  projectSlug: string,
+  adminToken: string,
+  setAdminToken: (value: string) => void,
+  state: VersionsState
+): VNode {
   return h("div", { class: "pm-view", "data-view": "versions" }, [
     renderPageHeader(
       projectSlug,
       "versions",
       "Project Versions",
-      "Diff review and restore stay on their own route, while snapshot creation stays behind an explicit toggle."
+      "This route owns snapshot history, diff review, and restore. It should not also act as an editor or AI surface."
     ),
     h("section", { class: "pm-card pm-stack" }, [
       renderMetricGrid(versionMetrics(state)),
       renderSectionHeader(
         "Snapshots",
-        "Review diffs first, then open the composer when you need a new checkpoint.",
+        "Review history and diff here. Open the composer only when you need a new checkpoint.",
         h(
           "button",
           {
@@ -356,6 +352,13 @@ function renderVersionsView(projectSlug: string, state: VersionsState): VNode {
           },
           state.composeOpen.value ? "Hide Composer" : "New Snapshot"
         )
+      ),
+      renderWriteAccessCard(
+        adminToken,
+        (value) => {
+          setAdminToken(value);
+        },
+        "Required only for creating snapshots and restoring a selected version."
       ),
       renderVersionsComposer(state),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
@@ -380,6 +383,9 @@ export const ProjectVersionsView = defineComponent({
       void state.loadVersions(slug);
     });
 
-    return () => renderVersionsView(projectSlug.value, state);
+    return () =>
+      renderVersionsView(projectSlug.value, context.adminToken, (value) => {
+        context.setAdminToken(value);
+      }, state);
   }
 });

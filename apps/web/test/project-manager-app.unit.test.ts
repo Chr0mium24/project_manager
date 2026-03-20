@@ -30,7 +30,7 @@ describe("project manager app", () => {
     const { created, wrapper } = await createMountedShell("/");
     await wrapper.vm.$nextTick();
     expect(created.router.currentRoute.value.path).toBe("/projects");
-    expect(wrapper.get("[data-view='projects-index']").text()).toContain("Route-based control plane");
+    expect(wrapper.get("[data-view='projects-index']").text()).toContain("Choose a project");
   });
 
   it("syncs the selected project slug into Pinia from the router", async () => {
@@ -48,5 +48,19 @@ describe("project manager app", () => {
     expect(tabLinks).toHaveLength(4);
     expect(tabLinks[3]?.text()).toBe("AI Tasks");
     expect(wrapper.get("[data-view='ai']").text()).toContain("Project AI Tasks");
+  });
+
+  it("keeps write access off the global shell on the projects index", async () => {
+    const { wrapper } = await createMountedShell("/projects");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).not.toContain("Only needed for file saves, snapshots, restore, and AI apply.");
+  });
+
+  it("uses overview as a workflow hand-off route", async () => {
+    const { wrapper } = await createMountedShell("/projects/landing-a");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get("[data-view='overview']").text()).toContain(
+      "Use this route to understand the project and decide which workflow route you need next."
+    );
   });
 });

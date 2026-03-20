@@ -23,11 +23,11 @@ export const ProjectsIndexView = defineComponent({
       h("div", { class: "pm-view", "data-view": "projects-index" }, [
         h("section", { class: "pm-card pm-hero" }, [
           h("p", { class: "pm-kicker" }, "Project index"),
-          h("h1", { class: "pm-title" }, "Route-based control plane"),
+          h("h1", { class: "pm-title" }, "Choose a project"),
           h(
             "p",
             { class: "pm-copy" },
-            "The Vue shell now routes projects into focused pages, so the control plane no longer depends on one overloaded screen."
+            "The shell only selects context. Once you enter a project, each route owns one workflow: overview, workspace, versions, or AI."
           )
         ]),
         h("section", { class: "pm-grid" }, [
@@ -60,12 +60,12 @@ export const ProjectsIndexView = defineComponent({
                   )
                 ]
           ),
-          renderInfoCard("Current rollout", [
+          renderInfoCard("Route responsibilities", [
             renderFocusList([
-              "Vue owns shell routing and primary layout",
-              "workspace, versions, and AI keep dedicated routes",
-              "strict lint, typecheck, unit, and smoke tests stay in the root gate",
-              "legacy string-rendered shell can now be retired route by route"
+              "overview identifies the project and hands off into workflows",
+              "workspace owns file browsing, editing, and saving",
+              "versions owns snapshot review and restore",
+              "AI owns task queue, task detail, and apply"
             ])
           ])
         ])

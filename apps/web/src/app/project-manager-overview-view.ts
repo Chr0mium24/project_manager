@@ -1,7 +1,7 @@
 import { computed, defineComponent, h, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import { GatewayProjectApiClient, type ManagedProjectRecord } from "../gateway-api.ts";
-import { renderPageHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
+import { renderPageHeader, renderSectionTitle, renderStatusMessage } from "./project-manager-view-shared.ts";
 
 const client = new GatewayProjectApiClient();
 
@@ -27,34 +27,54 @@ function renderRouteLinks(projectSlug: string) {
     {
       path: "workspace",
       title: "Workspace",
-      copy: "Edit files and save changes."
+      copy: "Open this route when you need to edit source files and save them back."
     },
     {
       path: "versions",
       title: "Versions",
-      copy: "Review snapshots and restore."
+      copy: "Open this route when you need to checkpoint, compare, or restore history."
     },
     {
       path: "ai",
       title: "AI Tasks",
-      copy: "Queue prompts, review output, and apply."
+      copy: "Open this route when you need to enqueue prompts, inspect output, or apply changes."
     }
   ];
 
   return h(
     "div",
-    { class: "pm-quick-grid" },
+    { class: "pm-flow-grid" },
     links.map((link) =>
       h(
         RouterLink,
         {
           to: `/projects/${projectSlug}/${link.path}`,
-          class: "pm-quick-link"
+          class: "pm-flow-card"
         },
-        () => [h("strong", link.title), h("small", link.copy)]
+        () => [h("strong", link.title), h("p", { class: "pm-copy" }, link.copy)]
       )
     )
   );
+}
+
+function renderIdentityCard(project: ManagedProjectRecord) {
+  return h("section", { class: "pm-card pm-stack" }, [
+    renderSectionTitle("Project identity"),
+    h("h3", { class: "pm-page-title" }, project.name),
+    h("p", { class: "pm-copy" }, project.description),
+    h("div", { class: "pm-stat-row" }, [
+      h("div", { class: "pm-stat-card" }, [h("strong", project.runtime), h("small", "Runtime")]),
+      h("div", { class: "pm-stat-card" }, [h("strong", project.route), h("small", "Public route")]),
+      h("div", { class: "pm-stat-card" }, [h("strong", project.entry), h("small", "Entry file")])
+    ])
+  ]);
+}
+
+function renderFactsCard(project: ManagedProjectRecord) {
+  return h("section", { class: "pm-card pm-stack" }, [
+    renderSectionTitle("Project facts"),
+    renderMetaList(project)
+  ]);
 }
 
 export const ProjectOverviewView = defineComponent({
@@ -96,7 +116,7 @@ export const ProjectOverviewView = defineComponent({
           projectSlug.value,
           "overview",
           "Project Overview",
-          "Keep this route for project identity and quick hand-offs into workspace, versions, and AI."
+          "Use this route to understand the project and decide which workflow route you need next."
         ),
         project.value === null
           ? h("section", { class: "pm-card" }, [
@@ -104,24 +124,18 @@ export const ProjectOverviewView = defineComponent({
                 ? renderStatusMessage("Loading project summary...")
                 : renderStatusMessage(error.value ?? "No project selected.", error.value ? "error" : "neutral")
             ])
-          : h("section", { class: "pm-card pm-stack" }, [
-              h("div", { class: "pm-page-copy" }, [
-                h("h3", { class: "pm-section-title" }, "Summary"),
-                h("p", { class: "pm-copy" }, project.value.description)
-              ]),
-              h("div", { class: "pm-stat-row" }, [
-                h("div", { class: "pm-stat-card" }, [h("strong", project.value.runtime), h("small", "Runtime")]),
-                h("div", { class: "pm-stat-card" }, [h("strong", project.value.route), h("small", "Route")]),
-                h("div", { class: "pm-stat-card" }, [
-                  h("strong", project.value.latestVersion),
-                  h("small", "Latest version")
-                ])
-              ]),
-              renderMetaList(project.value),
-              h("div", { class: "pm-page-copy" }, [
-                h("h3", { class: "pm-section-title" }, "Next step"),
+          : h("div", { class: "pm-view" }, [
+              renderIdentityCard(project.value),
+              h("section", { class: "pm-card pm-stack" }, [
+                renderSectionTitle("Choose a workflow"),
+                h(
+                  "p",
+                  { class: "pm-copy" },
+                  "Overview does not edit files, checkpoint history, or run AI. It only hands you into the route that owns that job."
+                ),
                 renderRouteLinks(projectSlug.value)
-              ])
+              ]),
+              renderFactsCard(project.value)
             ])
       ]);
   }

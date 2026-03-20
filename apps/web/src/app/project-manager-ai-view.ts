@@ -1,18 +1,8 @@
-import {
-  computed,
-  defineComponent,
-  h,
-  onMounted,
-  ref,
-  watch,
-  type ComputedRef,
-  type Ref,
-  type VNode
-} from "vue";
+import { computed, defineComponent, h, onMounted, ref, watch, type ComputedRef, type Ref, type VNode } from "vue";
 import { useRoute } from "vue-router";
 import { AiTaskApiClient, type AiTaskRecord, type ManagedTaskSummary } from "../ai-task-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
-import { renderPageHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
+import { renderPageHeader, renderStatusMessage, renderWriteAccessCard } from "./project-manager-view-shared.ts";
 interface AiState {
   tasks: Ref<AiTaskRecord[]>;
   selectedTask: Ref<AiTaskRecord | null>;
@@ -47,7 +37,6 @@ interface AiMutationContext {
   prompt: Ref<string>;
   queries: ReturnType<typeof createAiQueries>;
 }
-
 function createClient(adminToken: string): AiTaskApiClient {
   return adminToken.length === 0
     ? new AiTaskApiClient()
@@ -69,7 +58,6 @@ function createAiQueries(context: AiQueryContext) {
       context.error.value = selectError instanceof Error ? selectError.message : "unknown ai task error";
     }
   }
-
   async function refreshTasks() {
     try {
       const client = createClient(context.adminToken.value);
@@ -82,11 +70,7 @@ function createAiQueries(context: AiQueryContext) {
       context.error.value = refreshError instanceof Error ? refreshError.message : "unknown ai task error";
     }
   }
-
-  return {
-    refreshTasks,
-    selectTask
-  };
+  return { refreshTasks, selectTask };
 }
 function validateTaskCreation(
   projectSlug: string,
@@ -140,7 +124,6 @@ function createAiMutations(context: AiMutationContext) {
       context.isBusy.value = false;
     }
   }
-
   async function applySelectedTask() {
     if (context.selectedTask.value === null) {
       return;
@@ -162,11 +145,7 @@ function createAiMutations(context: AiMutationContext) {
       context.isBusy.value = false;
     }
   }
-
-  return {
-    createTask,
-    applySelectedTask
-  };
+  return { createTask, applySelectedTask };
 }
 function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef<string>): AiState {
   const tasks = ref<AiTaskRecord[]>([]);
@@ -206,7 +185,6 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     prompt,
     queries
   });
-
   return {
     tasks,
     selectedTask,
@@ -343,19 +321,24 @@ function renderAiTaskChanges(state: AiState): VNode {
         )
   );
 }
-function renderAiView(projectSlug: string, state: AiState): VNode {
+function renderAiView(
+  projectSlug: string,
+  adminToken: string,
+  setAdminToken: (value: string) => void,
+  state: AiState
+): VNode {
   return h("div", { class: "pm-view", "data-view": "ai" }, [
     renderPageHeader(
       projectSlug,
       "ai",
       "Project AI Tasks",
-      "Review tasks first, then open the composer only when you need a new prompt."
+      "This route owns AI task creation, task review, and apply. It should not also act as the file editor or version browser."
     ),
     h("section", { class: "pm-card pm-stack" }, [
       h("div", { class: "pm-card-head" }, [
         h("div", { class: "pm-page-copy" }, [
           h("h3", { class: "pm-section-title" }, "AI Tasks"),
-          h("p", { class: "pm-copy" }, "Open the composer only when you need a new prompt.")
+          h("p", { class: "pm-copy" }, "Inspect the queue here. Open the composer only when you need a new prompt.")
         ]),
         h(
           "button",
@@ -369,13 +352,19 @@ function renderAiView(projectSlug: string, state: AiState): VNode {
           state.composeOpen.value ? "Hide Composer" : "New Task"
         )
       ]),
+      renderWriteAccessCard(
+        adminToken,
+        (value) => {
+          setAdminToken(value);
+        },
+        "Required only for AI task creation and apply on this route."
+      ),
       renderAiComposer(state),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderAiBody(state)
     ])
   ]);
 }
-
 export const ProjectAiTasksView = defineComponent({
   name: "ProjectAiTasksView",
   setup() {
@@ -393,6 +382,9 @@ export const ProjectAiTasksView = defineComponent({
       void state.refreshTasks();
     });
 
-    return () => renderAiView(projectSlug.value, state);
+    return () =>
+      renderAiView(projectSlug.value, context.adminToken, (value) => {
+        context.setAdminToken(value);
+      }, state);
   }
 });

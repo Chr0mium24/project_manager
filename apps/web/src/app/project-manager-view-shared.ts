@@ -17,7 +17,7 @@ export function renderPageHeader(
     h("div", { class: "pm-page-copy" }, [
       h("div", { class: "pm-badge-row" }, [
         h("span", { class: "pm-badge" }, projectSlug || "project"),
-        h("p", { class: "pm-kicker" }, `${currentView} route`)
+        h("p", { class: "pm-kicker" }, `Project ${currentView}`)
       ]),
       h("h2", { class: "pm-page-title" }, title),
       h("p", { class: "pm-copy" }, description)
@@ -77,4 +77,28 @@ export function renderMetricGrid(metrics: ProjectManagerMetric[]): VNode {
 
 export function renderStatusMessage(message: string, tone: "error" | "neutral" = "neutral"): VNode {
   return h("p", { class: ["pm-copy", tone === "error" ? "pm-error" : "pm-muted-block"] }, message);
+}
+
+export function renderWriteAccessCard(
+  adminToken: string,
+  onInput: (value: string) => void,
+  purpose: string
+): VNode {
+  return h("section", { class: "pm-card pm-subcard pm-stack" }, [
+    h("div", { class: "pm-page-copy" }, [
+      renderSectionTitle("Write Access"),
+      h("p", { class: "pm-copy" }, purpose)
+    ]),
+    h("label", { class: "pm-field" }, [
+      h("span", "Admin Token"),
+      h("input", {
+        class: "pm-input",
+        value: adminToken,
+        placeholder: "Paste bearer token for writes",
+        onInput: (event: Event) => {
+          onInput((event.target as HTMLInputElement).value.trim());
+        }
+      })
+    ])
+  ]);
 }

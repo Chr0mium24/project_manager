@@ -13,8 +13,8 @@ function renderTopNav(projectSlug: string) {
         "p",
         { class: "pm-copy" },
         projectSlug
-          ? "Project routes now own the control plane, so each workflow can stay focused."
-          : "Select a managed project and move through its dedicated routes."
+          ? "Project routes now own the control plane. The shell only handles navigation and project context."
+          : "Choose a project first. Once selected, each route handles exactly one workflow."
       )
     ]),
     projectSlug
@@ -53,15 +53,17 @@ body { margin: 0; background: linear-gradient(180deg, #f8f7f2 0%, #fafaf8 22%, #
 .pm-topbar, .pm-sidebar, .pm-card { border: 1px solid var(--pm-line); background: var(--pm-panel); box-shadow: var(--pm-shadow); }
 .pm-topbar { display: flex; justify-content: space-between; gap: 18px; align-items: end; padding: 18px 20px; }
 .pm-topbar-copy { display: grid; gap: 8px; }
-.pm-brand-block, .pm-link-copy, .pm-page-copy, .pm-main, .pm-view, .pm-stack, .pm-sidebar-section, .pm-link-list { display: grid; gap: 8px; }
+.pm-brand-block, .pm-link-copy, .pm-page-copy, .pm-main, .pm-view, .pm-stack, .pm-sidebar-section, .pm-link-list, .pm-context-card, .pm-flow-grid { display: grid; gap: 8px; }
 .pm-kicker { margin: 0; color: var(--pm-muted); font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; }
 .pm-brand { font-size: 1.05rem; }
 .pm-context-pill, .pm-topbar-link, .pm-badge { border: 1px solid #c7f9f1; background: var(--pm-accent-soft); color: var(--pm-accent); padding: 8px 12px; font-size: 0.8rem; font-weight: 800; text-decoration: none; text-transform: uppercase; letter-spacing: 0.12em; }
-.pm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; }
+.pm-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 18px; }
 .pm-sidebar { padding: 18px; display: grid; gap: 16px; align-content: start; }
 .pm-side-link, .pm-tab-link, .pm-button, .pm-list-button, .pm-tree-button { border: 1px solid var(--pm-line); background: var(--pm-panel); color: var(--pm-text); text-decoration: none; padding: 12px 14px; font-weight: 700; transition: border-color 120ms ease, background 120ms ease; }
 .pm-side-link:hover, .pm-tab-link:hover, .pm-list-button:hover, .pm-tree-button:hover { border-color: #bdb8aa; background: var(--pm-panel-soft); }
 .pm-side-link.is-active, .pm-tab-link.is-active, .pm-list-button.is-active, .pm-tree-button.is-active { border-color: #99f6e4; background: #f0fdfa; color: var(--pm-accent); box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.14); }
+.pm-context-card { border: 1px solid var(--pm-line); background: var(--pm-panel-soft); padding: 14px; }
+.pm-context-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--pm-muted); font-size: 0.82rem; }
 .pm-card { padding: 20px; }
 .pm-page-header-card { gap: 16px; }
 .pm-hero { padding: 24px; }
@@ -74,8 +76,11 @@ body { margin: 0; background: linear-gradient(180deg, #f8f7f2 0%, #fafaf8 22%, #
 .pm-muted-block { min-height: 24px; }
 .pm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .pm-quick-grid, .pm-stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pm-flow-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .pm-quick-link, .pm-stat-card { border: 1px solid var(--pm-line); background: var(--pm-panel-soft); padding: 14px; display: grid; gap: 6px; color: inherit; text-decoration: none; }
+.pm-flow-card { border: 1px solid var(--pm-line); background: var(--pm-panel-soft); padding: 16px; display: grid; gap: 10px; }
 .pm-quick-link strong, .pm-stat-card strong { font-size: 0.98rem; overflow-wrap: anywhere; }
+.pm-flow-card strong { font-size: 1rem; }
 .pm-quick-link small, .pm-stat-card small, .pm-link-copy small, .pm-list-button small, .pm-tree-button small { color: var(--pm-muted); font-size: 0.78rem; letter-spacing: 0.04em; }
 .pm-section-title { margin: 0; font-size: 0.8rem; color: var(--pm-muted); text-transform: uppercase; letter-spacing: 0.16em; }
 .pm-focus-list, .pm-list, .pm-tree-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
@@ -109,7 +114,7 @@ body { margin: 0; background: linear-gradient(180deg, #f8f7f2 0%, #fafaf8 22%, #
 .pm-details summary { cursor: pointer; list-style: none; font-weight: 700; }
 .pm-details summary::-webkit-details-marker { display: none; }
 .pm-details-body { display: grid; gap: 12px; padding-top: 12px; }
-@media (max-width: 960px) { .pm-layout, .pm-grid, .pm-tab-row, .pm-quick-grid, .pm-stat-row { grid-template-columns: 1fr; } .pm-shell { width: min(100% - 18px, 1180px); margin-top: 16px; } .pm-topbar, .pm-card-head, .pm-actions { align-items: start; flex-direction: column; } }
+@media (max-width: 960px) { .pm-layout, .pm-grid, .pm-tab-row, .pm-quick-grid, .pm-stat-row, .pm-flow-grid { grid-template-columns: 1fr; } .pm-shell { width: min(100% - 18px, 1180px); margin-top: 16px; } .pm-topbar, .pm-card-head, .pm-actions { align-items: start; flex-direction: column; } }
 @media (max-width: 960px) { .pm-form-grid, .pm-workspace-grid, .pm-version-grid { grid-template-columns: 1fr; } }
 `;
 
@@ -133,32 +138,39 @@ export const ProjectManagerShell = defineComponent({
         h("div", { class: "pm-layout" }, [
           h("aside", { class: "pm-sidebar" }, [
             h("section", { class: "pm-sidebar-section" }, [
-              h("p", { class: "pm-kicker" }, "Navigation"),
-              h("nav", { class: "pm-link-list", "aria-label": "Primary routes" }, [
-                h(
-                  RouterLink,
-                  {
-                    to: "/projects",
-                    class: ["pm-side-link", route.path === "/projects" ? "is-active" : ""]
-                  },
-                  () => "All Projects"
-                )
-              ])
+              h("p", { class: "pm-kicker" }, "Projects"),
+              h(
+                RouterLink,
+                {
+                  to: "/projects",
+                  class: ["pm-side-link", route.path === "/projects" ? "is-active" : ""]
+                },
+                () => "All Projects"
+              )
             ]),
             selectedProject.value === null
               ? null
               : h("section", { class: "pm-sidebar-section" }, [
-                  h("p", { class: "pm-kicker" }, "Current project"),
-                  renderProjectLink(
-                    route.path,
-                    selectedProject.value.slug,
-                    selectedProject.value.runtime,
-                    selectedProject.value.route
-                  ),
-                  h("p", { class: "pm-inline-note" }, "Open overview, workspace, versions, or AI from the page header.")
+                  h("p", { class: "pm-kicker" }, "Current context"),
+                  h("div", { class: "pm-context-card" }, [
+                    h("strong", selectedProject.value.name),
+                    h("p", { class: "pm-copy" }, selectedProject.value.slug),
+                    h("div", { class: "pm-context-meta" }, [
+                      h("span", selectedProject.value.runtime),
+                      h("span", selectedProject.value.route)
+                    ]),
+                    h(
+                      RouterLink,
+                      {
+                        to: `/projects/${selectedProject.value.slug}`,
+                        class: "pm-topbar-link"
+                      },
+                      () => "Open Overview"
+                    )
+                  ])
                 ]),
             h("section", { class: "pm-sidebar-section" }, [
-              h("p", { class: "pm-kicker" }, "Managed projects"),
+              h("p", { class: "pm-kicker" }, "Project switcher"),
               context.projectsLoading
                 ? h("p", { class: "pm-copy" }, "Loading projects...")
                 : context.projectsError
@@ -170,23 +182,6 @@ export const ProjectManagerShell = defineComponent({
                         renderProjectLink(route.path, project.slug, project.runtime, project.route)
                       )
                     )
-            ]),
-            h("details", { class: "pm-details" }, [
-              h("summary", "Write access"),
-              h("div", { class: "pm-details-body" }, [
-                h("p", { class: "pm-inline-note" }, "Only needed for file saves, snapshots, restore, and AI apply."),
-                h("label", { class: "pm-field" }, [
-                  h("span", "Admin Token"),
-                  h("input", {
-                    class: "pm-input",
-                    value: context.adminToken,
-                    placeholder: "Paste bearer token for writes",
-                    onInput: (event: Event) => {
-                      context.setAdminToken((event.target as HTMLInputElement).value.trim());
-                    }
-                  })
-                ])
-              ])
             ])
           ]),
           h("main", { class: "pm-main" }, [h(RouterView)])

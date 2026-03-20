@@ -21,7 +21,8 @@ import {
   renderPageHeader,
   renderMetricGrid,
   renderSectionHeader,
-  renderStatusMessage
+  renderStatusMessage,
+  renderWriteAccessCard
 } from "./project-manager-view-shared.ts";
 
 const client = new GatewayProjectApiClient();
@@ -284,19 +285,26 @@ function workspaceMetrics(state: WorkspaceState): ProjectManagerMetric[] {
   ];
 }
 
-function renderWorkspaceView(projectSlug: string, state: WorkspaceState): VNode {
+function renderWorkspaceView(
+  projectSlug: string,
+  adminToken: string,
+  setAdminToken: (value: string) => void,
+  state: WorkspaceState
+): VNode {
   return h("div", { class: "pm-view", "data-view": "workspace" }, [
     renderPageHeader(
       projectSlug,
       "workspace",
       "Project Workspace",
-      "Browse files and edit one thing at a time without competing review panels."
+      "This route owns file browsing, editing, and saving. It should not also act like a review or AI surface."
     ),
     h("section", { class: "pm-card pm-workspace-card" }, [
       renderMetricGrid(workspaceMetrics(state)),
       renderSectionHeader(
         "Workspace",
-        state.selectedFilePath.value ? state.selectedFilePath.value : "Select a file to begin editing.",
+        state.selectedFilePath.value
+          ? `Editing ${state.selectedFilePath.value}`
+          : "Select a file from the tree, edit it, and save it back to the project.",
         h(
           "button",
           {
@@ -308,6 +316,13 @@ function renderWorkspaceView(projectSlug: string, state: WorkspaceState): VNode 
           },
           state.navOpen.value ? "Focus Editor" : "Show Tree"
         )
+      ),
+      renderWriteAccessCard(
+        adminToken,
+        (value) => {
+          setAdminToken(value);
+        },
+        "Required only for file saves on this route."
       ),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderWorkspaceBody(state)
@@ -331,6 +346,9 @@ export const ProjectWorkspaceView = defineComponent({
       void state.loadWorkspace(slug);
     });
 
-    return () => renderWorkspaceView(projectSlug.value, state);
+    return () =>
+      renderWorkspaceView(projectSlug.value, context.adminToken, (value) => {
+        context.setAdminToken(value);
+      }, state);
   }
 });
