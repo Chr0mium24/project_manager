@@ -33,6 +33,18 @@ export {
   type AiTaskPanelState
 } from "./ai-task-panel.ts";
 export {
+  GatewayProjectApiClient
+} from "./gateway-api.ts";
+export type {
+  ManagedProjectRecord,
+  ProjectFileTreeDirectoryNode,
+  ProjectFileTreeFileNode,
+  ProjectFileTreeNode,
+  ProjectListEntry,
+  ProjectVersionDiff,
+  ProjectVersionRecord
+} from "./gateway-api.ts";
+export {
   readPlatformAsset,
   renderPlatformDocument,
   type PlatformAsset,

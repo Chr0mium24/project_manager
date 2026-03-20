@@ -26,6 +26,13 @@ describe("project manager app", () => {
     document.body.innerHTML = "";
   });
 
+  it("redirects the root route to the projects index", async () => {
+    const { created, wrapper } = await createMountedShell("/");
+    await wrapper.vm.$nextTick();
+    expect(created.router.currentRoute.value.path).toBe("/projects");
+    expect(wrapper.get("[data-view='projects-index']").text()).toContain("Route-based control plane");
+  });
+
   it("syncs the selected project slug into Pinia from the router", async () => {
     const { created, wrapper } = await createMountedShell("/projects/landing-a/workspace");
     await wrapper.vm.$nextTick();

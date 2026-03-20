@@ -19,6 +19,10 @@ import {
 
 export const projectManagerRoutes: RouteRecordRaw[] = [
   {
+    path: "/",
+    redirect: "/projects"
+  },
+  {
     path: "/projects",
     name: "projects-index",
     component: ProjectsIndexView

@@ -5,6 +5,7 @@ describe("project manager route smoke", () => {
   it("defines the required dedicated project routes", () => {
     const paths = projectManagerRoutes.map((route) => route.path);
     expect(paths).toEqual([
+      "/",
       "/projects",
       "/projects/:slug",
       "/projects/:slug/workspace",

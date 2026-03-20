@@ -11,46 +11,26 @@ void test("renderPlatformDocument returns a platform shell with the boot asset",
   });
 
   assert.match(html, /Project Manager Control Plane/);
-  assert.match(html, /Focused Route/);
-  assert.match(html, /Project Workspace/);
-  assert.match(html, /Project Versions/);
-  assert.match(html, /data-section-nav/);
-  assert.match(html, /data-overview-panel/);
-  assert.match(html, /data-ai-compose-toggle/);
-  assert.match(html, /data-ai-compose-body/);
-  assert.match(html, /data-workspace-nav-toggle/);
-  assert.match(html, /data-workspace-nav/);
-  assert.match(html, /data-version-compose-toggle/);
-  assert.match(html, /data-version-compose-body/);
-  assert.match(html, /data-file-tree/);
-  assert.match(html, /data-file-preview/);
-  assert.match(html, /data-version-list/);
-  assert.match(html, /data-version-diff/);
-  assert.match(html, /window\.__PROJECT_MANAGER_PLATFORM__/);
+  assert.match(html, /data-project-manager-app/);
   assert.match(html, /\/assets\/platform-ui\.js/);
-  assert.match(html, /\/projects\/landing-a/);
 });
 
 void test("readPlatformAsset returns the platform ui module asset", () => {
   const asset = readPlatformAsset("/assets/platform-ui.js");
+  const shellAsset = readPlatformAsset("/assets/platform-ui/app/project-manager-shell.js");
+  const vueAsset = readPlatformAsset("/assets/platform-ui/vendor/vue.js");
 
   assert.notEqual(asset, null);
   if (asset === null) {
     throw new Error("expected platform ui asset");
   }
+  assert.notEqual(shellAsset, null);
+  assert.notEqual(vueAsset, null);
   assert.equal(asset.contentType, "text/javascript; charset=utf-8");
-  assert.match(asset.body, /requestJson/);
-  assert.match(asset.body, /\/api\/projects\/\$\{state\.selectedProject\.slug\}\/file-tree/);
-  assert.match(asset.body, /\/api\/projects\/\$\{state\.selectedProject\.slug\}\/versions/);
-  assert.match(asset.body, /data-file-path/);
-  assert.match(asset.body, /data-version-id/);
-  assert.match(asset.body, /renderFocusedView/);
-  assert.match(asset.body, /buildProjectPath/);
-  assert.match(asset.body, /renderAiComposer/);
-  assert.match(asset.body, /renderWorkspaceChrome/);
-  assert.match(asset.body, /renderVersionComposer/);
-  assert.match(asset.body, /method: 'PUT'/);
-  assert.match(asset.body, /data-restore-version/);
-  assert.match(asset.body, /data-save-file/);
+  assert.match(asset.body, /createProjectManagerApp/);
+  assert.match(asset.body, /\/assets\/platform-ui\/app\/project-manager-shell\.js/);
+  assert.match(shellAsset?.body ?? "", /PROJECT_MANAGER_SHELL_STYLES/);
+  assert.match(shellAsset?.body ?? "", /\/assets\/platform-ui\/vendor\/vue\.js/);
+  assert.match(vueAsset?.body ?? "", /defineComponent/);
   assert.equal(readPlatformAsset("/assets/missing.js"), null);
 });

@@ -139,14 +139,15 @@ void test("createGatewayApp serves platform ui html and asset routes", async () 
 
   assert.equal(home.statusCode, 200);
   assert.match(home.body, /Project Manager Control Plane/);
+  assert.match(home.body, /data-project-manager-app/);
   assert.match(String(home.headers["content-type"]), /^text\/html/);
 
   assert.equal(projectsPage.statusCode, 200);
-  assert.match(projectsPage.body, /\/projects\/landing-a/);
+  assert.match(projectsPage.body, /data-project-manager-app/);
   assert.match(String(projectsPage.headers["content-type"]), /^text\/html/);
 
   assert.equal(asset.statusCode, 200);
-  assert.match(asset.body, /requestJson/);
+  assert.match(asset.body, /createProjectManagerApp/);
   assert.match(String(asset.headers["content-type"]), /^text\/javascript/);
 
   await app.close();
