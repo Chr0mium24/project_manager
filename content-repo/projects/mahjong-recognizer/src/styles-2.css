@@ -1,0 +1,48 @@
+html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+    body {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      align-items: stretch;
+      justify-items: stretch;
+    }
+    .toolbar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      padding: 8px;
+      background: rgba(8, 8, 10, 0.96);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    .count-btn {
+      border: 1px solid rgba(220, 230, 255, 0.4);
+      border-radius: 8px;
+      background: rgba(245, 248, 255, 0.12);
+      color: #eaf2ff;
+      font-size: 13px;
+      font-weight: 600;
+      // padding: 6px 8px;
+      cursor: pointer;
+    }
+    .count-btn.active {
+      border-color: #7fb2ff;
+      background: rgba(95, 155, 255, 0.34);
+      color: #fff;
+    }
+    .image-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    img {
+      display: block;
+      max-width: 100vw;
+      max-height: calc(100vh - 56px);
+      object-fit: contain;
+    }

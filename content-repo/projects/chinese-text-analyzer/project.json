@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Chinese Text Analyzer",
+  "slug": "chinese-text-analyzer",
+  "description": "Chinese text comparison workbench with feature extraction, chart-based summaries, and distribution views.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/chinese-text-analyzer",
+  "visibility": "public",
+  "tags": [
+    "text",
+    "analysis",
+    "charts"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "chartjs-cdn",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.873Z",
+  "updatedAt": "2026-03-20T23:13:21.874Z"
+}

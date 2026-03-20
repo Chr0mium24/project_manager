@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Shanten Calculator",
+  "slug": "shanten-calculator",
+  "description": "Mahjong shanten calculator focused on hand evaluation, tile state inspection, and discard planning.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/shanten-calculator",
+  "visibility": "public",
+  "tags": [
+    "mahjong",
+    "calculator",
+    "game"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.867Z",
+  "updatedAt": "2026-03-20T23:13:21.870Z"
+}

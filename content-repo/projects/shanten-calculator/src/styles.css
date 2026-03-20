@@ -1,0 +1,139 @@
+:root {
+      --bg: #f4f7f2;
+      --panel: #ffffff;
+      --ink: #1f2a1f;
+      --sub: #4f5d4f;
+      --accent: #2f6f4f;
+      --danger: #b12626;
+      --line: #d9e2d6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      color: var(--ink);
+      background: radial-gradient(circle at 20% 10%, #e8f2e4, var(--bg) 45%);
+    }
+
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      line-height: 1.25;
+    }
+
+    .hint {
+      margin: 0 0 16px;
+      color: var(--sub);
+      font-size: 14px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input {
+      flex: 1 1 520px;
+      min-width: 280px;
+      border: 1px solid #9fb29f;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 16px;
+      font-family: inherit;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-size: 15px;
+      font-family: inherit;
+    }
+
+    button.secondary {
+      background: #5d7a66;
+    }
+
+    .msg {
+      min-height: 24px;
+      margin: 14px 0 10px;
+      font-size: 14px;
+    }
+
+    .msg.error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .mode-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 12px 0 10px;
+      font-size: 14px;
+      color: var(--sub);
+      flex-wrap: wrap;
+    }
+
+    .mode-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #f8faf7;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+      line-height: 1.55;
+      font-size: 14px;
+      min-height: 240px;
+    }
+
+    pre.output-unicode {
+      font-size: 14px;
+      line-height: 1.55;
+      font-family: "Noto Sans Symbols2", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", monospace;
+    }
+
+    pre.output-unicode .tile-u {
+      font-size: 1.45em;
+      line-height: 1;
+      vertical-align: -0.08em;
+    }
+
+    pre.output-unicode .tile-tag {
+      font-size: 0.86em;
+      color: var(--sub);
+    }
+
+    pre.output-text {
+      font-size: 14px;
+      line-height: 1.55;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }

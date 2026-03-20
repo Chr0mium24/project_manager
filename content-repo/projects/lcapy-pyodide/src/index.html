@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lcapy in Pyodide (Final Fix)</title>
+    <!-- 1. 直接引入 Pyodide 的 JS 文件 -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+</head>
+<body>
+    <h1>Lcapy 符号分析示例 (原生 Pyodide)</h1>
+    <p>下面的代码使用原生 Pyodide API 来加载 Python 环境、安装 Lcapy 并执行分析。</p>
+    <p><strong>注意：</strong> 第一次加载会比较慢，因为它需要加载 Pyodide 运行时并安装 Lcapy 及其依赖。</p>
+    <button id="run-button">运行分析<button/>
+    
+    <!-- 用于显示状态和最终结果的容器 -->
+    <div id="output" style="white-space: pre-wrap; font-family: monospace; background-color: #f0f0f0; padding: 1em; border-radius: 5px;">
+        正在初始化 Pyodide...
+    </div>
+
+    <!-- 2. 使用 JavaScript 来编排所有操作 -->
+    <script type="text/javascript" src="/p/lcapy-pyodide/script.js"></script>
+</body>
+</html>

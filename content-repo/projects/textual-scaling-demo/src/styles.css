@@ -1,0 +1,8 @@
+/* 自定义一些过渡动画，让演示更丝滑 */
+        .token-transition {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body {
+            background-color: #0f172a; /* Slate 900 */
+            font-family: 'Fira Code', monospace;
+        }

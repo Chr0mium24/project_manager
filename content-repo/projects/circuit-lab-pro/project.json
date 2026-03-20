@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Circuit Lab Pro",
+  "slug": "circuit-lab-pro",
+  "description": "Circuit experiment assistant with persistent local state, guided workflows, and export tooling.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/circuit-lab-pro",
+  "visibility": "public",
+  "tags": [
+    "circuits",
+    "lab",
+    "workflow"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vue-cdn",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.899Z",
+  "updatedAt": "2026-03-20T23:13:21.900Z"
+}

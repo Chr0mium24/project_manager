@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中文文本特征对比分析</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Chart.js 用于绘图 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入Chart.js的箱形图插件 -->
+<script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.2.0/build/index.umd.min.js"></script>
+    <!-- 引入LZ-String库 用于计算压缩率 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">中文文本特征对比分析工具</h1>
+            <p class="text-gray-600 mt-2">输入两段中文文本，从词汇、句法、信息密度和连贯性等维度进行可视化对比。</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                <label for="textA" class="block text-lg font-medium text-gray-700">文本 A (蓝色)</label>
+                <textarea id="textA" rows="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base p-3" placeholder="请在此处粘贴第一段中文文本..."></textarea>
+            </div>
+            <div>
+                <label for="textB" class="block text-lg font-medium text-gray-700">文本 B (红色)</label>
+                <textarea id="textB" rows="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base p-3" placeholder="请在此处粘贴第二段中文文本..."></textarea>
+            </div>
+        </div>
+
+        <div class="text-center mb-8">
+            <button id="analyzeBtn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition duration-300 shadow-lg">
+                开始分析
+            </button>
+        </div>
+
+        <div id="results" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- 图表将在这里动态生成 -->
+        </div>
+    </div>
+
+    <script src="/p/chinese-text-analyzer/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Lcapy Pyodide",
+  "slug": "lcapy-pyodide",
+  "description": "Browser-based Lcapy and Pyodide circuit worksheet for symbolic analysis and quick experiments.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/lcapy-pyodide",
+  "visibility": "public",
+  "tags": [
+    "circuits",
+    "pyodide",
+    "analysis"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "pyodide",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.855Z",
+  "updatedAt": "2026-03-20T23:13:21.857Z"
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Bag Formula Calculator",
+  "slug": "bag-formula-calculator",
+  "description": "Realtime packaging formula calculator for bag sizing, material inputs, and manufacturing estimates.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/bag-formula-calculator",
+  "visibility": "public",
+  "tags": [
+    "calculator",
+    "manufacturing",
+    "packaging"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.859Z",
+  "updatedAt": "2026-03-20T23:13:21.862Z"
+}

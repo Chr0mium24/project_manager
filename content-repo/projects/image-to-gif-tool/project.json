@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Image To GIF Tool",
+  "slug": "image-to-gif-tool",
+  "description": "Image-to-GIF converter for assembling still images into animated exports directly in the browser.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/image-to-gif-tool",
+  "visibility": "public",
+  "tags": [
+    "image",
+    "gif",
+    "converter"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.909Z",
+  "updatedAt": "2026-03-20T23:13:21.911Z"
+}

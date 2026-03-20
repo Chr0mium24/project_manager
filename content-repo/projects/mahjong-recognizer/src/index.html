@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mahjong Recognize + Shanten</title>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+  <link rel="stylesheet" href="/p/mahjong-recognizer/styles.css">
+</head>
+<body>
+  <main class="page">
+    <section class="card intro-card">
+      <h1>麻将图像识别 + 向听计算（单文件）</h1>
+      <div class="hint">
+        使用方式：先上传项目中的 <code>weight.onnx</code>（选择后会自动加载），再在页面内按 <code>Ctrl+V</code>/<code>Cmd+V</code> 粘贴截图（或上传图片）。<br>
+        粘贴后会自动识别并计算。识别框统一浅色显示；最佳/次优/第三切牌会在图上按递减颜色高亮。
+      </div>
+    </section>
+
+    <div class="layout-top">
+      <section class="card">
+        <div class="section-head">
+          <div class="section-title">模型与分析配置</div>
+          <div class="section-subtitle">加载模型并设置手牌与识别参数</div>
+        </div>
+
+        <div class="group-stack">
+          <div class="group-box">
+            <div class="group-title">模型文件</div>
+            <div class="grid">
+              <div class="field span-2">
+                <label for="modelFile">ONNX 模型文件（选择后自动加载，建议使用 weight.onnx）</label>
+                <input id="modelFile" type="file" accept=".onnx">
+              </div>
+            </div>
+          </div>
+
+          <div class="group-box">
+            <div class="group-title">目标手牌张数</div>
+            <div class="grid">
+              <div class="field">
+                <label for="targetTileCount">手牌模式（手动指定）</label>
+                <select id="targetTileCount">
+                  <option value="14">14</option>
+                  <option value="11">11</option>
+                  <option value="8">8</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="group-box">
+            <div class="group-title">识别参数</div>
+            <div class="grid">
+              <div class="field">
+                <label for="minConf" class="label-row">
+                  <span>最低阈值（自动降阈下限）</span>
+                  <span class="range-value" id="minConfText">0.10</span>
+                </label>
+                <input id="minConf" type="range" min="0.01" max="0.95" step="0.01" value="0.10">
+              </div>
+
+              <div class="field">
+                <label for="iou" class="label-row">
+                  <span>NMS IoU 阈值</span>
+                  <span class="range-value" id="iouText">0.30</span>
+                </label>
+                <input id="iou" type="range" min="0.05" max="0.9" step="0.01" value="0.30">
+              </div>
+
+              <div class="field">
+                <label for="maxBoxes">NMS 最大候选框</label>
+                <input id="maxBoxes" type="number" min="20" max="500" step="10" value="180">
+              </div>
+            </div>
+          </div>
+
+          <div class="group-box">
+            <div class="group-title">功能操作</div>
+            <div class="actions">
+              <button id="btnRun" class="primary">对当前图片重新计算</button>
+              <span id="status" class="status mid">请先上传模型文件。</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <div class="section-title">图像输入方式</div>
+          <div class="section-subtitle">支持三种输入：上传/粘贴图片、录屏、摄像头</div>
+        </div>
+
+        <div class="method-select-wrap">
+          <div class="field">
+            <label for="inputMode">当前输入方式</label>
+            <select id="inputMode">
+              <option value="upload">上传 / 粘贴图片</option>
+              <option value="screen">录屏</option>
+              <option value="camera">摄像头</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="group-stack">
+          <div class="group-box method-panel" data-method="upload">
+            <div class="group-title">上传 / 粘贴图片</div>
+            <div class="grid">
+              <div class="field">
+                <label for="imageFile">图片文件（可选，粘贴更方便）</label>
+                <input id="imageFile" type="file" accept="image/*">
+              </div>
+
+              <div class="field span-2">
+                <label for="autoClipboard">剪贴板图片自动监听（可选）</label>
+                <label class="checkline">
+                  <input id="autoClipboard" type="checkbox">
+                  <span>开启后自动检测新图片（需浏览器授权，默认关闭）</span>
+                </label>
+              </div>
+            </div>
+            <div class="actions">
+              <button id="btnOpenImageWindow">弹出纯图片窗口</button>
+            </div>
+          </div>
+
+          <div class="group-box method-panel" data-method="screen" hidden>
+            <div class="group-title">录屏</div>
+            <div class="grid">
+              <div class="field">
+                <label for="screenFps">读屏帧率（FPS）</label>
+                <input id="screenFps" type="number" min="1" max="30" step="1" value="3">
+              </div>
+
+              <div class="field span-2">
+                <label>点 A（左上角）与点 B（右下角），百分比坐标</label>
+                <div class="coord-grid">
+                  <input id="cropX1" type="number" min="0" max="100" step="0.1" value="0" title="X1">
+                  <input id="cropY1" type="number" min="0" max="100" step="0.1" value="80" title="Y1">
+                  <input id="cropX2" type="number" min="0" max="100" step="0.1" value="100" title="X2">
+                  <input id="cropY2" type="number" min="0" max="100" step="0.1" value="100" title="Y2">
+                </div>
+              </div>
+            </div>
+            <div class="actions">
+              <button id="btnPickA">设置点A（点击预览）</button>
+              <button id="btnPickB">设置点B（点击预览）</button>
+              <button id="btnStartScreen" class="primary">启动读屏截图</button>
+              <button id="btnStopScreen" disabled>停止读屏</button>
+            </div>
+            <p class="screen-hint">读屏启动后会按裁剪区域持续截图，并对每帧自动识别与向听计算。</p>
+            <div class="video-preview-wrap">
+              <video id="screenVideo" autoplay playsinline muted></video>
+              <div id="screenOverlayBox"></div>
+            </div>
+          </div>
+
+          <div class="group-box method-panel" data-method="camera" hidden>
+            <div class="group-title">摄像头</div>
+            <div class="grid">
+              <div class="field">
+                <label for="cameraDevice">摄像头设备</label>
+                <select id="cameraDevice"></select>
+              </div>
+              <div class="field">
+                <label for="cameraFps">摄像头帧率（FPS）</label>
+                <input id="cameraFps" type="number" min="1" max="30" step="1" value="5">
+              </div>
+              <div class="field">
+                <label for="cameraFocusMode">对焦模式（focusMode）</label>
+                <select id="cameraFocusMode">
+                  <option value="continuous">连续对焦</option>
+                  <option value="single-shot">单次对焦</option>
+                  <option value="manual">手动对焦</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="cameraZoom" class="label-row">
+                  <span>变焦（zoom）</span>
+                  <span class="range-value" id="cameraZoomText">1.00x</span>
+                </label>
+                <input id="cameraZoom" type="range" min="1" max="1" step="0.1" value="1" disabled>
+              </div>
+            </div>
+            <div class="actions">
+              <button id="btnRefreshCamera">刷新设备列表</button>
+              <button id="btnStartCamera" class="primary">启动摄像头识别</button>
+              <button id="btnStopCamera" disabled>停止摄像头</button>
+            </div>
+            <p class="screen-hint">启动后会按设定帧率持续采样，并自动识别与向听计算。</p>
+            <div class="video-preview-wrap">
+              <video id="cameraVideo" autoplay playsinline muted></video>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card viewer-card">
+      <div class="section-head">
+        <div class="section-title">识别结果与分析</div>
+        <div class="section-subtitle">左侧为识别框叠加图，右侧为手牌与向听详情</div>
+      </div>
+
+      <div class="viewer">
+        <canvas id="canvas" width="960" height="540"></canvas>
+        <div class="side">
+          <div>
+            <div class="block-title">识别手牌</div>
+            <pre id="recognized">暂无</pre>
+          </div>
+          <div>
+            <div class="block-title">向听与最佳切牌</div>
+            <pre id="calc">暂无</pre>
+          </div>
+          <div>
+            <div class="block-title">调试信息</div>
+            <pre id="meta">暂无</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/p/mahjong-recognizer/script-payload.js"></script>
+    <script src="/p/mahjong-recognizer/script.js"></script>
+</body>
+</html>

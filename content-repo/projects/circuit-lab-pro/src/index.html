@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>电路实验助手 Pro (AI + IDB)</title>
+    
+    <!-- 核心库 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 工具库: IndexedDB封装, Zip打包, 文件保存 -->
+    <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <link rel="stylesheet" href="/p/circuit-lab-pro/styles.css">
+</head>
+<body class="bg-base-200 min-h-screen text-base-content">
+
+<div id="app" class="pb-20">
+    
+    <!-- 1. 顶部导航 -->
+    <div class="navbar bg-base-100 shadow-sm sticky top-0 z-40 px-2">
+        <div class="flex-none">
+            <button class="btn btn-square btn-ghost" @click="toggleDrawer(true)">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 text-center">
+            <span class="font-bold text-lg">电路实验助手</span>
+        </div>
+        <div class="flex-none">
+            <div v-if="isProcessing" class="loader mr-2"></div>
+            <button class="btn btn-square btn-ghost text-primary" @click="exportZip" :disabled="isProcessing">
+                <i class="fa-solid fa-file-export text-xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. 侧边栏：大纲编辑器 & AI -->
+    <div class="drawer z-50" :class="showDrawer ? 'drawer-open' : ''">
+        <input type="checkbox" class="drawer-toggle" :checked="showDrawer" />
+        <div class="drawer-side" style="height: 100vh; position: fixed;">
+            <label class="drawer-overlay" @click="toggleDrawer(false)"></label>
+            <div class="menu p-4 w-80 min-h-full bg-base-100 flex flex-col gap-4 shadow-xl">
+                
+                <div class="flex justify-between items-center pb-2 border-b">
+                    <h2 class="text-xl font-bold">工作区大纲</h2>
+                    <button class="btn btn-xs btn-circle btn-ghost" @click="toggleDrawer(false)"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- API 设置 -->
+                <div class="collapse collapse-arrow bg-base-200">
+                    <input type="checkbox" /> 
+                    <div class="collapse-title font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-robot" :class="apiKey ? 'text-success' : 'text-gray-400'"></i> 
+                        AI设置 & 手册分析
+                    </div>
+                    <div class="collapse-content flex flex-col gap-2">
+                        <div class="join w-full">
+                            <input type="password" placeholder="Gemini API Key" class="input input-bordered input-sm join-item w-full" v-model="apiKey" @change="saveKey" />
+                        </div>
+                        <div class="divider my-0"></div>
+                        <p class="text-xs text-gray-500">上传实验手册(图片)生成大纲</p>
+                        <input type="file" accept="image/*" class="file-input file-input-bordered file-input-sm w-full" @change="analyzeManual" :disabled="!apiKey || isProcessing"/>
+                        <button class="btn btn-sm btn-outline w-full" @click="addExperiment">手动添加实验</button>
+                    </div>
+                </div>
+
+                <!-- 树状大纲 -->
+                <div class="flex-1 overflow-y-auto no-scrollbar pb-10">
+                    <div v-for="(exp, eIdx) in experiments" :key="exp.id" class="mb-3 border border-base-300 rounded-lg p-2 bg-base-50">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xs font-bold w-4">{{eIdx+1}}</span>
+                            <input v-model="exp.title" class="input input-ghost input-sm flex-1 font-bold px-1 h-8" @change="saveState"/>
+                            <button class="btn btn-xs btn-error btn-square" @click="removeExperiment(eIdx)"><i class="fa-solid fa-minus"></i></button>
+                        </div>
+                        <div class="pl-4 border-l-2 border-base-200 ml-2 flex flex-col gap-2">
+                            <div v-for="(step, sIdx) in exp.steps" :key="step.id" class="flex items-center gap-1">
+                                <span class="text-[10px] text-gray-400 w-3">{{sIdx+1}}</span>
+                                <input v-model="step.name" class="input input-bordered input-xs flex-1 bg-white" @change="saveState"/>
+                                <button class="btn btn-xs btn-ghost btn-square text-error" @click="removeStep(eIdx, sIdx)"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                            </div>
+                            <button class="btn btn-xs btn-ghost justify-start text-gray-500" @click="addStep(eIdx)">+ 添加步骤</button>
+                        </div>
+                    </div>
+                    <div class="h-20"></div> <!-- 底部垫高 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 主工作区 -->
+    <div class="p-3 flex flex-col gap-4 min-h-[80vh]">
+        <div v-if="experiments.length === 0" class="flex flex-col items-center justify-center mt-20 text-gray-400 gap-4">
+            <i class="fa-solid fa-clipboard-list text-6xl opacity-20"></i>
+            <p>暂无实验，请在左上角菜单添加或上传手册</p>
+        </div>
+
+        <div v-for="(exp, eIdx) in experiments" :key="exp.id">
+            <!-- 实验标题条 -->
+            <div class="sticky top-[64px] z-30 bg-base-200/95 backdrop-blur py-2 px-1 mb-2 border-b border-base-300 flex items-center gap-2 shadow-sm">
+                <div class="badge badge-primary font-bold">Exp {{ eIdx + 1 }}</div>
+                <h2 class="text-lg font-bold truncate">{{ exp.title }}</h2>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <div v-for="(step, sIdx) in exp.steps" :key="step.id" class="card bg-base-100 shadow-sm border border-base-200">
+                    <div class="card-body p-3">
+                        <h3 class="font-medium text-base mb-2 flex items-center gap-2 text-gray-700">
+                            <div class="badge badge-sm badge-neutral">{{ sIdx + 1 }}</div>
+                            {{ step.name }}
+                        </h3>
+
+                        <!-- 图片列表容器 -->
+                        <div class="flex flex-wrap gap-2">
+                            <!-- 图片项 -->
+                            <div v-for="(imgMeta, imgIdx) in step.images" :key="imgMeta.id" class="relative w-[30%] aspect-square group">
+                                <div class="w-full h-full overflow-hidden rounded-lg border border-base-300 bg-gray-100 relative">
+                                    <img 
+                                        :src="imgBlobUrls[imgMeta.imageId] || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='" 
+                                        class="w-full h-full object-cover cursor-pointer"
+                                        @click="openGallery(eIdx, sIdx, imgIdx)"
+                                    />
+                                    <div v-if="!imgBlobUrls[imgMeta.imageId]" class="absolute inset-0 flex items-center justify-center">
+                                        <span class="loading loading-spinner loading-xs text-gray-400"></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="img-badge" :class="getTypeColor(imgMeta.type)">{{ getTypeName(imgMeta.type) }}</div>
+                                
+                                <button class="absolute -top-2 -right-2 btn btn-circle btn-error btn-xs scale-75 shadow-md z-10" @click.stop="deleteImage(eIdx, sIdx, imgIdx)">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                                
+                                <div v-if="imgMeta.type === 'scope'" class="absolute top-0 left-0 z-10">
+                                    <button class="btn btn-circle btn-warning btn-xs scale-75 shadow-md" @click.stop="openEditor(eIdx, sIdx, imgIdx)">
+                                        <i class="fa-solid fa-crop-simple text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 添加按钮 -->
+                            <button 
+                                class="w-[30%] aspect-square rounded-lg border-2 border-dashed border-primary/30 flex flex-col items-center justify-center gap-1 bg-primary/5 active:scale-95 transition-transform"
+                                @click="onShortClick(eIdx, sIdx)"
+                                @contextmenu.prevent="onLongPress(eIdx, sIdx)"
+                            >
+                                <i class="fa-solid fa-camera text-xl text-primary/60"></i>
+                                <div class="flex flex-col items-center text-[9px] text-primary/50 leading-tight">
+                                    <span>点按拍照</span>
+                                    <span>长按选图</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 类型选择模态框 -->
+    <dialog id="type_modal" class="modal modal-bottom sm:modal-middle">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4 text-center">
+                {{ inputMode === 'camera' ? '拍摄照片' : '选择照片' }} - 请选类型
+            </h3>
+            <div class="grid grid-cols-3 gap-3">
+                <button class="btn h-24 flex-col gap-2 bg-base-100 border-warning hover:bg-warning/20" @click="selectType('scope')">
+                    <i class="fa-solid fa-wave-square text-2xl text-warning"></i>
+                    示波器
+                    <span class="text-[10px] text-gray-500">(支持校正)</span>
+                </button>
+                <button class="btn h-24 flex-col gap-2 bg-base-100 border-success hover:bg-success/20" @click="selectType('circuit')">
+                    <i class="fa-solid fa-microchip text-2xl text-success"></i>
+                    电路连线
+                </button>
+                <button class="btn h-24 flex-col gap-2 bg-base-100 border-info hover:bg-info/20" @click="selectType('desk')">
+                    <i class="fa-solid fa-table text-2xl text-info"></i>
+                    桌面整体
+                </button>
+            </div>
+            <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <!-- 5. 全屏画廊 -->
+    <dialog id="gallery_modal" class="modal p-0">
+        <div class="w-screen h-screen bg-black flex flex-col relative">
+            <!-- 顶部信息栏 -->
+            <div class="absolute top-0 w-full p-4 pt-6 bg-gradient-to-b from-black/80 to-transparent z-50 text-white flex justify-between items-start pointer-events-none">
+                <div class="flex flex-col gap-1 drop-shadow-md">
+                    <div class="text-xs opacity-80 flex items-center gap-2">
+                        <span class="badge badge-xs badge-primary">Exp {{galleryInfo.expIdx}}</span>
+                        {{ galleryInfo.expName }}
+                    </div>
+                    <div class="font-bold text-lg leading-tight flex items-center gap-2">
+                         <span class="badge badge-sm badge-outline text-white">Step {{galleryInfo.stepIdx}}</span>
+                         {{ galleryInfo.stepName }}
+                    </div>
+                    <div class="mt-1">
+                        <span class="badge badge-sm border-none text-white font-bold" :class="getTypeColor(galleryInfo.type)">
+                            {{ getTypeName(galleryInfo.type) }}
+                        </span>
+                    </div>
+                </div>
+                <form method="dialog" class="pointer-events-auto">
+                    <button class="btn btn-circle btn-sm btn-ghost bg-white/20 text-white border-none"><i class="fa-solid fa-xmark"></i></button>
+                </form>
+            </div>
+
+            <!-- 图片容器 -->
+            <div class="flex-1 flex items-center justify-center relative w-full h-full" @touchstart="handleSwipeStart" @touchend="handleSwipeEnd">
+                <img v-if="galleryInfo.url" :src="galleryInfo.url" class="max-w-full max-h-full object-contain transition-opacity duration-300" />
+                
+                <!-- 左右导航按钮 (桌面端或点击) -->
+                <button class="absolute left-2 btn btn-circle btn-ghost text-white bg-white/10 z-40" @click="navGallery(-1)">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button class="absolute right-2 btn btn-circle btn-ghost text-white bg-white/10 z-40" @click="navGallery(1)">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- 6. 示波器校正编辑器 -->
+    <div v-if="editor.show" class="fixed inset-0 z-[60] bg-black flex flex-col">
+        <div class="flex justify-between items-center p-4 text-white bg-black z-10">
+            <span>拖动四角进行校正</span>
+            <button class="btn btn-sm btn-ghost text-white" @click="closeEditor">取消</button>
+        </div>
+        
+        <div class="flex-1 relative overflow-hidden bg-gray-900 touch-none flex items-center justify-center" id="editor-container">
+            <!-- 底图 -->
+            <canvas ref="editorCanvas" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-full max-h-full"></canvas>
+            
+            <!-- 拖拽点 -->
+            <div v-for="(p, idx) in editor.points" :key="idx"
+                 class="corner-handle"
+                 :style="{ left: p.x + 'px', top: p.y + 'px' }"
+                 @touchstart.prevent="startDrag(idx, $event)"
+                 @touchmove.prevent="onDrag($event)"
+                 @touchend="endDrag"
+                 @mousedown.prevent="startDrag(idx, $event)"
+            ></div>
+            
+            <!-- 辅助连线 SVG -->
+            <svg class="absolute inset-0 pointer-events-none w-full h-full" style="z-index: 15;">
+                <polygon :points="polygonPoints" fill="rgba(66, 135, 245, 0.2)" stroke="#ef4444" stroke-width="2" />
+            </svg>
+        </div>
+
+        <div class="p-4 bg-black flex justify-center gap-4 z-10">
+            <button class="btn btn-ghost text-white" @click="resetEditor">重置</button>
+            <button class="btn btn-primary px-8" @click="saveEditor">
+                <span v-if="editor.processing" class="loading loading-spinner"></span>
+                确认校正
+            </button>
+        </div>
+    </div>
+
+    <!-- 隐藏 Input -->
+    <input type="file" id="camInput" accept="image/*" capture="environment" class="hidden" @change="handleFileSelected" />
+    <input type="file" id="fileInput" accept="image/*" class="hidden" @change="handleFileSelected" />
+
+</div>
+
+<script src="/p/circuit-lab-pro/script-payload.js"></script>
+    <script src="/p/circuit-lab-pro/script.js"></script>
+</body>
+</html>

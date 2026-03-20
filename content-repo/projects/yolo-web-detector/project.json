@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "YOLO Web Detector",
+  "slug": "yolo-web-detector",
+  "description": "Browser YOLOv8 ONNX detector for realtime inference demos and quick model checks in the page.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/yolo-web-detector",
+  "visibility": "public",
+  "tags": [
+    "yolo",
+    "onnx",
+    "vision"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "onnx-cdn",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.902Z",
+  "updatedAt": "2026-03-20T23:13:21.903Z"
+}

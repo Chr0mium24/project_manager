@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>制袋公式实时计算 - 增强版</title>
+    <link rel="stylesheet" href="/p/bag-formula-calculator/styles.css">
+</head>
+<body>
+    <div id="calculator">
+        <div class="formula-row">
+            1. 布料长 = <span class="c-dim">高</span><input type="number" id="h" placeholder="30"> × 2 + <span class="c-dim">侧边</span><input type="number" id="side1" placeholder="10"> + 
+            <select id="lengthOffset">
+                <option value="3">3</option>
+                <option value="6.5" selected>6.5</option>
+                <option value="7">7</option>
+                <option value="11.5">11.5</option>
+            </select>
+            = <span class="result" id="resL"></span>
+        </div>
+        
+        <div class="formula-row">
+            2. 布料宽 = <span class="c-dim">横宽</span><input type="number" id="w" placeholder="40"> + <span class="c-dim">侧边</span><input type="number" id="side2" placeholder="10"> + 1.5 = <span class="result" id="resW"></span>
+        </div>
+        
+        <div class="formula-row">
+            3. 总面积 = (<span class="c-dim">布料长</span> <span class="result" id="valL"></span> × <span class="c-dim">布料宽</span> <span class="result" id="valW"></span>) = <span class="result c-area" id="resArea"></span>
+        </div>
+        
+        <div class="formula-row">
+            4. 布料成本：单个袋子重量(g) = <span class="c-area">总面积</span> <span class="result" id="valArea1"></span> × <span class="c-price">克重</span><input type="number" id="gsm" placeholder="80"> × <span class="c-price">布料单价</span><input type="number" id="fabricPrice" placeholder="7000"> = <span class="result c-price" id="resFabricCost"></span>
+        </div>
+        
+        <div class="formula-row">
+            5. 彩印成本：彩印面积(m²) = ((<span class="c-dim">布料长</span> <span class="result" id="valL2"></span> - <span class="c-dim">彩印扣减</span><input type="number" id="printDeduct" placeholder="2">) × <span class="c-dim">布料宽</span> <span class="result" id="valW2"></span>) × <span class="c-price">彩印单价</span><input type="number" id="printPrice" placeholder="0.8"> = <span class="result c-price" id="resPrintCost"></span>
+        </div>
+        
+        <div class="formula-row" style="font-size: 1.1em;">
+            6. 最终单价 = (<span class="c-price">布料</span> <span class="result" id="valFabricCost"></span> + <span class="c-price">彩印</span> <span class="result" id="valPrintCost"></span> + <span class="c-fee">加工</span><input type="number" id="processFee" placeholder="0.2"> + <span class="c-fee">打包</span><input type="number" id="packFee" placeholder="0.05"> + <span class="c-fee">其他</span><input type="number" id="otherFee" placeholder="0">) × 
+            <span class="c-fee">系数</span><select id="multiplier">
+                <option value="" selected disabled>选系数</option>
+                <option value="1">1</option>
+                <option value="1.01">1.01</option>
+                <option value="1.075">1.075</option>
+            </select>
+             = <span class="result c-final" id="resFinal" style="font-size: 1.4em;"></span>
+        </div>
+
+        <div class="action-row">
+            <button id="clearBtn">清空全部数据</button>
+        </div>
+    </div>
+
+    <script src="/p/bag-formula-calculator/script.js"></script>
+</body>
+</html>

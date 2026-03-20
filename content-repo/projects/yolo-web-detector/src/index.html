@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLOv8s ONNX 实时检测</title>
+    <!-- 引入 ONNX Runtime Web -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <link rel="stylesheet" href="/p/yolo-web-detector/styles.css">
+</head>
+<body>
+
+    <h1>YOLOv8 Web 实时检测</h1>
+
+    <div class="controls">
+        <div class="input-group">
+            <label for="modelUpload">1. 上传 yolov8s.onnx</label>
+            <input type="file" id="modelUpload" accept=".onnx">
+        </div>
+        <div class="input-group">
+            <label for="fpsInput">2. 设置帧率 (FPS)</label>
+            <input type="number" id="fpsInput" value="10" min="1" max="60" style="width: 80px;">
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+            <button id="startBtn" disabled>3. 打开摄像头并开始</button>
+        </div>
+    </div>
+
+    <div id="status">请先上传模型...</div>
+
+    <div class="container">
+        <!-- 视频元素用于捕获流，但不可见 -->
+        <video id="video" playsinline></video>
+        <!-- Canvas 用于绘制视频帧和检测框 -->
+        <canvas id="outputCanvas"></canvas>
+    </div>
+
+<script src="/p/yolo-web-detector/script.js"></script>
+</body>
+</html>

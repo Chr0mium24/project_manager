@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选课</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/p/course-selection-helper/styles.css">
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
+
+    <div id="app" class="container mx-auto p-4 md:p-6 lg:p-8">
+        <header class="text-center mb-8">
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 左侧：课程和设置 -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- 课程管理 -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                    <h2 class="text-xl font-semibold mb-4">1. 课程管理</h2>
+                    <div class="space-y-3">
+                        <button id="addCourseBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105">添加新课程</button>
+                        <div class="flex space-x-2">
+                            <button id="importCoursesBtn" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2 px-4 rounded-lg">导入课程 (JSON)</button>
+                            <button id="exportCoursesBtn" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2 px-4 rounded-lg">导出课程 (JSON)</button>
+                            <input type="file" id="courseFileInput" class="hidden" accept=".json">
+                        </div>
+                    </div>
+                    <div id="courseList" class="mt-4 space-y-3 max-h-96 overflow-y-auto pr-2">
+                        <!-- 课程列表将动态插入此处 -->
+                    </div>
+                </div>
+
+                <!-- 排课设置 -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                    <h2 class="text-xl font-semibold mb-4">2. 排课设置</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="font-medium">必修课和课程选项</label>
+                            <div id="requiredCoursesContainer" class="mt-2 space-y-2 text-sm"></div>
+                        </div>
+                        <div>
+                            <label class="font-medium">课程替代组 (N选1)</label>
+                            <div id="alternativeGroupsContainer" class="mt-2 space-y-2"></div>
+                            <button id="addAlternativeGroupBtn" class="mt-2 text-sm text-blue-600 hover:text-blue-800">+ 添加替代组</button>
+                        </div>
+                        <div>
+                            <label class="font-medium">时间偏好 (符合条件加分)</label>
+                            <div id="preferencesContainer" class="space-y-2 mt-2">
+                                <!-- 时间偏好将动态插入 -->
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                             <button id="importSettingsBtn" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2 px-4 rounded-lg">导入设置</button>
+                             <button id="exportSettingsBtn" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2 px-4 rounded-lg">导出设置</button>
+                             <input type="file" id="settingsFileInput" class="hidden" accept=".json">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 生成按钮 -->
+                <div class="sticky bottom-4">
+                    <button id="generateSchedulesBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                        <span id="generateBtnText">生成课程表</span>
+                        <span id="loadingSpinner" class="hidden animate-spin">&#9696;</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右侧：结果展示 -->
+            <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md min-h-screen">
+                <h2 class="text-xl font-semibold mb-4">3. 推荐课程表</h2>
+                <div id="resultsContainer" class="space-y-8">
+                    <div id="placeholder" class="text-center py-20 text-gray-500">
+                        <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        <p class="mt-4">添加课程并设置完毕后，点击“生成课程表”</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 课程添加/编辑 Modal -->
+    <div id="courseModal" class="modal-backdrop hidden">
+        <div class="modal-content bg-white dark:bg-gray-800 w-11/12 md:w-2/3 lg:w-1/2 p-6 rounded-xl shadow-2xl">
+            <h3 id="modalTitle" class="text-2xl font-bold mb-6">添加新课程</h3>
+            <form id="courseForm">
+                <input type="hidden" id="courseId">
+                <div class="mb-4">
+                    <label for="courseName" class="block font-medium mb-1">课程名称</label>
+                    <input type="text" id="courseName" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required>
+                </div>
+                
+                <div id="timeGroupsContainer" class="space-y-4">
+                    <!-- 时间组将动态插入此处 -->
+                </div>
+
+                <button type="button" id="addTimeGroupBtn" class="mt-4 text-blue-600 hover:text-blue-800">+ 添加可替代的时间选项 (例如: 不同老师或时间)</button>
+                
+                <div class="mt-8 flex justify-end space-x-4">
+                    <button type="button" id="cancelCourseModal" class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 py-2 px-6 rounded-lg">取消</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">保存课程</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/p/course-selection-helper/script-payload.js"></script>
+    <script src="/p/course-selection-helper/script.js"></script>
+</body>
+</html>

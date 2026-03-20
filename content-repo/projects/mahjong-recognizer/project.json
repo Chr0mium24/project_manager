@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Mahjong Recognizer",
+  "slug": "mahjong-recognizer",
+  "description": "Mahjong screenshot recognizer with ONNX-based tile detection and integrated shanten analysis.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/mahjong-recognizer",
+  "visibility": "public",
+  "tags": [
+    "mahjong",
+    "onnx",
+    "vision"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "onnx-cdn",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.895Z",
+  "updatedAt": "2026-03-20T23:13:21.897Z"
+}

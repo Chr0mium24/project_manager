@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "OpenCV Color Range Selector",
+  "slug": "opencv-color-range-selector",
+  "description": "OpenCV-based color range selector for HSV and LAB tuning with image-backed preview controls.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/opencv-color-range-selector",
+  "visibility": "public",
+  "tags": [
+    "opencv",
+    "vision",
+    "color"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "opencv-cdn",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.890Z",
+  "updatedAt": "2026-03-20T23:13:21.892Z"
+}

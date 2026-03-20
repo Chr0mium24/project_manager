@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验图片上传与打包</title>
+  <link rel="stylesheet" href="/p/experiment-image-packer/styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>实验图片上传与 ZIP 导出</h1>
+      <div class="muted">数据保存在浏览器 <code>IndexedDB(localForage)</code>。支持按实验分块管理、多图上传、ZIP 备份导入导出。</div>
+      <div class="toolbar">
+        <label class="inline-field">
+          <span>Lab 前缀</span>
+          <input id="labPrefixInput" class="lab-input" type="text" placeholder="例如：digital_lab">
+        </label>
+        <button id="downloadZipBtn" class="primary">导出图片 ZIP</button>
+        <label class="file-btn" for="importZipInput">导入图片 ZIP 备份</label>
+        <input id="importZipInput" class="hidden" type="file" accept=".zip,application/zip">
+        <button id="openEditorBtn">编辑实验列表</button>
+        <label class="file-btn" for="importListInput">导入实验列表 JSON</label>
+        <input id="importListInput" class="hidden" type="file" accept="application/json,.json">
+        <button id="exportListBtn">导出实验列表 JSON</button>
+        <button id="clearAllBtn" class="danger">清空全部图片</button>
+        <span id="summary" class="small"></span>
+      </div>
+    </div>
+
+    <div id="experimentContainer"></div>
+
+    <div class="card">
+      <h2>命名与导入规则</h2>
+      <ul class="tips">
+        <li>导出文件命名格式：<code>lab前缀__实验编号__条目序号__同条目第N张__图片主体--描述.ext</code>。</li>
+        <li>同一条目可上传多张图片，导出时会按 <code>01, 02, 03...</code> 递增命名。</li>
+        <li>ZIP 导入会按 <code>--</code> 解析“图片主体”和“描述”，并按双下划线 <code>__</code> 解析前置字段。</li>
+        <li>删除条目或实验块时，如果存在已上传图片会二次确认。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>实验列表 JSON 格式与 AI Prompt 模板</h2>
+      <div class="small muted">JSON 仅用于导入/导出实验结构（不含图片数据）。图片备份统一走 ZIP。</div>
+      <pre id="jsonSchema" class="schema-box"></pre>
+      <textarea id="promptTemplate" class="prompt-box" readonly></textarea>
+      <div class="toolbar">
+        <button id="copyPromptBtn">复制 Prompt 模板</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="editorModal" class="modal hidden">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h2>编辑实验列表（分块）</h2>
+        <button id="closeEditorBtn">关闭</button>
+      </div>
+
+      <div class="toolbar">
+        <input id="newExpCodeInput" type="text" placeholder="新实验编号，例如 4.4">
+        <input id="newExpTitleInput" type="text" placeholder="新实验标题，例如 组合逻辑扩展实验">
+        <button id="addExperimentBtn" class="primary">新建实验块</button>
+      </div>
+
+      <div class="toolbar">
+        <select id="quickAddExpSelect"></select>
+        <input id="quickAddCoreInput" type="text" placeholder="图片主体（不含扩展名）">
+        <input id="quickAddDescInput" type="text" placeholder="描述（导出时放在 -- 后面）">
+        <button id="quickAddItemBtn">按下拉框新增条目</button>
+      </div>
+
+      <div id="editorExperiments"></div>
+
+      <div class="toolbar">
+        <button id="saveEditorBtn" class="primary">保存实验列表</button>
+        <button id="cancelEditorBtn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="previewModal" class="modal hidden">
+    <div class="preview-panel">
+      <div class="modal-head">
+        <h2>图片预览</h2>
+        <button id="closePreviewBtn">关闭</button>
+      </div>
+      <div id="previewMeta" class="small"></div>
+      <div class="preview-stage">
+        <img id="previewImage" alt="preview">
+      </div>
+      <div class="toolbar">
+        <button id="previewPrevBtn">上一张</button>
+        <button id="previewNextBtn">下一张</button>
+        <button id="previewDeleteBtn" class="danger">删除当前图片</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="/p/experiment-image-packer/script-payload.js"></script>
+    <script src="/p/experiment-image-packer/script.js"></script>
+</body>
+</html>

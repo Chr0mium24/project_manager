@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCV 颜色范围选择器 (HSV & LAB)</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- noUiSlider CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="/p/opencv-color-range-selector/styles.css">
+</head>
+<body>
+
+    <!-- 加载指示器 -->
+    <div id="loader">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-primary mb-0">正在加载 OpenCV.js...</p>
+    </div>
+
+    <div class="container-fluid">
+        <h3 class="text-center mb-4">OpenCV 颜色范围选择器</h3>
+
+        <!-- 控制区域 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <!-- 模式选择 -->
+                    <div class="col-md-auto">
+                        <label class="form-label fw-bold">色彩模式:</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="colorMode" id="hsvMode" value="hsv" checked>
+                            <label class="form-check-label" for="hsvMode">HSV</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="colorMode" id="labMode" value="lab">
+                            <label class="form-check-label" for="labMode">LAB</label>
+                        </div>
+                    </div>
+                    <!-- 文件上传 -->
+                    <div class="col-md-auto">
+                         <label for="imageUpload" class="btn btn-primary">上传图片</label>
+                         <input type="file" id="imageUpload" accept="image/*" class="d-none">
+                         <span class="form-text d-none d-md-inline ms-2">或直接在页面按 Ctrl+V 粘贴</span>
+                    </div>
+                    <!-- 取色器 -->
+                    <div class="col-md-auto">
+                        <label for="colorPicker" class="form-label fw-bold">取色器:</label>
+                        <input type="color" class="form-control form-control-color" id="colorPicker" value="#563d7c" title="选择颜色">
+                    </div>
+                    <div class="col-md">
+                        <div id="color-values" class="form-text" style="font-family: monospace;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图像显示 -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <h5 class="text-center">原图</h5>
+                <div class="canvas-container mx-auto" id="original-container">
+                    <canvas id="originalCanvas"></canvas>
+                    <div class="canvas-placeholder" id="original-placeholder">
+                        <p class="mb-0">请上传或粘贴图片</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <h5 class="text-center">遮罩 (Mask)</h5>
+                <div class="canvas-container mx-auto" id="mask-container">
+                    <canvas id="maskCanvas"></canvas>
+                     <div class="canvas-placeholder" id="mask-placeholder">
+                        <p class="mb-0">处理结果将显示在此处</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 滑动条 -->
+        <div class="card mb-4">
+            <div class="card-body" id="sliders-container">
+                <!-- Sliders will be dynamically generated here -->
+            </div>
+        </div>
+
+        <!-- 代码输出 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Python 代码</h5>
+            </div>
+            <div class="card-body">
+                <div id="code-output">
+                    <button id="copy-code-btn" class="btn btn-sm btn-outline-light">复制</button>
+                    <code id="python-code"></code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OpenCV.js -->
+    <script async src="https://docs.opencv.org/4.9.0/opencv.js" onload="onOpenCvReady();"></script>
+    
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- noUiSlider JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
+
+    <script src="/p/opencv-color-range-selector/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Textual Scaling Demo",
+  "slug": "textual-scaling-demo",
+  "description": "Interactive text resolution scaling demo for tuning layout density, type size, and readability.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/textual-scaling-demo",
+  "visibility": "public",
+  "tags": [
+    "typography",
+    "ui",
+    "demo"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vue-cdn",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.864Z",
+  "updatedAt": "2026-03-20T23:13:21.865Z"
+}

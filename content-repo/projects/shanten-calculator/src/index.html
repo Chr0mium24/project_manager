@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculate Shanten (Single HTML)</title>
+  <link rel="stylesheet" href="/p/shanten-calculator/styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <h1>Shanten / 切牌组合 (Single HTML)</h1>
+    <p class="hint">输入 14 张手牌字符，例如: <code>123m456s789p1234z0m</code> 或 <code>123m 456p 789s 55z 0m</code></p>
+
+    <div class="row">
+      <input id="handInput" type="text" value="123m456s789p1234z0m" autocomplete="off" />
+      <button id="calcBtn" type="button">计算</button>
+      <button id="sampleBtn" class="secondary" type="button">示例</button>
+    </div>
+
+    <div class="mode-row">
+      <span>牌面显示:</span>
+      <label><input type="radio" name="tileViewMode" value="unicode" checked /> Unicode</label>
+      <label><input type="radio" name="tileViewMode" value="text" /> 文字(1m)</label>
+    </div>
+
+    <div id="message" class="msg"></div>
+    <pre id="output" class="output-unicode"></pre>
+  </div>
+
+  <script src="/p/shanten-calculator/script-payload.js"></script>
+    <script src="/p/shanten-calculator/script.js"></script>
+</body>
+</html>

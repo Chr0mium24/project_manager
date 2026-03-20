@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "PDF Split Tool",
+  "slug": "pdf-split-tool",
+  "description": "Client-side PDF preview and custom split utility for slicing documents into targeted output files.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/pdf-split-tool",
+  "visibility": "public",
+  "tags": [
+    "pdf",
+    "documents",
+    "utility"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "pdf-lib-cdn",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.875Z",
+  "updatedAt": "2026-03-20T23:13:21.876Z"
+}

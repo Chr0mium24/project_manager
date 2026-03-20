@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Experiment Image Packer",
+  "slug": "experiment-image-packer",
+  "description": "Experiment image upload and ZIP packaging workflow for collecting, reviewing, and exporting batches.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/experiment-image-packer",
+  "visibility": "public",
+  "tags": [
+    "images",
+    "zip",
+    "workflow"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T23:13:21.918Z",
+  "updatedAt": "2026-03-20T23:13:21.920Z"
+}

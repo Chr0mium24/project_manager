@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-03-20T22:42:06.111Z",
+  "generatedAt": "2026-03-20T23:13:21.918Z",
   "projects": [
     {
       "slug": "agent-brain-core",
@@ -10,7 +10,17 @@
       "visibility": "public",
       "entry": "src/index.html",
       "route": "/p/agent-brain-core",
-      "updatedAt": "2026-03-20T22:42:06.099Z"
+      "updatedAt": "2026-03-20T23:13:21.878Z"
+    },
+    {
+      "slug": "bag-formula-calculator",
+      "path": "projects/bag-formula-calculator",
+      "name": "Bag Formula Calculator",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/bag-formula-calculator",
+      "updatedAt": "2026-03-20T23:13:21.859Z"
     },
     {
       "slug": "cec-sync-tool",
@@ -20,7 +30,47 @@
       "visibility": "public",
       "entry": "src/index.html",
       "route": "/p/cec-sync-tool",
-      "updatedAt": "2026-03-20T22:42:06.103Z"
+      "updatedAt": "2026-03-20T23:13:21.885Z"
+    },
+    {
+      "slug": "chinese-text-analyzer",
+      "path": "projects/chinese-text-analyzer",
+      "name": "Chinese Text Analyzer",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/chinese-text-analyzer",
+      "updatedAt": "2026-03-20T23:13:21.873Z"
+    },
+    {
+      "slug": "circuit-lab-pro",
+      "path": "projects/circuit-lab-pro",
+      "name": "Circuit Lab Pro",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/circuit-lab-pro",
+      "updatedAt": "2026-03-20T23:13:21.899Z"
+    },
+    {
+      "slug": "course-selection-helper",
+      "path": "projects/course-selection-helper",
+      "name": "Course Selection Helper",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/course-selection-helper",
+      "updatedAt": "2026-03-20T23:13:21.914Z"
+    },
+    {
+      "slug": "experiment-image-packer",
+      "path": "projects/experiment-image-packer",
+      "name": "Experiment Image Packer",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/experiment-image-packer",
+      "updatedAt": "2026-03-20T23:13:21.918Z"
     },
     {
       "slug": "gre-flow",
@@ -30,7 +80,17 @@
       "visibility": "public",
       "entry": "src/index.html",
       "route": "/p/gre-flow",
-      "updatedAt": "2026-03-20T22:42:06.082Z"
+      "updatedAt": "2026-03-20T23:13:21.828Z"
+    },
+    {
+      "slug": "image-to-gif-tool",
+      "path": "projects/image-to-gif-tool",
+      "name": "Image To GIF Tool",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/image-to-gif-tool",
+      "updatedAt": "2026-03-20T23:13:21.909Z"
     },
     {
       "slug": "lan-clipboard",
@@ -40,7 +100,7 @@
       "visibility": "public",
       "entry": "src/index.html",
       "route": "/p/lan-clipboard",
-      "updatedAt": "2026-03-20T22:42:06.107Z"
+      "updatedAt": "2026-03-20T23:13:21.887Z"
     },
     {
       "slug": "landing-a",
@@ -53,6 +113,16 @@
       "updatedAt": "2026-03-20T00:00:00.000Z"
     },
     {
+      "slug": "lcapy-pyodide",
+      "path": "projects/lcapy-pyodide",
+      "name": "Lcapy Pyodide",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/lcapy-pyodide",
+      "updatedAt": "2026-03-20T23:13:21.855Z"
+    },
+    {
       "slug": "lean-algebra-dojo",
       "path": "projects/lean-algebra-dojo",
       "name": "Lean Algebra Dojo",
@@ -60,7 +130,7 @@
       "visibility": "public",
       "entry": "src/index.html",
       "route": "/p/lean-algebra-dojo",
-      "updatedAt": "2026-03-20T22:42:06.096Z"
+      "updatedAt": "2026-03-20T23:13:21.852Z"
     },
     {
       "slug": "local-ai-assistant",
@@ -70,7 +140,37 @@
       "visibility": "public",
       "entry": "src/index.html",
       "route": "/p/local-ai-assistant",
-      "updatedAt": "2026-03-20T22:42:06.101Z"
+      "updatedAt": "2026-03-20T23:13:21.882Z"
+    },
+    {
+      "slug": "mahjong-recognizer",
+      "path": "projects/mahjong-recognizer",
+      "name": "Mahjong Recognizer",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/mahjong-recognizer",
+      "updatedAt": "2026-03-20T23:13:21.895Z"
+    },
+    {
+      "slug": "opencv-color-range-selector",
+      "path": "projects/opencv-color-range-selector",
+      "name": "OpenCV Color Range Selector",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/opencv-color-range-selector",
+      "updatedAt": "2026-03-20T23:13:21.890Z"
+    },
+    {
+      "slug": "pdf-split-tool",
+      "path": "projects/pdf-split-tool",
+      "name": "PDF Split Tool",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/pdf-split-tool",
+      "updatedAt": "2026-03-20T23:13:21.875Z"
     },
     {
       "slug": "service-b",
@@ -83,6 +183,16 @@
       "updatedAt": "2026-03-20T00:00:00.000Z"
     },
     {
+      "slug": "shanten-calculator",
+      "path": "projects/shanten-calculator",
+      "name": "Shanten Calculator",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/shanten-calculator",
+      "updatedAt": "2026-03-20T23:13:21.867Z"
+    },
+    {
       "slug": "split-bill-calculator",
       "path": "projects/split-bill-calculator",
       "name": "Split Bill Calculator",
@@ -90,7 +200,17 @@
       "visibility": "public",
       "entry": "src/index.html",
       "route": "/p/split-bill-calculator",
-      "updatedAt": "2026-03-20T22:42:06.111Z"
+      "updatedAt": "2026-03-20T23:13:21.907Z"
+    },
+    {
+      "slug": "textual-scaling-demo",
+      "path": "projects/textual-scaling-demo",
+      "name": "Textual Scaling Demo",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/textual-scaling-demo",
+      "updatedAt": "2026-03-20T23:13:21.864Z"
     },
     {
       "slug": "yolo-label-editor",
@@ -100,7 +220,17 @@
       "visibility": "public",
       "entry": "src/index.html",
       "route": "/p/yolo-label-editor",
-      "updatedAt": "2026-03-20T22:42:06.109Z"
+      "updatedAt": "2026-03-20T23:13:21.904Z"
+    },
+    {
+      "slug": "yolo-web-detector",
+      "path": "projects/yolo-web-detector",
+      "name": "YOLO Web Detector",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/yolo-web-detector",
+      "updatedAt": "2026-03-20T23:13:21.902Z"
     }
   ]
 }

@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { createProject, deleteManagedProject, readProject } from "../packages/project-core/src/index.ts";
+import { createProject, readProject } from "../packages/project-core/src/index.ts";
+import { transformReferenceHtml } from "./lib/reference-project-transform.ts";
 
 interface ReferenceProjectConfig {
   description: string;
@@ -10,16 +11,6 @@ interface ReferenceProjectConfig {
   referenceDir: string;
   slug: string;
   tags: string[];
-}
-
-interface ProjectAsset {
-  content: string;
-  fileName: string;
-}
-
-interface TransformedProject {
-  assets: ProjectAsset[];
-  html: string;
 }
 
 const REFERENCE_PROJECTS: readonly ReferenceProjectConfig[] = Object.freeze([
@@ -38,6 +29,54 @@ const REFERENCE_PROJECTS: readonly ReferenceProjectConfig[] = Object.freeze([
     framework: "tailwind-cdn",
     referenceDir: "bb3c35712be64afaa83289e138414bfb",
     tags: ["lean", "math", "education"]
+  },
+  {
+    slug: "lcapy-pyodide",
+    name: "Lcapy Pyodide",
+    description: "Browser-based Lcapy and Pyodide circuit worksheet for symbolic analysis and quick experiments.",
+    framework: "pyodide",
+    referenceDir: "14ed03867fa442eb8c70de47db67108a",
+    tags: ["circuits", "pyodide", "analysis"]
+  },
+  {
+    slug: "bag-formula-calculator",
+    name: "Bag Formula Calculator",
+    description: "Realtime packaging formula calculator for bag sizing, material inputs, and manufacturing estimates.",
+    framework: "vanilla",
+    referenceDir: "2516dcb291ad41569c23b5a6cc57425e",
+    tags: ["calculator", "manufacturing", "packaging"]
+  },
+  {
+    slug: "textual-scaling-demo",
+    name: "Textual Scaling Demo",
+    description: "Interactive text resolution scaling demo for tuning layout density, type size, and readability.",
+    framework: "vue-cdn",
+    referenceDir: "2842ae93589e4cbda1828d16aaf1ac0d",
+    tags: ["typography", "ui", "demo"]
+  },
+  {
+    slug: "shanten-calculator",
+    name: "Shanten Calculator",
+    description: "Mahjong shanten calculator focused on hand evaluation, tile state inspection, and discard planning.",
+    framework: "vanilla",
+    referenceDir: "330efde1458f4b4b9777a2f694aad022",
+    tags: ["mahjong", "calculator", "game"]
+  },
+  {
+    slug: "chinese-text-analyzer",
+    name: "Chinese Text Analyzer",
+    description: "Chinese text comparison workbench with feature extraction, chart-based summaries, and distribution views.",
+    framework: "chartjs-cdn",
+    referenceDir: "38784b7751224d898cd23cb00665cfc0",
+    tags: ["text", "analysis", "charts"]
+  },
+  {
+    slug: "pdf-split-tool",
+    name: "PDF Split Tool",
+    description: "Client-side PDF preview and custom split utility for slicing documents into targeted output files.",
+    framework: "pdf-lib-cdn",
+    referenceDir: "43c7d128bf4d47c0ba9648b059d2adb2",
+    tags: ["pdf", "documents", "utility"]
   },
   {
     slug: "agent-brain-core",
@@ -72,6 +111,38 @@ const REFERENCE_PROJECTS: readonly ReferenceProjectConfig[] = Object.freeze([
     tags: ["clipboard", "network", "utility"]
   },
   {
+    slug: "opencv-color-range-selector",
+    name: "OpenCV Color Range Selector",
+    description: "OpenCV-based color range selector for HSV and LAB tuning with image-backed preview controls.",
+    framework: "opencv-cdn",
+    referenceDir: "68187d52bc8a4ba2b42105e2c9874ccb",
+    tags: ["opencv", "vision", "color"]
+  },
+  {
+    slug: "mahjong-recognizer",
+    name: "Mahjong Recognizer",
+    description: "Mahjong screenshot recognizer with ONNX-based tile detection and integrated shanten analysis.",
+    framework: "onnx-cdn",
+    referenceDir: "981a35ec3a03489eb22b0850ebb57dd2",
+    tags: ["mahjong", "onnx", "vision"]
+  },
+  {
+    slug: "circuit-lab-pro",
+    name: "Circuit Lab Pro",
+    description: "Circuit experiment assistant with persistent local state, guided workflows, and export tooling.",
+    framework: "vue-cdn",
+    referenceDir: "a357416320734c9a9a68203637c43235",
+    tags: ["circuits", "lab", "workflow"]
+  },
+  {
+    slug: "yolo-web-detector",
+    name: "YOLO Web Detector",
+    description: "Browser YOLOv8 ONNX detector for realtime inference demos and quick model checks in the page.",
+    framework: "onnx-cdn",
+    referenceDir: "a3f6fe6162464f8797a53d45f183b470",
+    tags: ["yolo", "onnx", "vision"]
+  },
+  {
     slug: "yolo-label-editor",
     name: "YOLO Label Editor",
     description: "YOLO annotation editing tool with quick label management and image-focused review workflow.",
@@ -86,14 +157,31 @@ const REFERENCE_PROJECTS: readonly ReferenceProjectConfig[] = Object.freeze([
     framework: "vanilla",
     referenceDir: "e6e0b8a19ca04d5bab4cdee6fa1057d3",
     tags: ["finance", "calculator", "group"]
+  },
+  {
+    slug: "image-to-gif-tool",
+    name: "Image To GIF Tool",
+    description: "Image-to-GIF converter for assembling still images into animated exports directly in the browser.",
+    framework: "vanilla",
+    referenceDir: "b17bcc99851d4c168cc31c16b5610c79",
+    tags: ["image", "gif", "converter"]
+  },
+  {
+    slug: "course-selection-helper",
+    name: "Course Selection Helper",
+    description: "Course planning interface for comparing options, tracking constraints, and assembling schedules.",
+    framework: "vanilla",
+    referenceDir: "f63a62a250024ecdbf88cf2baba4e6d0",
+    tags: ["education", "planning", "schedule"]
+  },
+  {
+    slug: "experiment-image-packer",
+    name: "Experiment Image Packer",
+    description: "Experiment image upload and ZIP packaging workflow for collecting, reviewing, and exporting batches.",
+    framework: "vanilla",
+    referenceDir: "fc1670b3052847a5aa800cea4aa02e39",
+    tags: ["images", "zip", "workflow"]
   }
-]);
-
-const REMOVED_REFERENCE_PROJECT_SLUGS: readonly string[] = Object.freeze([
-  "circuit-lab-pro",
-  "experiment-image-packer",
-  "mahjong-recognizer",
-  "shanten-calculator"
 ]);
 
 function nowIso(): string {
@@ -107,10 +195,6 @@ function writeTextFile(filePath: string, content: string): void {
 
 function writeJson(filePath: string, value: unknown): void {
   writeTextFile(filePath, `${JSON.stringify(value, null, 2)}\n`);
-}
-
-function normalizeAssetContent(content: string): string {
-  return `${content.replace(/[ \t]+$/gm, "").trim()}\n`;
 }
 
 function listReferenceHtmlFiles(referenceRoot: string): string[] {
@@ -131,52 +215,6 @@ function selectBestReferenceHtml(referenceRoot: string): string {
       size: fs.statSync(filePath).size
     }))
     .sort((left, right) => right.size - left.size)[0]?.filePath ?? htmlFiles[0];
-}
-
-function replaceInlineStyles(html: string, slug: string, assets: ProjectAsset[]): string {
-  let styleIndex = 0;
-  return html.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, (_match, cssContent: string) => {
-    styleIndex += 1;
-    const fileName = styleIndex === 1 ? "styles.css" : `styles-${String(styleIndex)}.css`;
-    assets.push({
-      fileName,
-      content: normalizeAssetContent(cssContent)
-    });
-    return `<link rel="stylesheet" href="/p/${slug}/${fileName}">`;
-  });
-}
-
-function replaceInlineScripts(html: string, slug: string, assets: ProjectAsset[]): string {
-  let scriptIndex = 0;
-  return html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (match, attributes: string, scriptContent: string) => {
-    if (/\bsrc\s*=/.test(attributes)) {
-      return match;
-    }
-
-    scriptIndex += 1;
-    const typeAttribute = attributes.match(/\btype\s*=\s*["']([^"']+)["']/i)?.[1]?.toLowerCase() ?? null;
-    const extension = typeAttribute !== null && typeAttribute.includes("babel") ? "jsx" : "js";
-    const fileName = scriptIndex === 1 ? `script.${extension}` : `script-${String(scriptIndex)}.${extension}`;
-    assets.push({
-      fileName,
-      content: normalizeAssetContent(scriptContent)
-    });
-    const normalizedAttributes = attributes.trim();
-    return normalizedAttributes.length === 0
-      ? `<script src="/p/${slug}/${fileName}"></script>`
-      : `<script ${normalizedAttributes} src="/p/${slug}/${fileName}"></script>`;
-  });
-}
-
-function transformReferenceHtml(html: string, slug: string): TransformedProject {
-  const assets: ProjectAsset[] = [];
-  const htmlWithStyles = replaceInlineStyles(html, slug, assets);
-  const transformedHtml = replaceInlineScripts(htmlWithStyles, slug, assets);
-
-  return {
-    html: transformedHtml,
-    assets
-  };
 }
 
 function updateProjectMetadata(
@@ -220,15 +258,8 @@ function importReferenceProject(rootDir: string, config: ReferenceProjectConfig)
   updateProjectMetadata(rootDir, config, updatedAt);
 }
 
-function removeDeprecatedReferenceProjects(rootDir: string): void {
-  REMOVED_REFERENCE_PROJECT_SLUGS.forEach((slug) => {
-    deleteManagedProject(rootDir, slug);
-  });
-}
-
 function main(): void {
   const rootDir = process.cwd();
-  removeDeprecatedReferenceProjects(rootDir);
   REFERENCE_PROJECTS.forEach((config) => {
     importReferenceProject(rootDir, config);
     process.stdout.write(`${JSON.stringify({
