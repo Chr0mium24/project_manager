@@ -178,7 +178,7 @@ For one-command local startup, use:
 ./scripts/dev-up.sh
 ```
 
-This helper installs dependencies on first run, defaults the local admin token if needed, and starts the gateway on `127.0.0.1:3100`.
+This helper installs dependencies on first run, defaults the local admin token if needed, waits for the local health check, and starts the gateway on `127.0.0.1:3100`.
 
 ## Development behavior policy
 

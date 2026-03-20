@@ -26,11 +26,14 @@ What the helper does:
 - installs dependencies on first run if `node_modules/` is missing
 - defaults `PROJECT_MANAGER_ADMIN_TOKEN` to `local-dev-token` if unset
 - starts the gateway on `http://127.0.0.1:3100/`
+- waits for `/healthz` to pass before reporting readiness
+- auto-opens the control plane in a browser when a local opener is available
 
 Overrides:
 
 ```bash
 PORT=3200 PROJECT_MANAGER_ADMIN_TOKEN=my-token ./scripts/dev-up.sh
+PROJECT_MANAGER_OPEN_BROWSER=0 ./scripts/dev-up.sh
 ```
 
 ## Notes
