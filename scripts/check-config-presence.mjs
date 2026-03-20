@@ -14,6 +14,8 @@ const requiredFiles = [
   '.dependency-cruiser.cjs',
   'CODEX.md',
   'docs/README.md',
+  'scripts/setup-git-hooks.mjs',
+  '.githooks/pre-commit',
 ];
 
 const missing = requiredFiles.filter((file) => !existsSync(path.join(rootDir, file)));
@@ -27,6 +29,7 @@ if (missing.length > 0) {
 console.log('[config] required files present');
 
 const requiredExecutables = [
+  '.githooks/pre-commit',
   'scripts/dev-up.sh',
   'scripts/run-quality-gate.sh',
   'scripts/register-dev-route.sh',

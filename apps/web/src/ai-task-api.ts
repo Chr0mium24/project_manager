@@ -76,6 +76,18 @@ export class GatewayApiError extends Error {
   }
 }
 
+function resolveFetch(fetchImpl?: typeof fetch): typeof fetch {
+  if (fetchImpl !== undefined) {
+    return fetchImpl;
+  }
+
+  if (typeof globalThis.fetch !== "function") {
+    throw new Error("global fetch is unavailable");
+  }
+
+  return globalThis.fetch.bind(globalThis);
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -248,7 +260,7 @@ export class AiTaskApiClient implements AiTaskClient {
   public constructor(options: AiTaskApiClientOptions = {}) {
     this.adminToken = options.adminToken ?? null;
     this.baseUrl = options.baseUrl ?? "";
-    this.fetchImpl = options.fetch ?? fetch;
+    this.fetchImpl = resolveFetch(options.fetch);
   }
 
   public async listTasks(): Promise<AiTaskRecord[]> {

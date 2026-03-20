@@ -25,6 +25,7 @@ Current repository implementation:
 
 - the root gate runs Git, AI, and publish lanes every time
 - this keeps the current pre-bootstrap repository deterministic
+- local commits are guarded by a repository `pre-commit` hook that reruns the full gate
 
 Frontend rebuild requirement:
 
@@ -135,6 +136,7 @@ Already enforced at the repository root:
 - no-compatibility-code checks
 - route-registry behavior checks
 - quality-gate stamp checks for safe Git commits
+- tracked Git hook files and hook bootstrap wiring
 - content repo schema checks
 - project bootstrap checks
 - Codex CLI capability checks

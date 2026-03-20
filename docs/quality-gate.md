@@ -12,6 +12,13 @@ Canonical command:
 ./scripts/run-quality-gate.sh
 ```
 
+Local commit enforcement:
+
+- repository installs a tracked `pre-commit` hook through `core.hooksPath=.githooks`
+- the hook rejects commits when tracked files have unstaged edits
+- the hook runs the full root quality gate before `git commit` is allowed to complete
+- bypassing the hook with `--no-verify` is a policy violation
+
 Current implementation detail:
 
 - the gate is executable in this repository today
@@ -128,6 +135,8 @@ After every code update, rerun:
 ```
 
 This is required for frontend work too.
+
+In normal local development, every commit will also rerun this same gate through the repository `pre-commit` hook.
 
 Do not treat UI iteration as exempt from the gate.
 

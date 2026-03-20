@@ -180,6 +180,14 @@ For one-command local startup, use:
 
 This helper installs dependencies on first run, defaults the local admin token if needed, starts the gateway backend on `127.0.0.1:3101`, and starts the Vue/Vite management UI on `127.0.0.1:3100`. The Vite dev server proxies control API and managed project routes back to the gateway.
 
+After dependency install, the repository also configures tracked Git hooks automatically:
+
+```bash
+corepack pnpm setup:hooks
+```
+
+That wiring makes local `git commit` run the full quality gate through `.githooks/pre-commit`. Do not bypass this with `--no-verify`.
+
 For packaged management UI output, use:
 
 ```bash
@@ -207,3 +215,4 @@ Codex should:
 - do not add speculative compatibility branches
 - treat the frontend rebuild as a multi-route Vue application, not a monolithic single-screen shell
 - rerun the quality gate after every code update during frontend work, not only at the end of a large batch
+- keep tracked changes fully staged before commit so the pre-commit gate runs against the exact snapshot

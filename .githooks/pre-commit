@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "${ROOT_DIR}"
+
+if ! git diff --quiet --ignore-submodules --; then
+  echo "[pre-commit] unstaged tracked changes detected" >&2
+  echo "[pre-commit] stage or stash tracked edits before commit so the gate runs against the exact snapshot" >&2
+  exit 1
+fi
+
+echo "[pre-commit] running quality gate"
+exec ./scripts/run-quality-gate.sh

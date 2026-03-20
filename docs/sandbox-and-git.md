@@ -63,6 +63,9 @@ Implementation note:
 - it blocks commits on `main` and `master`
 - it blocks commits on non-`task/<slug>` branches
 - `./scripts/codex-safe-gh.sh` exists only to reject PR creation explicitly
+- the repository also installs `.githooks/pre-commit`, which reruns the full quality gate for local commits
+- the hook rejects commits when tracked files have unstaged edits because that would test a different snapshot than the one being committed
+- bypassing the hook with `--no-verify` is forbidden
 
 Scope note:
 

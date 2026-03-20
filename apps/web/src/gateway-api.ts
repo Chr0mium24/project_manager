@@ -62,6 +62,18 @@ interface GatewayApiClientOptions {
   fetch?: typeof fetch;
 }
 
+function resolveFetch(fetchImpl?: typeof fetch): typeof fetch {
+  if (fetchImpl !== undefined) {
+    return fetchImpl;
+  }
+
+  if (typeof globalThis.fetch !== "function") {
+    throw new Error("global fetch is unavailable");
+  }
+
+  return globalThis.fetch.bind(globalThis);
+}
+
 function readErrorCode(payload: unknown): string | null {
   if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
     return null;
@@ -197,7 +209,7 @@ export class GatewayProjectApiClient {
 
   public constructor(options: GatewayApiClientOptions = {}) {
     this.baseUrl = options.baseUrl ?? "";
-    this.fetchImpl = options.fetch ?? fetch;
+    this.fetchImpl = resolveFetch(options.fetch);
   }
 
   public async listProjects(): Promise<ProjectListEntry[]> {
