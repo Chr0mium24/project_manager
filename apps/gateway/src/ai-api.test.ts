@@ -3,8 +3,29 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { type FastifyInstance } from "fastify";
 import { createGatewayApp } from "./index.ts";
 import { TEST_ADMIN_TOKEN, authHeaders, writeContentRepo } from "./test-fixtures.ts";
+
+interface AiTaskResponsePayload {
+  task: { taskId: string; status: string; summaryPath?: string | null; appliedAt?: string | null };
+}
+
+async function waitForCompletedTask(app: FastifyInstance, taskId: string): Promise<AiTaskResponsePayload> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/ai/tasks/${taskId}`
+    });
+    const payload: AiTaskResponsePayload = response.json();
+    if (payload.task.status === "completed") {
+      return payload;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+
+  throw new Error(`ai task did not complete: ${taskId}`);
+}
 
 function createSecuredApp(rootDir: string) {
   return createGatewayApp(rootDir, {
@@ -51,6 +72,7 @@ void test("createGatewayApp creates and reads an ai task", async () => {
     method: "GET",
     url: `/api/ai/tasks/${createPayload.task.taskId}`
   });
+  const completedPayload = await waitForCompletedTask(app, createPayload.task.taskId);
   const summaryResponse = await app.inject({
     method: "GET",
     url: `/api/ai/tasks/${createPayload.task.taskId}/summary`
@@ -62,12 +84,12 @@ void test("createGatewayApp creates and reads an ai task", async () => {
     summary: { changedFiles: number };
   } = summaryResponse.json();
 
-  assert.equal(createResponse.statusCode, 201);
-  assert.equal(createPayload.task.status, "completed");
-  assert.notEqual(createPayload.task.summaryPath, null);
+  assert.equal(createResponse.statusCode, 202);
+  assert.equal(createPayload.task.status, "queued");
   assert.equal(listResponse.statusCode, 200);
   assert.equal(listPayload.tasks.length, 1);
   assert.equal(readResponse.statusCode, 200);
+  assert.equal(completedPayload.task.status, "completed");
   assert.equal(summaryResponse.statusCode, 200);
   assert.equal(summaryPayload.summary.changedFiles, 1);
 
@@ -121,12 +143,31 @@ void test("createGatewayApp applies a completed ai task back to the managed proj
     url: `/api/ai/tasks/${createPayload.task.taskId}/apply`,
     headers: authHeaders()
   });
+  if (applyResponse.statusCode === 409) {
+    await waitForCompletedTask(app, createPayload.task.taskId);
+  }
+  const retryApply = await app.inject({
+    method: "POST",
+    url: `/api/ai/tasks/${createPayload.task.taskId}/apply`,
+    headers: authHeaders()
+  });
+  const applyPayload: {
+    task: { appliedAt: string | null };
+  } = retryApply.json();
+  const readResponse = await app.inject({
+    method: "GET",
+    url: `/api/ai/tasks/${createPayload.task.taskId}`
+  });
+  const readPayload: AiTaskResponsePayload = readResponse.json();
   const projectSource = fs.readFileSync(
     path.join(rootDir, "content-repo", "projects", "landing-a", "src", "index.html"),
     "utf8"
   );
 
-  assert.equal(applyResponse.statusCode, 200);
+  assert.equal(retryApply.statusCode, 200);
+  assert.notEqual(applyPayload.task.appliedAt, null);
+  assert.equal(readResponse.statusCode, 200);
+  assert.notEqual(readPayload.task.appliedAt ?? null, null);
   assert.match(projectSource, /Codex Updated/);
 
   await app.close();

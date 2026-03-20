@@ -13,6 +13,9 @@ import { z } from "zod";
 
 export interface GatewayAiOptions {
   executor?: CodexExecutor;
+  queue?: {
+    enqueue(options: CreateAiTaskBody): AiTaskRecord;
+  };
 }
 
 interface AiRequestContext {
@@ -40,6 +43,7 @@ interface AiTaskSummaryPayload {
 }
 
 interface AiTaskApplyPayload {
+  task: AiTaskRecord;
   result: ManagedTaskApplyResult;
 }
 
@@ -120,6 +124,15 @@ function sendAiTaskSummary(rootDir: string, pathname: string, reply: FastifyRepl
   }
 }
 
+function readRequiredGatewayAiTask(rootDir: string, taskId: string): AiTaskRecord {
+  const task = readAiTask(rootDir, taskId);
+  if (task === null) {
+    throw new Error(`ai task not found: ${taskId}`);
+  }
+
+  return task;
+}
+
 function sendAiTaskApply(rootDir: string, pathname: string, reply: FastifyReply): boolean {
   const taskMatch = pathname.match(/^\/api\/ai\/tasks\/([a-z0-9-]+)\/apply$/);
   if (!taskMatch) {
@@ -129,7 +142,8 @@ function sendAiTaskApply(rootDir: string, pathname: string, reply: FastifyReply)
   const taskId = taskMatch[1] ?? "";
   try {
     const result = applyAiTask(rootDir, taskId);
-    const payload: AiTaskApplyPayload = { result };
+    const task = readRequiredGatewayAiTask(rootDir, taskId);
+    const payload: AiTaskApplyPayload = { task, result };
     void reply.code(200).send(payload);
     return true;
   } catch (error) {
@@ -174,9 +188,10 @@ function sendAiTaskCreate(
   }
 
   try {
-    const task = createAiTask(context.rootDir, parsedBody.data, context.aiOptions);
+    const task = context.aiOptions?.queue?.enqueue(parsedBody.data)
+      ?? createAiTask(context.rootDir, parsedBody.data);
     const payload: AiTaskPayload = { task };
-    void reply.code(201).send(payload);
+    void reply.code(202).send(payload);
     return true;
   } catch (error) {
     if (!(error instanceof Error)) {

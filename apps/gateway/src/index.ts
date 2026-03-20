@@ -4,7 +4,7 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { z } from "zod";
-import { type CodexExecutor } from "@project-manager/ai-core";
+import { createAiTaskQueue, type CodexExecutor } from "@project-manager/ai-core";
 import { sendAiTaskApi, type GatewayAiOptions } from "./ai-api.ts";
 import {
   sendAdminAuthRejection,
@@ -12,10 +12,7 @@ import {
   type GatewayAuthConfig,
   type GatewayAuthOptions
 } from "./auth.ts";
-import {
-  executeDynamicRuntimeRequest,
-  normalizeRuntimeQuery
-} from "./runtime-api.ts";
+import { executeDynamicRuntimeRequest, normalizeRuntimeQuery } from "./runtime-api.ts";
 import { sendManagedTaskApi } from "./managed-task-api.ts";
 import { sendManagedTaskQueryApi } from "./managed-task-query-api.ts";
 import { sendProjectApi } from "./project-api.ts";
@@ -111,7 +108,8 @@ function findBestManagedRoute(pathname: string, routes: RouteRecord[]): RouteRec
 }
 
 function isPlatformUiPath(pathname: string): boolean {
-  return pathname === "/" || pathname === "/projects" || pathname.startsWith("/projects/") || pathname.startsWith("/assets/");
+  return pathname === "/" || pathname === "/projects"
+    || pathname.startsWith("/projects/") || pathname.startsWith("/assets/");
 }
 
 function isControlApiPath(pathname: string): boolean {
@@ -337,7 +335,10 @@ export function createGatewayApp(rootDir: string, options?: GatewayAppOptions): 
     authConfig: resolveGatewayAuthConfig(options),
     rootDir,
     aiOptions: {
-      executor: options?.aiExecutor
+      executor: options?.aiExecutor,
+      queue: createAiTaskQueue(rootDir, {
+        executor: options?.aiExecutor
+      })
     }
   };
   const routes: ResolutionRouteRegistration[] = [

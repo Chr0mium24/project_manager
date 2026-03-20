@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 
-const aiTaskStatusSchema = z.enum(["running", "completed", "failed"]);
+const aiTaskStatusSchema = z.enum(["queued", "running", "completed", "failed"]);
 
 export const aiTaskRecordSchema = z.object({
   schemaVersion: z.literal(1),

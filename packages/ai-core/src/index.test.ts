@@ -7,11 +7,12 @@ import {
   createAiTask,
   listAiTasks,
   readAiTask,
-  readAiTaskSummary
+  readAiTaskSummary,
+  runAiTask
 } from "./index.ts";
 import { createTempRoot, writeContentRepo } from "./test-fixtures.ts";
 
-void test("createAiTask runs codex against a managed workspace and records artifacts", () => {
+void test("runAiTask completes a queued ai task and records artifacts", async () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
@@ -22,35 +23,35 @@ void test("createAiTask runs codex against a managed workspace and records artif
       taskSlug: "fix-copy",
       prompt: "Update the landing page heading."
     },
-    {
-      executor: ({ cwd }) => {
-        fs.writeFileSync(
-          path.join(cwd, "src", "index.html"),
-          "<!doctype html>\n<html><body><h1>Landing A Updated</h1></body></html>\n",
-          "utf8"
-        );
-        return {
-          exitCode: 0,
-          stdout: "{\"status\":\"ok\"}\n",
-          stderr: "",
-          error: null
-        };
-      }
-    }
   );
-
+  const completedTask = await runAiTask(rootDir, task.taskId, {
+    executor: ({ cwd }) => {
+      fs.writeFileSync(
+        path.join(cwd, "src", "index.html"),
+        "<!doctype html>\n<html><body><h1>Landing A Updated</h1></body></html>\n",
+        "utf8"
+      );
+      return {
+        exitCode: 0,
+        stdout: "{\"status\":\"ok\"}\n",
+        stderr: "",
+        error: null
+      };
+    }
+  });
   const persistedTask = readAiTask(rootDir, task.taskId);
 
-  assert.equal(task.status, "completed");
-  assert.notEqual(task.summaryPath, null);
-  assert.notEqual(task.validationPath, null);
-  assert.notEqual(task.stdoutPath, null);
-  assert.notEqual(task.completedAt, null);
+  assert.equal(task.status, "queued");
+  assert.equal(completedTask.status, "completed");
+  assert.notEqual(completedTask.summaryPath, null);
+  assert.notEqual(completedTask.validationPath, null);
+  assert.notEqual(completedTask.stdoutPath, null);
+  assert.notEqual(completedTask.completedAt, null);
   assert.notEqual(persistedTask, null);
   assert.equal(listAiTasks(rootDir).length, 1);
 });
 
-void test("createAiTask records failed codex executions", () => {
+void test("runAiTask records failed codex executions", async () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
@@ -60,24 +61,25 @@ void test("createAiTask records failed codex executions", () => {
       projectSlug: "landing-a",
       taskSlug: "broken-copy",
       prompt: "Break the task."
-    },
-    {
-      executor: () => ({
-        exitCode: 1,
-        stdout: "",
-        stderr: "failed\n",
-        error: null
-      })
     }
   );
+  const failedTask = await runAiTask(rootDir, task.taskId, {
+    executor: () => ({
+      exitCode: 1,
+      stdout: "",
+      stderr: "failed\n",
+      error: null
+    })
+  });
 
-  assert.equal(task.status, "failed");
-  assert.equal(task.summaryPath, null);
-  assert.equal(task.validationPath, null);
-  assert.equal(task.codexExitCode, 1);
+  assert.equal(task.status, "queued");
+  assert.equal(failedTask.status, "failed");
+  assert.equal(failedTask.summaryPath, null);
+  assert.equal(failedTask.validationPath, null);
+  assert.equal(failedTask.codexExitCode, 1);
 });
 
-void test("readAiTaskSummary returns the managed task summary for a completed ai task", () => {
+void test("readAiTaskSummary returns the managed task summary for a completed ai task", async () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
@@ -87,23 +89,23 @@ void test("readAiTaskSummary returns the managed task summary for a completed ai
       projectSlug: "landing-a",
       taskSlug: "summary-copy",
       prompt: "Update the landing page heading."
-    },
-    {
-      executor: ({ cwd }) => {
-        fs.writeFileSync(
-          path.join(cwd, "src", "index.html"),
-          "<!doctype html>\n<html><body><h1>Summary Updated</h1></body></html>\n",
-          "utf8"
-        );
-        return {
-          exitCode: 0,
-          stdout: "{\"status\":\"ok\"}\n",
-          stderr: "",
-          error: null
-        };
-      }
     }
   );
+  await runAiTask(rootDir, task.taskId, {
+    executor: ({ cwd }) => {
+      fs.writeFileSync(
+        path.join(cwd, "src", "index.html"),
+        "<!doctype html>\n<html><body><h1>Summary Updated</h1></body></html>\n",
+        "utf8"
+      );
+      return {
+        exitCode: 0,
+        stdout: "{\"status\":\"ok\"}\n",
+        stderr: "",
+        error: null
+      };
+    }
+  });
 
   const summary = readAiTaskSummary(rootDir, task.taskId);
 
@@ -111,7 +113,7 @@ void test("readAiTaskSummary returns the managed task summary for a completed ai
   assert.equal(summary.changedFiles, 1);
 });
 
-void test("applyAiTask applies a completed ai task back to the managed project", () => {
+void test("applyAiTask applies a completed ai task back to the managed project", async () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);
 
@@ -121,23 +123,23 @@ void test("applyAiTask applies a completed ai task back to the managed project",
       projectSlug: "landing-a",
       taskSlug: "apply-copy",
       prompt: "Update the landing page heading."
-    },
-    {
-      executor: ({ cwd }) => {
-        fs.writeFileSync(
-          path.join(cwd, "src", "index.html"),
-          "<!doctype html>\n<html><body><h1>Applied Updated</h1></body></html>\n",
-          "utf8"
-        );
-        return {
-          exitCode: 0,
-          stdout: "{\"status\":\"ok\"}\n",
-          stderr: "",
-          error: null
-        };
-      }
     }
   );
+  await runAiTask(rootDir, task.taskId, {
+    executor: ({ cwd }) => {
+      fs.writeFileSync(
+        path.join(cwd, "src", "index.html"),
+        "<!doctype html>\n<html><body><h1>Applied Updated</h1></body></html>\n",
+        "utf8"
+      );
+      return {
+        exitCode: 0,
+        stdout: "{\"status\":\"ok\"}\n",
+        stderr: "",
+        error: null
+      };
+    }
+  });
 
   const result = applyAiTask(rootDir, task.taskId);
   const updatedProject = fs.readFileSync(
