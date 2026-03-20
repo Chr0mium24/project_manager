@@ -13,19 +13,32 @@ export function renderPageHeader(
   title: string,
   description: string
 ): VNode {
+  const tabs = createProjectRouteTabs(projectSlug);
+
   return h("header", { class: "pm-page-head pm-card pm-page-header-card" }, [
-    h("div", { class: "pm-page-copy" }, [
-      h("div", { class: "pm-page-meta" }, [
-        h("p", { class: "pm-kicker" }, projectSlug || "project"),
-        h("span", { class: "pm-badge" }, currentView)
+    h("div", { class: "pm-page-head-top" }, [
+      h("div", { class: "pm-page-copy" }, [
+        h("div", { class: "pm-page-breadcrumb" }, [
+          h(
+            RouterLink,
+            {
+              to: "/projects",
+              class: "pm-breadcrumb-link"
+            },
+            () => "Projects"
+          ),
+          h("span", "/"),
+          h("span", projectSlug || "repository")
+        ]),
+        h("h1", { class: "pm-page-title" }, title),
+        h("p", { class: "pm-copy" }, description)
       ]),
-      h("h2", { class: "pm-page-title" }, title),
-      h("p", { class: "pm-copy" }, description)
+      h("span", { class: "pm-badge pm-badge-accent" }, currentView)
     ]),
     h(
       "nav",
       { class: "pm-tab-row", "aria-label": "Project sections" },
-      createProjectRouteTabs(projectSlug).map((tab) =>
+      tabs.map((tab) =>
         h(
           RouterLink,
           {
@@ -40,7 +53,7 @@ export function renderPageHeader(
 }
 
 export function renderSectionTitle(title: string): VNode {
-  return h("h3", { class: "pm-section-title" }, title);
+  return h("h2", { class: "pm-section-title" }, title);
 }
 
 export function renderSectionHeader(title: string, description: string, action?: VNode | null): VNode {
@@ -62,7 +75,7 @@ export function renderFocusList(items: string[]): VNode {
 }
 
 export function renderInfoCard(title: string, children: VNode[]): VNode {
-  return h("section", { class: "pm-card" }, [renderSectionTitle(title), ...children]);
+  return h("section", { class: "pm-card pm-stack" }, [renderSectionTitle(title), ...children]);
 }
 
 export function renderMetricGrid(metrics: ProjectManagerMetric[]): VNode {
@@ -86,15 +99,15 @@ export function renderWriteAccessFields(
 ): VNode {
   return h("div", { class: "pm-stack" }, [
     h("div", { class: "pm-page-copy" }, [
-      renderSectionTitle("Write Access"),
+      renderSectionTitle("Write access"),
       h("p", { class: "pm-copy" }, purpose)
     ]),
     h("label", { class: "pm-field" }, [
-      h("span", "Admin Token"),
+      h("span", "Admin token"),
       h("input", {
         class: "pm-input",
         value: adminToken,
-        placeholder: "Paste bearer token for writes",
+        placeholder: "Paste bearer token for write operations",
         onInput: (event: Event) => {
           onInput((event.target as HTMLInputElement).value.trim());
         }
@@ -108,5 +121,5 @@ export function renderWriteAccessCard(
   onInput: (value: string) => void,
   purpose: string
 ): VNode {
-  return h("section", { class: "pm-card pm-subcard" }, [renderWriteAccessFields(adminToken, onInput, purpose)]);
+  return h("section", { class: "pm-card pm-stack" }, [renderWriteAccessFields(adminToken, onInput, purpose)]);
 }

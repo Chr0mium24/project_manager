@@ -20,17 +20,18 @@ function renderVersionsComposer(props: ProjectVersionsWriteActionsProps): VNode 
   }
 
   return h("div", { class: "pm-form-grid" }, [
-    h("label", { class: "pm-field" }, [
+    h("label", { class: "pm-field pm-field-full" }, [
       h("span", "Snapshot message"),
       h("input", {
         class: "pm-input",
         value: props.message,
+        placeholder: "Describe this checkpoint",
         onInput: (event: Event) => {
           props.setMessage((event.target as HTMLInputElement).value);
         }
       })
     ]),
-    h("div", { class: "pm-actions pm-actions-end" }, [
+    h("div", { class: "pm-actions pm-actions-end pm-field-full" }, [
       h(
         "button",
         {
@@ -41,60 +42,58 @@ function renderVersionsComposer(props: ProjectVersionsWriteActionsProps): VNode 
             props.createVersion();
           }
         },
-        props.isBusy ? "Saving..." : "Create Snapshot"
+        props.isBusy ? "Creating..." : "Create snapshot"
       )
     ])
   ]);
 }
 
 export function renderVersionsWriteActions(props: ProjectVersionsWriteActionsProps): VNode {
-  return h("details", { class: "pm-card pm-details" }, [
-    h("summary", "Write actions"),
-    h("div", { class: "pm-details-body" }, [
-      h(
-        "p",
-        { class: "pm-inline-note" },
-        "Use this section only when you want to change snapshot state. The main section above stays focused on review."
-      ),
-      renderWriteAccessFields(
-        props.adminToken,
-        (value) => {
-          props.setAdminToken(value);
-        },
-        "Required only for creating snapshots and restoring a selected version."
-      ),
-      h("details", { class: "pm-details", open: props.composeOpen }, [
+  return h("section", { class: "pm-card pm-stack" }, [
+    h("div", { class: "pm-card-head" }, [
+      h("div", { class: "pm-page-copy" }, [
+        h("h2", { class: "pm-section-title" }, "Snapshot actions"),
         h(
-          "summary",
-          {
-            onClick: (event: Event) => {
-              event.preventDefault();
-              props.toggleComposer();
-            }
-          },
-          props.composeOpen ? "Hide snapshot form" : "Compose snapshot"
-        ),
-        h("div", { class: "pm-details-body" }, [
-          h("p", { class: "pm-copy" }, "Use this only when you need a new checkpoint."),
-          renderVersionsComposer(props)
-        ])
+          "p",
+          { class: "pm-copy" },
+          "Create a new checkpoint or restore the selected one. These are the only write actions on this page."
+        )
       ]),
-      props.selectedVersionId.length === 0
-        ? renderStatusMessage("Select a snapshot above before attempting restore.")
-        : h("div", { class: "pm-actions pm-actions-end" }, [
-            h(
-              "button",
-              {
-                type: "button",
-                class: "pm-button pm-button-ghost",
-                disabled: props.isBusy,
-                onClick: () => {
-                  props.restoreSelectedVersion();
-                }
-              },
-              props.isBusy ? "Restoring..." : "Restore Selected"
-            )
-          ])
-    ])
+      h(
+        "button",
+        {
+          type: "button",
+          class: "pm-button pm-button-ghost",
+          onClick: () => {
+            props.toggleComposer();
+          }
+        },
+        props.composeOpen ? "Hide create form" : "New snapshot"
+      )
+    ]),
+    renderWriteAccessFields(
+      props.adminToken,
+      (value) => {
+        props.setAdminToken(value);
+      },
+      "Required only for creating snapshots and restoring a selected version."
+    ),
+    renderVersionsComposer(props),
+    props.selectedVersionId.length === 0
+      ? renderStatusMessage("Select a snapshot in the history panel before restoring.")
+      : h("div", { class: "pm-actions pm-actions-end" }, [
+          h(
+            "button",
+            {
+              type: "button",
+              class: "pm-button pm-button-ghost",
+              disabled: props.isBusy,
+              onClick: () => {
+                props.restoreSelectedVersion();
+              }
+            },
+            props.isBusy ? "Restoring..." : "Restore selected"
+          )
+        ])
   ]);
 }

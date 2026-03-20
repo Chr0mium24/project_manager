@@ -27,6 +27,7 @@ function renderAiComposer(props: ProjectAiWriteActionsProps): VNode | null {
       h("input", {
         class: "pm-input",
         value: props.taskSlug,
+        placeholder: "fix-copy or add-nav",
         onInput: (event: Event) => {
           props.setTaskSlug((event.target as HTMLInputElement).value);
         }
@@ -37,12 +38,13 @@ function renderAiComposer(props: ProjectAiWriteActionsProps): VNode | null {
       h("textarea", {
         class: "pm-textarea",
         value: props.prompt,
+        placeholder: "Describe the change you want the AI task to perform",
         onInput: (event: Event) => {
           props.setPrompt((event.target as HTMLTextAreaElement).value);
         }
       })
     ]),
-    h("div", { class: "pm-actions pm-actions-end" }, [
+    h("div", { class: "pm-actions pm-actions-end pm-field-full" }, [
       h(
         "button",
         {
@@ -53,60 +55,58 @@ function renderAiComposer(props: ProjectAiWriteActionsProps): VNode | null {
             props.createTask();
           }
         },
-        props.isBusy ? "Running..." : "Enqueue Task"
+        props.isBusy ? "Running..." : "Create task"
       )
     ])
   ]);
 }
 
 export function renderAiWriteActions(props: ProjectAiWriteActionsProps): VNode {
-  return h("details", { class: "pm-card pm-details" }, [
-    h("summary", "Write actions"),
-    h("div", { class: "pm-details-body" }, [
-      h(
-        "p",
-        { class: "pm-inline-note" },
-        "Use this section only when you want to enqueue a new task or apply a completed one. The main section above stays focused on review."
-      ),
-      renderWriteAccessFields(
-        props.adminToken,
-        (value) => {
-          props.setAdminToken(value);
-        },
-        "Required only for AI task creation and apply on this route."
-      ),
-      h("details", { class: "pm-details", open: props.composeOpen }, [
+  return h("section", { class: "pm-card pm-stack" }, [
+    h("div", { class: "pm-card-head" }, [
+      h("div", { class: "pm-page-copy" }, [
+        h("h2", { class: "pm-section-title" }, "Task actions"),
         h(
-          "summary",
-          {
-            onClick: (event: Event) => {
-              event.preventDefault();
-              props.toggleComposer();
-            }
-          },
-          props.composeOpen ? "Hide new task form" : "Compose new task"
-        ),
-        h("div", { class: "pm-details-body" }, [
-          h("p", { class: "pm-copy" }, "Use this only when you need to enqueue a new prompt."),
-          renderAiComposer(props)
-        ])
+          "p",
+          { class: "pm-copy" },
+          "Create a new AI task or apply the selected completed task. Review stays in the main panel above."
+        )
       ]),
-      !props.canApplySelectedTask
-        ? renderStatusMessage("Select a completed task above before applying it.")
-        : h("div", { class: "pm-actions pm-actions-end" }, [
-            h(
-              "button",
-              {
-                type: "button",
-                class: "pm-button pm-button-ghost",
-                disabled: props.isBusy,
-                onClick: () => {
-                  props.applySelectedTask();
-                }
-              },
-              props.isBusy ? "Applying..." : "Apply Selected"
-            )
-          ])
-    ])
+      h(
+        "button",
+        {
+          type: "button",
+          class: "pm-button pm-button-ghost",
+          onClick: () => {
+            props.toggleComposer();
+          }
+        },
+        props.composeOpen ? "Hide task form" : "New task"
+      )
+    ]),
+    renderWriteAccessFields(
+      props.adminToken,
+      (value) => {
+        props.setAdminToken(value);
+      },
+      "Required only for AI task creation and apply on this page."
+    ),
+    renderAiComposer(props),
+    !props.canApplySelectedTask
+      ? renderStatusMessage("Select a completed task in the queue before applying it.")
+      : h("div", { class: "pm-actions pm-actions-end" }, [
+          h(
+            "button",
+            {
+              type: "button",
+              class: "pm-button pm-button-ghost",
+              disabled: props.isBusy,
+              onClick: () => {
+                props.applySelectedTask();
+              }
+            },
+            props.isBusy ? "Applying..." : "Apply selected"
+          )
+        ])
   ]);
 }

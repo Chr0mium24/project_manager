@@ -2,10 +2,7 @@ import { computed, defineComponent, h, onMounted, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import { GatewayProjectApiClient, type ManagedProjectRecord } from "../gateway-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
-import {
-  renderInfoCard,
-  renderStatusMessage
-} from "./project-manager-view-shared.ts";
+import { renderInfoCard, renderMetricGrid, renderStatusMessage } from "./project-manager-view-shared.ts";
 
 const client = new GatewayProjectApiClient();
 
@@ -28,26 +25,31 @@ async function readProjectDetails(slugs: string[]): Promise<Record<string, Manag
     }, {});
 }
 
-function renderProjectCard(project: ReturnType<typeof useProjectContextStore>["projects"][number], detail: ManagedProjectRecord | null) {
+function renderProjectRow(project: ReturnType<typeof useProjectContextStore>["projects"][number], detail: ManagedProjectRecord | null) {
   const runtimeHref = project.runtime === "static" ? `/p/${project.slug}` : `/app/${project.slug}`;
 
-  return h("article", { class: "pm-project-card" }, [
-    h("p", { class: "pm-kicker" }, `${project.runtime} project`),
-    h("h2", { class: "pm-page-title" }, detail?.name ?? project.slug),
-    h("p", { class: "pm-copy" }, detail?.description ?? "Loading project description..."),
-    h("div", { class: "pm-project-meta" }, [
-      h("span", project.slug),
-      h("span", project.route),
-      h("span", project.entry)
+  return h("li", { class: "pm-project-row" }, [
+    h("div", { class: "pm-project-main" }, [
+      h("div", { class: "pm-project-title-row" }, [
+        h("h2", { class: "pm-project-title" }, detail?.name ?? project.slug),
+        h("span", { class: "pm-badge" }, project.runtime),
+        h("span", { class: "pm-badge" }, detail?.framework ?? "loading")
+      ]),
+      h("p", { class: "pm-copy" }, detail?.description ?? "Loading repository description..."),
+      h("div", { class: "pm-project-meta" }, [
+        h("span", `slug: ${project.slug}`),
+        h("span", `route: ${project.route}`),
+        h("span", `entry: ${project.entry}`)
+      ])
     ]),
     h("div", { class: "pm-project-actions" }, [
       h(
         RouterLink,
         {
           to: `/projects/${project.slug}`,
-          class: "pm-project-link"
+          class: "pm-project-link pm-project-link-primary"
         },
-        () => "Open manager"
+        () => "Open repository"
       ),
       h(
         "a",
@@ -80,34 +82,51 @@ export const ProjectsIndexView = defineComponent({
         await loadProjectDetails();
       })();
     });
+
     watch(projects, () => {
       void loadProjectDetails();
     });
 
     return () =>
       h("div", { class: "pm-view", "data-view": "projects-index" }, [
-        h("section", { class: "pm-card pm-hero" }, [
-          h("p", { class: "pm-kicker" }, "Project index"),
-          h("h1", { class: "pm-title" }, "Choose a project"),
-          h(
-            "p",
-            { class: "pm-copy" },
-            "Start here, choose a project, then move into the route that owns the workflow you need."
-          )
+        h("section", { class: "pm-card pm-stack" }, [
+          h("div", { class: "pm-page-copy" }, [
+            h("p", { class: "pm-kicker" }, "Repositories"),
+            h("h1", { class: "pm-title" }, "Managed projects"),
+            h(
+              "p",
+              { class: "pm-copy" },
+              "This is the repository index. Pick a project, then move into overview, workspace, versions, or AI from its own page."
+            )
+          ]),
+          renderMetricGrid([
+            {
+              label: "Repositories",
+              value: String(projects.value.length)
+            },
+            {
+              label: "Static apps",
+              value: String(projects.value.filter((project) => project.runtime === "static").length)
+            },
+            {
+              label: "Dynamic apps",
+              value: String(projects.value.filter((project) => project.runtime === "dynamic").length)
+            }
+          ])
         ]),
         renderInfoCard(
-          "Projects",
+          "Repository list",
           projects.value.length === 0
             ? [
                 context.projectsLoading
-                  ? renderStatusMessage("Loading managed projects...")
-                  : renderStatusMessage(context.projectsError ?? "No projects available yet.")
+                  ? renderStatusMessage("Loading repositories...")
+                  : renderStatusMessage(context.projectsError ?? "No repositories available yet.")
               ]
             : [
                 h(
-                  "div",
-                  { class: "pm-project-grid", "aria-label": "Managed projects" },
-                  projects.value.map((project) => renderProjectCard(project, projectDetails.value[project.slug] ?? null))
+                  "ul",
+                  { class: "pm-project-list", "aria-label": "Managed repositories" },
+                  projects.value.map((project) => renderProjectRow(project, projectDetails.value[project.slug] ?? null))
                 )
               ]
         )

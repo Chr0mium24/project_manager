@@ -295,37 +295,39 @@ function renderWorkspaceView(
     renderPageHeader(
       projectSlug,
       "workspace",
-      "Project Workspace",
-      "This route owns file browsing, editing, and saving. It should not also act like a review or AI surface."
+      "Repository workspace",
+      "Browse repository files, edit the selected file, and save changes back to the managed project."
     ),
-    h("section", { class: "pm-card pm-workspace-card" }, [
-      renderMetricGrid(workspaceMetrics(state)),
-      renderSectionHeader(
-        "Workspace",
-        state.selectedFilePath.value
-          ? `Editing ${state.selectedFilePath.value}`
-          : "Select a file from the tree, edit it, and save it back to the project.",
-        h(
-          "button",
-          {
-            type: "button",
-            class: "pm-button pm-button-ghost",
-            onClick: () => {
-              state.navOpen.value = !state.navOpen.value;
-            }
-          },
-          state.navOpen.value ? "Focus Editor" : "Show Tree"
-        )
-      ),
+    renderMetricGrid(workspaceMetrics(state)),
+    h("div", { class: "pm-column-grid" }, [
+      h("section", { class: "pm-card pm-workspace-card" }, [
+        renderSectionHeader(
+          "Files",
+          state.selectedFilePath.value
+            ? `Editing ${state.selectedFilePath.value}`
+            : "Choose a file from the repository tree, then edit it in the main panel.",
+          h(
+            "button",
+            {
+              type: "button",
+              class: "pm-button pm-button-ghost",
+              onClick: () => {
+                state.navOpen.value = !state.navOpen.value;
+              }
+            },
+            state.navOpen.value ? "Hide tree" : "Show tree"
+          )
+        ),
+        state.error.value ? renderStatusMessage(state.error.value, "error") : null,
+        renderWorkspaceBody(state)
+      ]),
       renderWriteAccessCard(
         adminToken,
         (value) => {
           setAdminToken(value);
         },
-        "Required only for file saves on this route."
-      ),
-      state.error.value ? renderStatusMessage(state.error.value, "error") : null,
-      renderWorkspaceBody(state)
+        "Only required when you want to save the current file back to the repository."
+      )
     ])
   ]);
 }

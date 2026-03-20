@@ -278,13 +278,13 @@ function renderAiView(
     renderPageHeader(
       projectSlug,
       "ai",
-      "Project AI Tasks",
-      "This route owns AI task creation, task review, and apply. It should not also act as the file editor or version browser."
+      "Repository AI tasks",
+      "Review queued and completed AI tasks here, then apply a completed task when the summary is ready."
     ),
     h("section", { class: "pm-card pm-stack" }, [
       h("div", { class: "pm-page-copy" }, [
-        h("h3", { class: "pm-section-title" }, "AI task queue"),
-        h("p", { class: "pm-copy" }, "Inspect queued and completed tasks here first. Write actions stay in their own section below.")
+        h("h2", { class: "pm-section-title" }, "Task queue"),
+        h("p", { class: "pm-copy" }, "The left column is the queue. The right column is the selected task summary.")
       ]),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderAiBody(state)

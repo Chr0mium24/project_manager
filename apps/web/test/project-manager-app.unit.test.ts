@@ -30,7 +30,7 @@ describe("project manager app", () => {
     const { created, wrapper } = await createMountedShell("/");
     await wrapper.vm.$nextTick();
     expect(created.router.currentRoute.value.path).toBe("/projects");
-    expect(wrapper.get("[data-view='projects-index']").text()).toContain("Choose a project");
+    expect(wrapper.get("[data-view='projects-index']").text()).toContain("Managed projects");
   });
 
   it("syncs the selected project slug into Pinia from the router", async () => {
@@ -38,7 +38,7 @@ describe("project manager app", () => {
     await wrapper.vm.$nextTick();
     const context = useProjectContextStore(created.pinia);
     expect(context.projectSlug).toBe("landing-a");
-    expect(wrapper.get("[data-view='workspace']").text()).toContain("Project Workspace");
+    expect(wrapper.get("[data-view='workspace']").text()).toContain("Repository workspace");
   });
 
   it("renders project route tabs for project pages", async () => {
@@ -47,7 +47,7 @@ describe("project manager app", () => {
     const tabLinks = wrapper.findAll(".pm-tab-link");
     expect(tabLinks).toHaveLength(4);
     expect(tabLinks[3]?.text()).toBe("AI Tasks");
-    expect(wrapper.get("[data-view='ai']").text()).toContain("Project AI Tasks");
+    expect(wrapper.get("[data-view='ai']").text()).toContain("Repository AI tasks");
   });
 
   it("keeps write access off the global shell on the projects index", async () => {
@@ -60,7 +60,7 @@ describe("project manager app", () => {
     const { wrapper } = await createMountedShell("/projects/landing-a");
     await wrapper.vm.$nextTick();
     expect(wrapper.get("[data-view='overview']").text()).toContain(
-      "Use this route to understand the project and decide which workflow route you need next."
+      "Start from repository identity and public route status, then move into the workflow tab you need."
     );
   });
 });

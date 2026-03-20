@@ -1,31 +1,75 @@
 import { computed, defineComponent, h, onMounted, ref, watch } from "vue";
-import { RouterLink } from "vue-router";
-import { useRoute } from "vue-router";
+import { RouterLink, useRoute } from "vue-router";
 import { GatewayProjectApiClient, type ManagedProjectRecord } from "../gateway-api.ts";
-import { renderPageHeader, renderSectionTitle, renderStatusMessage } from "./project-manager-view-shared.ts";
+import { renderPageHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
 
 const client = new GatewayProjectApiClient();
 
-function renderIdentityCard(project: ManagedProjectRecord) {
+function renderOverviewMain(project: ManagedProjectRecord) {
+  return h("section", { class: "pm-card pm-stack" }, [
+    h("div", { class: "pm-page-copy" }, [
+      h("p", { class: "pm-kicker" }, "Repository"),
+      h("h2", { class: "pm-page-title" }, project.name),
+      h("p", { class: "pm-copy" }, project.description)
+    ]),
+    h("dl", { class: "pm-meta-list" }, [
+      h("dt", "Owner"),
+      h("dd", project.owner),
+      h("dt", "Framework"),
+      h("dd", project.framework),
+      h("dt", "Language"),
+      h("dd", project.mainLanguage),
+      h("dt", "Entry"),
+      h("dd", project.entry),
+      h("dt", "Route"),
+      h("dd", project.route),
+      h("dt", "Latest version"),
+      h("dd", project.latestVersion),
+      h("dt", "Updated"),
+      h("dd", project.updatedAt)
+    ]),
+    project.tags.length === 0
+      ? null
+      : h(
+          "div",
+          { class: "pm-badge-row" },
+          project.tags.map((tag) => h("span", { class: "pm-badge" }, tag))
+        )
+  ]);
+}
+
+function renderOverviewActions(project: ManagedProjectRecord) {
   const runtimeHref = project.runtime === "static" ? `/p/${project.slug}` : `/app/${project.slug}`;
 
   return h("section", { class: "pm-card pm-stack" }, [
-    renderSectionTitle("Project identity"),
-    h("h3", { class: "pm-page-title" }, project.name),
-    h("p", { class: "pm-copy" }, project.description),
-    h("div", { class: "pm-stat-row" }, [
-      h("div", { class: "pm-stat-card" }, [h("strong", project.runtime), h("small", "Runtime")]),
-      h("div", { class: "pm-stat-card" }, [h("strong", project.route), h("small", "Public route")]),
-      h("div", { class: "pm-stat-card" }, [h("strong", project.entry), h("small", "Entry file")])
+    h("div", { class: "pm-page-copy" }, [
+      h("h2", { class: "pm-section-title" }, "Next"),
+      h("p", { class: "pm-copy" }, "Use the repository tabs for work. Use the public page link to inspect the running project.")
     ]),
     h("div", { class: "pm-project-actions" }, [
       h(
         RouterLink,
         {
           to: `/projects/${project.slug}/workspace`,
-          class: "pm-project-link"
+          class: "pm-project-link pm-project-link-primary"
         },
         () => "Open workspace"
+      ),
+      h(
+        RouterLink,
+        {
+          to: `/projects/${project.slug}/versions`,
+          class: "pm-project-link"
+        },
+        () => "Open versions"
+      ),
+      h(
+        RouterLink,
+        {
+          to: `/projects/${project.slug}/ai`,
+          class: "pm-project-link"
+        },
+        () => "Open AI tasks"
       ),
       h(
         "a",
@@ -68,6 +112,7 @@ export const ProjectOverviewView = defineComponent({
     onMounted(() => {
       void loadProject(projectSlug.value);
     });
+
     watch(projectSlug, (slug) => {
       void loadProject(slug);
     });
@@ -77,16 +122,16 @@ export const ProjectOverviewView = defineComponent({
         renderPageHeader(
           projectSlug.value,
           "overview",
-          "Project Overview",
-          "Use this route to understand the project and decide which workflow route you need next."
+          "Repository overview",
+          "Start from repository identity and public route status, then move into the workflow tab you need."
         ),
         project.value === null
           ? h("section", { class: "pm-card" }, [
               isLoading.value
-                ? renderStatusMessage("Loading project summary...")
+                ? renderStatusMessage("Loading repository overview...")
                 : renderStatusMessage(error.value ?? "No project selected.", error.value ? "error" : "neutral")
             ])
-          : h("div", { class: "pm-view" }, [renderIdentityCard(project.value)])
+          : h("div", { class: "pm-column-grid" }, [renderOverviewMain(project.value), renderOverviewActions(project.value)])
       ]);
   }
 });

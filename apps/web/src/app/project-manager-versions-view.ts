@@ -288,40 +288,40 @@ function renderVersionsView(
     renderPageHeader(
       projectSlug,
       "versions",
-      "Project Versions",
-      "This route owns snapshot history, diff review, and restore. It should not also act as an editor or AI surface."
+      "Repository history",
+      "Review snapshots and diffs here before restoring any repository state."
     ),
+    renderMetricGrid(versionMetrics(state)),
     h("section", { class: "pm-card pm-stack" }, [
-      renderMetricGrid(versionMetrics(state)),
       renderSectionHeader(
         "Snapshot history",
-        "Review versions and diffs here first. Write actions stay in their own section below."
+        "Select a snapshot from the left column to inspect its diff against the current repository."
       ),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderVersionsBody(state)
     ]),
     renderVersionsWriteActions({
-        adminToken,
-        selectedVersionId: state.selectedVersionId.value,
-        composeOpen: state.composeOpen.value,
-        message: state.message.value,
-        isBusy: state.isBusy.value,
-        setAdminToken: (value) => {
-          setAdminToken(value);
-        },
-        setMessage: (value) => {
-          state.message.value = value;
-        },
-        toggleComposer: () => {
-          state.composeOpen.value = !state.composeOpen.value;
-        },
-        createVersion: () => {
-          void state.createVersion();
-        },
-        restoreSelectedVersion: () => {
-          void state.restoreSelectedVersion();
-        }
-      })
+      adminToken,
+      selectedVersionId: state.selectedVersionId.value,
+      composeOpen: state.composeOpen.value,
+      message: state.message.value,
+      isBusy: state.isBusy.value,
+      setAdminToken: (value) => {
+        setAdminToken(value);
+      },
+      setMessage: (value) => {
+        state.message.value = value;
+      },
+      toggleComposer: () => {
+        state.composeOpen.value = !state.composeOpen.value;
+      },
+      createVersion: () => {
+        void state.createVersion();
+      },
+      restoreSelectedVersion: () => {
+        void state.restoreSelectedVersion();
+      }
+    })
   ]);
 }
 
