@@ -190,3 +190,5 @@ Codex should:
 - add or update tests for changed behavior
 - keep implementation aligned with the quality gate
 - do not add speculative compatibility branches
+- treat the frontend rebuild as a multi-route Vue application, not a monolithic single-screen shell
+- rerun the quality gate after every code update during frontend work, not only at the end of a large batch

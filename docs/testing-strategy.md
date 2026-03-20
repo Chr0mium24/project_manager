@@ -26,6 +26,10 @@ Current repository implementation:
 - the root gate runs Git, AI, and publish lanes every time
 - this keeps the current pre-bootstrap repository deterministic
 
+Frontend rebuild requirement:
+
+- the framework-based web app must not expand feature scope until lint, strict typecheck, component tests, and route smoke tests are wired into the root gate
+
 ## Test framework structure
 
 The testing system must itself be modular.
@@ -84,10 +88,13 @@ Validate API and module contracts:
 Validate critical user paths:
 
 - open project list
-- create project
-- open editor
+- open project overview
+- open workspace editor
+- open project versions
+- open project AI tasks
 - preview static project
 - inspect dynamic project metadata
+- exercise at least one mobile viewport for a critical project path
 
 ## Test design rules
 
@@ -133,6 +140,12 @@ Already enforced at the repository root:
 - Codex CLI capability checks
 - script-driven create-project flow
 - gateway route smoke
+
+Required next frontend enforcement:
+
+- route smoke for each dedicated project page
+- component tests for route-local interactions
+- mobile smoke for project navigation and task review
 
 ## False-negative policy
 

@@ -26,6 +26,16 @@ const checks = [
     mustContain: 'This file governs the `project_manager` repository itself.',
     reason: 'root Codex guide must identify its scope',
   },
+  {
+    file: 'docs/frontend-rebuild-plan.md',
+    mustContain: 'The frontend must be a route-based multi-view application.',
+    reason: 'frontend rebuild documentation must forbid the monolithic single-screen shell',
+  },
+  {
+    file: 'docs/quality-gate.md',
+    mustContain: 'After every code update, rerun:',
+    reason: 'quality gate doc must explicitly require post-change reruns',
+  },
 ];
 
 const failures = [];

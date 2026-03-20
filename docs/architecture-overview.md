@@ -38,6 +38,8 @@ The system has four major layers:
 3. Git-backed content repository
 4. Codex automation layer
 
+The frontend management UI should be treated as a route-based application with separate project views, not as one oversized control-plane page that mixes all workflows into a single screen.
+
 Formal runtime content must live under the repository root `content-repo/`.
 
 The formal `content-repo/` must be validated by product code in `packages/project-core`.
@@ -81,3 +83,4 @@ That means:
 - two runtime behaviors
 - one management plane
 - split publish and serve logic
+- split frontend workflows into dedicated routes and focused views

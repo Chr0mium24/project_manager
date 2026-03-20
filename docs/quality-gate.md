@@ -18,6 +18,7 @@ Current implementation detail:
 - the current runnable lanes are implemented with Node policy scripts, formal `content-repo/` validation, and root-level repository tests
 - the `lint` lane now includes real `ESLint`, dependency-boundary checks, and changed-scope enforcement
 - once the product monorepo is bootstrapped, the same lane names stay stable and their implementations can move to `pnpm`, `turbo`, `tsx`, `eslint`, `tsc`, `vitest`, and `playwright`
+- the frontend rebuild must plug its framework-specific lint and tests into this same root gate rather than introducing an optional side path
 
 ## Required pipeline
 
@@ -66,6 +67,12 @@ Must pass:
 - unit
 - e2e smoke for affected path
 
+If the change touches the rebuilt route-based frontend, also require:
+
+- component coverage for changed views or components
+- route smoke for each changed page
+- mobile smoke for changed critical flows
+
 ### API or service change
 
 Must pass:
@@ -109,6 +116,20 @@ A feature is blocked when:
 - a required test is missing
 - a runtime path changed without coverage
 - module boundaries were violated
+- a new frontend route landed without smoke coverage
+- a page mixes multiple unrelated workflows because the route split was skipped
+
+## Post-change discipline
+
+After every code update, rerun:
+
+```bash
+./scripts/run-quality-gate.sh
+```
+
+This is required for frontend work too.
+
+Do not treat UI iteration as exempt from the gate.
 
 ## Exceptions
 

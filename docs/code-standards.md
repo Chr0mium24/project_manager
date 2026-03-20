@@ -114,6 +114,7 @@ Formatting is not a style suggestion. It is part of the gate.
 - avoid large grab-bag modules
 - prefer pure functions in core packages
 - split feature files before they become "manager" or "helper" dumping grounds
+- do not build large frontend pages that combine unrelated project workflows in one view module
 
 ### Functions
 

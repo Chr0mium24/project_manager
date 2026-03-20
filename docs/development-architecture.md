@@ -20,9 +20,11 @@ Instead:
 Responsibilities:
 
 - project list
-- project editor
-- static preview
-- AI task panel
+- project overview route
+- project workspace route
+- project versions route
+- project AI task route
+- static preview access
 - publish actions
 
 Must not:
@@ -30,6 +32,14 @@ Must not:
 - call GitHub directly
 - execute Git commands
 - invoke Codex directly
+- collapse unrelated workflows into one oversized page-level module
+
+Required internal shape:
+
+- route-level views for each primary workflow
+- shared components for reusable UI blocks
+- API clients separated from view rendering
+- mobile-first responsive behavior for all project routes
 
 ### `gateway-api`
 

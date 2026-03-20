@@ -82,8 +82,10 @@ Frontend:
 - `Vue 3`
 - `TypeScript`
 - `Vite`
+- `Vue Router`
 - `Pinia`
 - `Monaco Editor`
+- application CSS tokens, not `Tailwind CSS` by default
 
 Backend:
 
@@ -100,6 +102,7 @@ Monorepo:
 Testing:
 
 - `Vitest`
+- `Vue Test Utils`
 - `Playwright`
 - Node built-in test runner for low-level validation tools
 
@@ -108,6 +111,21 @@ Code quality:
 - `ESLint`
 - `Prettier`
 - `TypeScript strict mode`
+- `vue-tsc` for strict frontend type safety
+
+## Frontend architecture decision
+
+The formal web UI should be rebuilt as a route-based Vue application.
+
+Required route groups:
+
+- project index
+- project overview
+- project workspace
+- project versions
+- project AI tasks
+
+Do not continue the long-term product UI as one monolithic page-level controller.
 
 ## Future experiments
 
