@@ -245,7 +245,7 @@ export class GatewayProjectApiClient {
   ): Promise<void> {
     await this.requestJson(`/api/projects/${slug}/file`, {
       method: "PUT",
-      headers: this.requestHeaders(adminToken),
+      headers: this.requestHeaders(adminToken, true),
       body: JSON.stringify({
         path: filePath,
         content
@@ -262,7 +262,7 @@ export class GatewayProjectApiClient {
     const payload = expectRecord(
       await this.requestJson(`/api/projects/${slug}/versions`, {
         method: "POST",
-        headers: this.requestHeaders(adminToken),
+        headers: this.requestHeaders(adminToken, true),
         body: JSON.stringify({ message })
       }),
       "project version create payload"
@@ -305,11 +305,15 @@ export class GatewayProjectApiClient {
     return payload;
   }
 
-  private requestHeaders(adminToken: string): Record<string, string> {
-    return {
-      authorization: `Bearer ${adminToken}`,
-      "content-type": "application/json"
-    };
+  private requestHeaders(adminToken: string, includeJsonContentType = false): Record<string, string> {
+    return includeJsonContentType
+      ? {
+          authorization: `Bearer ${adminToken}`,
+          "content-type": "application/json"
+        }
+      : {
+          authorization: `Bearer ${adminToken}`
+        };
   }
 
   private requireAdminToken(): string {

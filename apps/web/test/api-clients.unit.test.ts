@@ -80,5 +80,7 @@ describe("browser api clients", () => {
     expect(capturedInit?.headers).toMatchObject({
       authorization: "Bearer secret-token"
     });
+    expect(capturedInit?.body).toBeUndefined();
+    expect(capturedInit?.headers).not.toHaveProperty("content-type");
   });
 });
