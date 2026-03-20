@@ -5,6 +5,18 @@ import {
 } from "@project-manager/project-core";
 import { type FastifyReply } from "fastify";
 
+function buildProjectApiRecord(rootDir: string, slug: string) {
+  const project = readProject(rootDir, slug);
+  if (project === null) {
+    return null;
+  }
+
+  return {
+    ...project,
+    path: `projects/${slug}`
+  };
+}
+
 function sendProjectDeleteApi(
   rootDir: string,
   pathname: string,
@@ -53,7 +65,7 @@ export function sendProjectApi(
   }
 
   const slug = projectSlugMatch[1] ?? "";
-  const project = readProject(rootDir, slug);
+  const project = buildProjectApiRecord(rootDir, slug);
   if (project === null) {
     void reply.code(404).send({
       error: "project-not-found",

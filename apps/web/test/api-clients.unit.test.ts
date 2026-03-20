@@ -32,4 +32,34 @@ describe("browser api clients", () => {
     const client = new GatewayProjectApiClient();
     await expect(client.listProjects()).resolves.toEqual([]);
   });
+
+  it("reads a project detail payload that includes the managed project path", async () => {
+    const client = new GatewayProjectApiClient({
+      fetch: () =>
+        Promise.resolve(Response.json({
+          schemaVersion: 1,
+          slug: "landing-a",
+          path: "projects/landing-a",
+          name: "Landing A",
+          description: "Official sample static project",
+          runtime: "static",
+          visibility: "private",
+          entry: "src/index.html",
+          route: "/p/landing-a",
+          tags: ["landing", "sample"],
+          latestVersion: "v1",
+          mainLanguage: "html",
+          framework: "vanilla",
+          owner: "project-manager",
+          createdAt: "2026-03-20T00:00:00.000Z",
+          updatedAt: "2026-03-20T00:00:00.000Z"
+        }))
+    });
+
+    await expect(client.readProject("landing-a")).resolves.toMatchObject({
+      slug: "landing-a",
+      path: "projects/landing-a",
+      route: "/p/landing-a"
+    });
+  });
 });

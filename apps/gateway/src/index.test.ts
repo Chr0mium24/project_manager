@@ -170,12 +170,13 @@ void test("createGatewayApp serves a single project document and 404 for missing
 
   const existingProject = await app.inject({ method: "GET", url: "/api/projects/landing-a" });
   const missingProject = await app.inject({ method: "GET", url: "/api/projects/missing-project" });
-  const existingPayload = parseJsonResponse(existingProject.body) as { slug: string; runtime: string };
+  const existingPayload = parseJsonResponse(existingProject.body) as { slug: string; runtime: string; path: string };
   const missingPayload = parseJsonResponse(missingProject.body) as NotFoundResponse;
 
   assert.equal(existingProject.statusCode, 200);
   assert.equal(existingPayload.slug, "landing-a");
   assert.equal(existingPayload.runtime, "static");
+  assert.equal(existingPayload.path, "projects/landing-a");
 
   assert.equal(missingProject.statusCode, 404);
   assert.deepEqual(missingPayload, {
