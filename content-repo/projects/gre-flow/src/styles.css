@@ -1,0 +1,28 @@
+/* 自定义样式补充 */
+        html, body, #root { height: 100%; }
+        body { -webkit-font-smoothing: antialiased; }
+
+        /* 隐藏滚动条但保留功能 */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 单词高亮交互样式 */
+        .gre-word {
+            color: #2563eb;
+            font-weight: 700;
+            cursor: pointer;
+            border-bottom: 2px solid #dbeafe;
+            transition: all 0.2s;
+            padding-bottom: 1px;
+        }
+        .gre-word:hover {
+            background-color: #eff6ff;
+            border-bottom-color: #2563eb;
+        }
+
+        /* 动画 */
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

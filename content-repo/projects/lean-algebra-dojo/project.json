@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Lean Algebra Dojo",
+  "slug": "lean-algebra-dojo",
+  "description": "Lean 4 abstract algebra practice workspace with guided prompts and proof console panels.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/lean-algebra-dojo",
+  "visibility": "public",
+  "tags": [
+    "lean",
+    "math",
+    "education"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "tailwind-cdn",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T22:42:06.096Z",
+  "updatedAt": "2026-03-20T22:42:06.097Z"
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Local AI Assistant",
+  "slug": "local-ai-assistant",
+  "description": "Minimal local AI assistant shell with conversation layout and focused utility actions.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/local-ai-assistant",
+  "visibility": "public",
+  "tags": [
+    "assistant",
+    "chat",
+    "local"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T22:42:06.101Z",
+  "updatedAt": "2026-03-20T22:42:06.102Z"
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "GRE Flow",
+  "slug": "gre-flow",
+  "description": "Immersive GRE vocabulary trainer with AI-assisted practice and reading flow screens.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/gre-flow",
+  "visibility": "public",
+  "tags": [
+    "education",
+    "language",
+    "study"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "react-cdn",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T22:42:06.082Z",
+  "updatedAt": "2026-03-20T22:42:06.093Z"
+}

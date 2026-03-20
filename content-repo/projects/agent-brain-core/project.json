@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Agent Brain Core",
+  "slug": "agent-brain-core",
+  "description": "Agent cockpit prototype for prompt composition, state tracking, and lightweight interaction flows.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/agent-brain-core",
+  "visibility": "public",
+  "tags": [
+    "agent",
+    "workspace",
+    "prototype"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T22:42:06.099Z",
+  "updatedAt": "2026-03-20T22:42:06.100Z"
+}

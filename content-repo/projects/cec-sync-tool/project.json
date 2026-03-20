@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "CEC Sync Tool",
+  "slug": "cec-sync-tool",
+  "description": "CEC timing utility focused on synchronization, control status, and operator-facing feedback.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/cec-sync-tool",
+  "visibility": "public",
+  "tags": [
+    "timing",
+    "tooling",
+    "ops"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T22:42:06.103Z",
+  "updatedAt": "2026-03-20T22:42:06.105Z"
+}

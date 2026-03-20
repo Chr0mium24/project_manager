@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "Split Bill Calculator",
+  "slug": "split-bill-calculator",
+  "description": "Expense splitting calculator for small groups with clear contribution and settlement summaries.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/split-bill-calculator",
+  "visibility": "public",
+  "tags": [
+    "finance",
+    "calculator",
+    "group"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T22:42:06.111Z",
+  "updatedAt": "2026-03-20T22:42:06.113Z"
+}

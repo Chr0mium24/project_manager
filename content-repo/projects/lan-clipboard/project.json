@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "LAN Clipboard",
+  "slug": "lan-clipboard",
+  "description": "LAN clipboard utility for lightweight sharing and device-to-device handoff inside a local network.",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/lan-clipboard",
+  "visibility": "public",
+  "tags": [
+    "clipboard",
+    "network",
+    "utility"
+  ],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-20T22:42:06.107Z",
+  "updatedAt": "2026-03-20T22:42:06.108Z"
+}

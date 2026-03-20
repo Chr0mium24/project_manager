@@ -1,0 +1,17 @@
+/* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        .lean-editor {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            tab-size: 4;
+            line-height: 1.5;
+        }
+        /* Markdown 样式覆盖 */
+        .prose h1 { font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem; color: #e2e8f0; }
+        .prose h2 { font-size: 1.1rem; font-weight: bold; margin-top: 1rem; margin-bottom: 0.5rem; color: #e2e8f0; }
+        .prose p { margin-bottom: 0.5rem; color: #cbd5e1; }
+        .prose code { background-color: #334155; padding: 2px 4px; border-radius: 4px; color: #fbbf24; }
+        .prose pre { background-color: #1e293b; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }

@@ -9,6 +9,7 @@ import {
   publishStaticProject,
   readDynamicPublishRecord,
   readPublishedDynamicTarget,
+  readPublishedStaticFile,
   readPublishedStaticEntry,
   readStaticPublishRecord
 } from "./index.ts";
@@ -34,6 +35,7 @@ void test("publishStaticProject writes a static build artifact", () => {
     fs.existsSync(path.join(rootDir, "storage", "static-builds", "landing-a", "publish.json")),
     true
   );
+  assert.equal(readPublishedStaticFile(rootDir, "landing-a", "app.js")?.toString("utf8"), "console.log('landing-a');\n");
 });
 
 void test("publishStaticProject rejects dynamic projects", () => {

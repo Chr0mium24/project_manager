@@ -1,0 +1,6 @@
+/* 简单的滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .masked-msg { opacity: 0.5; filter: grayscale(100%); text-decoration: line-through; }

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CEC 工具 (时间同步版)</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="/p/cec-sync-tool/styles.css">
+  </head>
+  <body>
+    <!-- 拖拽提示层 -->
+    <div id="drag-overlay">
+      <div>📂 释放动态二维码图片以识别</div>
+    </div>
+
+    <div class="container">
+      <div id="scan-view">
+        <h2>CEC工具</h2>
+
+        <!-- 摄像头区域 -->
+        <div id="reader"></div>
+
+        <button
+          id="btn-start-scan"
+          class="btn btn-success"
+          onclick="startCamera()"
+        >
+          📷 相机扫描动态二维码
+        </button>
+        <button
+          id="btn-stop-scan"
+          class="btn btn-secondary"
+          onclick="stopCamera()"
+          style="display: none"
+        >
+          ⏹ 停止扫描
+        </button>
+
+        <div style="height: 1px; background: #eee; margin: 15px 0"></div>
+
+        <button
+          class="btn btn-primary"
+          onclick="document.getElementById('file-input').click()"
+        >
+          📁 上传动态二维码识别
+        </button>
+        <input type="file" id="file-input" accept="image/*" />
+
+        <p class="info-text">
+          支持 <strong>Ctrl+V</strong> 粘贴图片<br />
+          或将图片 <strong>拖拽</strong> 到此页面
+        </p>
+      </div>
+
+      <div id="generate-view" style="display: none">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <h2>本地模拟生成</h2>
+          <button
+            class="btn btn-secondary"
+            style="width: auto; padding: 5px 15px; font-size: 14px"
+            onclick="resetScan()"
+          >
+            返回
+          </button>
+        </div>
+
+        <!-- 降级警告提示 -->
+        <div id="legacy-warning" class="alert-warning">
+          <strong>⚠️ 注意：</strong>
+          检测到旧链接，未包含初始扫描时间。系统将使用当前时间作为基准，可能与服务器时间存在相位偏差。
+        </div>
+
+        <div class="qr-section">
+          <div class="qr-title">1. 课程详情码 (Static)</div>
+          <div id="static-qrcode" class="qr-holder"></div>
+        </div>
+
+        <div class="qr-section" style="border-bottom: none">
+          <div class="qr-title">2. 动态签到码 (5s 刷新 / 自动对齐)</div>
+          <div id="dynamic-qrcode" class="qr-holder"></div>
+
+          <!-- 进度条 -->
+          <div class="progress-wrapper">
+            <div id="token-progress" class="progress-bar"></div>
+          </div>
+
+          <div id="token-text" class="token-info">Waiting...</div>
+        </div>
+
+        <button class="btn btn-primary" onclick="copyCurrentUrl()">
+          🔗 复制此页面链接
+        </button>
+      </div>
+    </div>
+
+    <script src="/p/cec-sync-tool/script.js"></script>
+  </body>
+</html>

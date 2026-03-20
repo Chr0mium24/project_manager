@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO 标签编辑器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+    <div class="container mx-auto p-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">YOLO 标签编辑器</h1>
+            <p class="text-gray-600 mt-2">使用 File System Access API 和 Tailwind CSS</p>
+        </header>
+
+        <main>
+            <!-- 操作区 -->
+            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                <h2 class="text-xl font-semibold mb-4">操作面板</h2>
+                <div class="flex flex-wrap items-end gap-6">
+                    <!-- 选择文件夹 -->
+                    <div>
+                        <button id="openDirBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300">
+                            选择标签文件夹
+                        </button>
+                    </div>
+                    
+                    <!-- 功能一: 替换选中文件的标签 -->
+                    <div class="border-l pl-6">
+                        <label for="replaceSelectedInput" class="block text-sm font-medium text-gray-700 mb-1">1. 替换选中文件的所有标签为:</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="replaceSelectedInput" placeholder="新的标签ID" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md disabled:bg-gray-200">
+                            <button id="replaceSelectedBtn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300 whitespace-nowrap disabled:bg-gray-400">执行替换</button>
+                        </div>
+                    </div>
+
+                    <!-- 功能二: 替换指定的标签 -->
+                    <div class="border-l pl-6">
+                        <label for="replaceSpecificOld" class="block text-sm font-medium text-gray-700 mb-1">2. 将所有文件中的指定标签:</label>
+                        <div class="flex items-center gap-2">
+                             <input type="number" id="replaceSpecificOld" placeholder="旧的标签ID" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md disabled:bg-gray-200">
+                             <span class="font-bold">→</span>
+                            <input type="number" id="replaceSpecificNew" placeholder="新的标签ID" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md disabled:bg-gray-200">
+                            <button id="replaceSpecificBtn" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-300 whitespace-nowrap disabled:bg-gray-400">执行替换</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- 状态显示区 (已移动到这里) -->
+                <div class="mt-4 h-6"> <!-- 使用 h-6 占位，防止刷新时页面跳动 -->
+                    <p id="folderPath" class="text-sm text-gray-500 "></p>
+                    <p id="status" class="text-sm font-medium"></p>
+                </div>
+            </div>
+
+            <!-- 文件表格 -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th scope="col" class="p-4">
+                                    <div class="flex items-center">
+                                        <input id="selectAllCheckbox" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500">
+                                        <label for="selectAllCheckbox" class="sr-only">全选</label>
+                                    </div>
+                                </th>
+                                <th scope="col" class="px-6 py-3">文件名</th>
+                                <th scope="col" class="px-6 py-3">标签 (Class ID)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fileTableBody" class="bg-white divide-y">
+                           <!-- 动态生成行 -->
+                           <tr class="text-center">
+                               <td colspan="3" class="px-6 py-12 text-gray-400">请先选择一个文件夹...</td>
+                           </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/p/yolo-label-editor/script.js"></script>
+
+</body>
+</html>

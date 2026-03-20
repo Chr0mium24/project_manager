@@ -1,0 +1,7 @@
+/* 自定义滚动条与Markdown样式补偿 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .markdown-body pre { background-color: #f1f5f9; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-top: 0.5rem; }
+        .markdown-body code { font-family: monospace; background-color: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 0.25rem; }
+        .markdown-body p { margin-bottom: 0.5rem; }
+        .markdown-body a { color: #2563eb; text-decoration: underline; }

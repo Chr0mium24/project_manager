@@ -112,7 +112,17 @@ export function writeContentRepo(rootDir: string): void {
 
   fs.writeFileSync(
     path.join(contentRepoRoot, "projects", "landing-a", "src", "index.html"),
-    "<!doctype html>\n<html><body><h1>Landing A</h1></body></html>\n",
+    "<!doctype html>\n<html><head><link rel=\"stylesheet\" href=\"/p/landing-a/styles.css\"></head><body><h1>Landing A</h1><script src=\"/p/landing-a/app.js\"></script></body></html>\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(contentRepoRoot, "projects", "landing-a", "src", "styles.css"),
+    "body { color: #123456; }\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(contentRepoRoot, "projects", "landing-a", "src", "app.js"),
+    "console.log('landing-a');\n",
     "utf8"
   );
   fs.writeFileSync(

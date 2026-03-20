@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Agent 大脑核心 (v2 交互进化版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-200 min-h-screen p-6">
+    <div class="max-w-5xl mx-auto space-y-6">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-bold mb-4">⚙️ 系统配置</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <input type="password" id="apiKey" placeholder="Gemini API Key" class="bg-gray-700 p-2 rounded text-sm w-full outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="backendUrl" placeholder="http://127.0.0.1:9961" class="bg-gray-700 p-2 rounded text-sm w-full outline-none">
+                <input type="password" id="backendToken" placeholder="Backend Token" class="bg-gray-700 p-2 rounded text-sm w-full outline-none">
+                <select id="riskThreshold" class="bg-gray-700 p-2 rounded text-sm w-full outline-none">
+                    <option value="3">严格限制 (>3 需确认)</option>
+                    <option value="6" selected>中等限制 (>6 需确认)</option>
+                    <option value="10">无限制</option>
+                </select>
+            </div>
+            <div class="mt-4 flex space-x-4">
+                <button onclick="saveConfig()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-sm font-bold transition">保存配置</button>
+                <button onclick="checkBackend()" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded text-sm font-bold transition">测试连通性</button>
+            </div>
+            <p id="statusMsg" class="mt-2 text-sm text-gray-400"></p>
+        </div>
+
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-bold mb-4">🚀 发起新任务</h2>
+            <textarea id="taskInput" rows="2" placeholder="例如：写一个自动爬取某网站新闻并存为 CSV 的脚本..." class="bg-gray-700 p-3 rounded text-sm w-full outline-none focus:ring-2 focus:ring-blue-500 mb-4"></textarea>
+            <button onclick="createNewTask()" class="bg-purple-600 hover:bg-purple-500 w-full py-2 rounded text-md font-bold transition">开启任务会话</button>
+        </div>
+
+        <div id="tasksContainer" class="space-y-6"></div>
+    </div>
+
+    <script src="/p/agent-brain-core/script.js"></script>
+</body>
+</html>

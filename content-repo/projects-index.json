@@ -1,7 +1,47 @@
 {
   "version": 1,
-  "generatedAt": "2026-03-20T00:00:00.000Z",
+  "generatedAt": "2026-03-20T22:42:06.111Z",
   "projects": [
+    {
+      "slug": "agent-brain-core",
+      "path": "projects/agent-brain-core",
+      "name": "Agent Brain Core",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/agent-brain-core",
+      "updatedAt": "2026-03-20T22:42:06.099Z"
+    },
+    {
+      "slug": "cec-sync-tool",
+      "path": "projects/cec-sync-tool",
+      "name": "CEC Sync Tool",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/cec-sync-tool",
+      "updatedAt": "2026-03-20T22:42:06.103Z"
+    },
+    {
+      "slug": "gre-flow",
+      "path": "projects/gre-flow",
+      "name": "GRE Flow",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/gre-flow",
+      "updatedAt": "2026-03-20T22:42:06.082Z"
+    },
+    {
+      "slug": "lan-clipboard",
+      "path": "projects/lan-clipboard",
+      "name": "LAN Clipboard",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/lan-clipboard",
+      "updatedAt": "2026-03-20T22:42:06.107Z"
+    },
     {
       "slug": "landing-a",
       "path": "projects/landing-a",
@@ -13,6 +53,26 @@
       "updatedAt": "2026-03-20T00:00:00.000Z"
     },
     {
+      "slug": "lean-algebra-dojo",
+      "path": "projects/lean-algebra-dojo",
+      "name": "Lean Algebra Dojo",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/lean-algebra-dojo",
+      "updatedAt": "2026-03-20T22:42:06.096Z"
+    },
+    {
+      "slug": "local-ai-assistant",
+      "path": "projects/local-ai-assistant",
+      "name": "Local AI Assistant",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/local-ai-assistant",
+      "updatedAt": "2026-03-20T22:42:06.101Z"
+    },
+    {
       "slug": "service-b",
       "path": "projects/service-b",
       "name": "Service B",
@@ -21,6 +81,26 @@
       "entry": "src/server.ts",
       "route": "/app/service-b",
       "updatedAt": "2026-03-20T00:00:00.000Z"
+    },
+    {
+      "slug": "split-bill-calculator",
+      "path": "projects/split-bill-calculator",
+      "name": "Split Bill Calculator",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/split-bill-calculator",
+      "updatedAt": "2026-03-20T22:42:06.111Z"
+    },
+    {
+      "slug": "yolo-label-editor",
+      "path": "projects/yolo-label-editor",
+      "name": "YOLO Label Editor",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/yolo-label-editor",
+      "updatedAt": "2026-03-20T22:42:06.109Z"
     }
   ]
 }

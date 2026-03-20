@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分账计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/p/split-bill-calculator/styles.css">
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">分账计算器</h1>
+        </header>
+
+        <main class="space-y-8">
+            <!-- 1. Currency Settings -->
+            <section class="card p-6">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">1. 设置货币（可选）</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="text" id="initial-currency" placeholder="初始货币单位 (如: CNY)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <input type="number" id="exchange-rate" placeholder="汇率 (1初始 = ?最终)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="final-currency" placeholder="最终货币单位 (如: USD)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </section>
+
+            <!-- 2. Participants -->
+            <section class="card p-6">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">2. 添加参与人员</h2>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="participant-name" placeholder="输入姓名" class="flex-grow w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <button id="add-participant" class="btn btn-primary w-full sm:w-auto px-6 py-2 rounded-lg font-semibold">添加人员</button>
+                </div>
+                <div id="participants-list" class="mt-4 flex flex-wrap gap-3">
+                    <!-- Participant tags will be dynamically added here -->
+                </div>
+            </section>
+
+            <!-- 3. Expenses -->
+            <section class="card p-6">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">3. 添加消费项目</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Left: Input Form -->
+                    <div class="space-y-4">
+                        <input type="text" id="expense-description" placeholder="消费说明，例如：晚餐" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <input type="number" id="expense-amount" placeholder="总金额" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <div>
+                            <label for="paid-by" class="block text-sm font-medium text-gray-600 mb-1">由谁付款？</label>
+                            <select id="paid-by" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                <option value="">--请选择付款人--</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-2">由谁分摊？</label>
+                            <div id="sharers-list" class="space-y-2 max-h-40 overflow-y-auto p-2 border rounded-lg">
+                                <p class="text-gray-400">请先添加参与人员</p>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <input id="select-all-sharers" type="checkbox" class="custom-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="select-all-sharers" class="ml-2 block text-sm font-medium text-gray-700">全选</label>
+                            </div>
+                        </div>
+                        <button id="add-expense" class="btn btn-primary w-full px-6 py-2.5 rounded-lg font-semibold">添加这笔账单</button>
+                    </div>
+                    <!-- Right: Expense List -->
+                    <div class="bg-gray-50 p-4 rounded-lg border min-h-[200px]">
+                        <h3 class="font-semibold text-lg mb-3 text-gray-600">账单列表</h3>
+                        <div id="expenses-list" class="space-y-3">
+                            <p class="text-gray-400 text-center pt-8">暂无账单</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Actions -->
+            <section class="text-center">
+                <button id="calculate" class="btn btn-primary text-lg w-full md:w-auto px-8 py-3 rounded-lg font-bold shadow-lg">开始计算</button>
+                <button id="reset-all" class="btn btn-secondary text-lg w-full md:w-auto mt-4 md:mt-0 md:ml-4 px-8 py-3 rounded-lg font-bold">全部重置</button>
+            </section>
+
+            <!-- 5. Results Section -->
+            <section id="results-section" class="card p-6 hidden">
+                <div id="report-content">
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">🎉 分账结果 🎉</h2>
+                    <div id="summary" class="text-center text-gray-600 mb-6"></div>
+                    <div id="transactions" class="space-y-3 max-w-md mx-auto">
+                        <!-- Transactions go here -->
+                    </div>
+                    <div id="print-details" class="hidden mt-8">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-t pt-4">账单明细</h3>
+                        <div id="print-expenses-list" class="space-y-2"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal for messages and confirmations -->
+    <div id="modal" class="fixed inset-0 flex items-center justify-center p-4 hidden">
+        <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="modal-content card max-w-sm w-full p-6 text-center">
+            <p id="modal-message" class="text-lg text-gray-700 mb-6"></p>
+            <div id="modal-buttons" class="flex justify-center gap-4">
+                <!-- Buttons will be injected here by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/p/split-bill-calculator/script.js"></script>
+</body>
+</html>

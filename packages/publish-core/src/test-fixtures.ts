@@ -10,12 +10,8 @@ function writeJson(filePath: string, value: unknown): void {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-export function writeContentRepo(rootDir: string): void {
-  const contentRepoRoot = path.join(rootDir, "content-repo");
-  fs.mkdirSync(path.join(contentRepoRoot, "projects", "landing-a", "src"), { recursive: true });
-  fs.mkdirSync(path.join(contentRepoRoot, "projects", "service-b", "src"), { recursive: true });
-
-  writeJson(path.join(contentRepoRoot, "projects-index.json"), {
+function buildProjectsIndex(): Record<string, unknown> {
+  return {
     version: 1,
     generatedAt: "2026-03-20T00:00:00.000Z",
     projects: [
@@ -40,8 +36,10 @@ export function writeContentRepo(rootDir: string): void {
         updatedAt: "2026-03-20T00:00:00.000Z"
       }
     ]
-  });
+  };
+}
 
+function writeStaticProjectFixture(contentRepoRoot: string): void {
   writeJson(path.join(contentRepoRoot, "projects", "landing-a", "project.json"), {
     schemaVersion: 1,
     name: "Landing A",
@@ -59,7 +57,27 @@ export function writeContentRepo(rootDir: string): void {
     createdAt: "2026-03-20T00:00:00.000Z",
     updatedAt: "2026-03-20T00:00:00.000Z"
   });
+  fs.writeFileSync(
+    path.join(contentRepoRoot, "projects", "landing-a", "src", "index.html"),
+    "<!doctype html>\n<html><head><link rel=\"stylesheet\" href=\"/p/landing-a/styles.css\"></head><body><h1>Landing A</h1><script src=\"/p/landing-a/app.js\"></script></body></html>\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(contentRepoRoot, "projects", "landing-a", "src", "styles.css"),
+    "body { color: #123456; }\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(contentRepoRoot, "projects", "landing-a", "src", "app.js"),
+    "console.log('landing-a');\n",
+    "utf8"
+  );
+}
 
+function writeDynamicProjectFixture(contentRepoRoot: string): void {
+  writeJson(path.join(contentRepoRoot, "projects-index.json"), {
+    ...buildProjectsIndex()
+  });
   writeJson(path.join(contentRepoRoot, "projects", "service-b", "project.json"), {
     schemaVersion: 1,
     name: "Service B",
@@ -77,15 +95,17 @@ export function writeContentRepo(rootDir: string): void {
     createdAt: "2026-03-20T00:00:00.000Z",
     updatedAt: "2026-03-20T00:00:00.000Z"
   });
-
-  fs.writeFileSync(
-    path.join(contentRepoRoot, "projects", "landing-a", "src", "index.html"),
-    "<!doctype html>\n<html><body><h1>Landing A</h1></body></html>\n",
-    "utf8"
-  );
   fs.writeFileSync(
     path.join(contentRepoRoot, "projects", "service-b", "src", "server.ts"),
     "export async function handler() { return { ok: true }; }\n",
     "utf8"
   );
+}
+
+export function writeContentRepo(rootDir: string): void {
+  const contentRepoRoot = path.join(rootDir, "content-repo");
+  fs.mkdirSync(path.join(contentRepoRoot, "projects", "landing-a", "src"), { recursive: true });
+  fs.mkdirSync(path.join(contentRepoRoot, "projects", "service-b", "src"), { recursive: true });
+  writeStaticProjectFixture(contentRepoRoot);
+  writeDynamicProjectFixture(contentRepoRoot);
 }

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { publishDynamicProject } from "@project-manager/publish-core";
+import { publishDynamicProject, publishStaticProject } from "@project-manager/publish-core";
 import {
   createGatewayApp,
   readRouteRegistry,
@@ -208,14 +208,44 @@ void test("createGatewayApp serves managed routes and 404s", async () => {
   const app = createGatewayApp(rootDir);
 
   const managedRoute = await app.inject({ method: "GET", url: "/p/landing-a" });
+  const managedAsset = await app.inject({ method: "GET", url: "/p/landing-a/styles.css" });
   const missingRoute = await app.inject({ method: "GET", url: "/missing" });
+  const missingAsset = await app.inject({ method: "GET", url: "/p/landing-a/missing.css" });
   const missingPayload = parseJsonResponse(missingRoute.body) as NotFoundResponse;
 
   assert.equal(managedRoute.statusCode, 200);
   assert.match(managedRoute.body, /Landing A/);
   assert.match(String(managedRoute.headers["content-type"]), /^text\/html/);
+  assert.equal(managedAsset.statusCode, 200);
+  assert.equal(managedAsset.body, "body { color: #123456; }\n");
+  assert.match(String(managedAsset.headers["content-type"]), /^text\/css/);
+  assert.equal(missingAsset.statusCode, 404);
+  assert.deepEqual(missingAsset.json(), {
+    error: "static-project-asset-not-found",
+    slug: "landing-a",
+    path: "missing.css"
+  });
   assert.equal(missingRoute.statusCode, 404);
   assert.equal(missingPayload.kind, "not-found");
+
+  await app.close();
+});
+
+void test("createGatewayApp prefers published static assets over source files", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  publishStaticProject(rootDir, "landing-a");
+  fs.writeFileSync(
+    path.join(rootDir, "content-repo", "projects", "landing-a", "src", "styles.css"),
+    "body { color: #654321; }\n",
+    "utf8"
+  );
+  const app = createGatewayApp(rootDir);
+
+  const publishedAsset = await app.inject({ method: "GET", url: "/p/landing-a/styles.css" });
+
+  assert.equal(publishedAsset.statusCode, 200);
+  assert.equal(publishedAsset.body, "body { color: #123456; }\n");
 
   await app.close();
 });

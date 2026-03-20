@@ -60,7 +60,7 @@ void test("createGatewayApp serves project file listings and file content", asyn
   assert.equal(filesPayload.slug, "landing-a");
   assert.deepEqual(
     filesPayload.files.map((file: { path: string }) => file.path),
-    ["project.json", "src/index.html"]
+    ["project.json", "src/app.js", "src/index.html", "src/styles.css"]
   );
   assert.equal(fileResponse.statusCode, 200);
   assert.match(filePayload.content, /Landing A/);

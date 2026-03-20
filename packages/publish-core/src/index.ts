@@ -80,6 +80,10 @@ function getDynamicPublishMetadataPath(rootDir: string, slug: string): string {
   return path.join(getDynamicBuildDir(rootDir, slug), "publish.json");
 }
 
+function resolvePublishedStaticFilePath(rootDir: string, slug: string, relativePath: string): string {
+  return path.join(getStaticBuildDir(rootDir, slug), relativePath);
+}
+
 export function readStaticPublishRecord(rootDir: string, slug: string): StaticPublishResult | null {
   const metadataPath = getPublishMetadataPath(rootDir, slug);
   if (!fs.existsSync(metadataPath) || !fs.statSync(metadataPath).isFile()) {
@@ -119,6 +123,19 @@ export function readPublishedDynamicTarget(
   };
 }
 
+export function readPublishedStaticFile(
+  rootDir: string,
+  slug: string,
+  relativePath: string
+): Buffer | null {
+  const filePath = resolvePublishedStaticFilePath(rootDir, slug, relativePath);
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    return null;
+  }
+
+  return fs.readFileSync(filePath);
+}
+
 export function listStaticPublishRecords(rootDir: string): StaticPublishResult[] {
   const staticBuildRoot = getStaticBuildRoot(rootDir);
   if (!fs.existsSync(staticBuildRoot) || !fs.statSync(staticBuildRoot).isDirectory()) {
@@ -146,12 +163,12 @@ export function listDynamicPublishRecords(rootDir: string): DynamicPublishResult
 }
 
 export function readPublishedStaticEntry(rootDir: string, slug: string): string | null {
-  const entryPath = path.join(getStaticBuildDir(rootDir, slug), "index.html");
-  if (!fs.existsSync(entryPath) || !fs.statSync(entryPath).isFile()) {
+  const entryContent = readPublishedStaticFile(rootDir, slug, "index.html");
+  if (entryContent === null) {
     return null;
   }
 
-  return fs.readFileSync(entryPath, "utf8");
+  return entryContent.toString("utf8");
 }
 
 export function publishDynamicProject(rootDir: string, slug: string): DynamicPublishResult | null {

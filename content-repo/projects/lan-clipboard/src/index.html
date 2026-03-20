@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能局域网剪贴板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <link rel="stylesheet" href="/p/lan-clipboard/styles.css">
+</head>
+<body class="bg-gray-100 h-screen flex flex-col font-sans">
+
+    <header class="bg-teal-700 text-white p-4 shadow-md flex justify-between items-center z-10">
+        <div class="flex items-center gap-3">
+            <h1 class="text-xl font-bold tracking-wider">AirBoard</h1>
+            <div class="flex items-center bg-teal-800 rounded-lg px-2 py-1">
+                <span class="text-sm text-teal-200 mr-2">房间</span>
+                <input type="text" id="room-id" value="my-home-lan" class="bg-transparent text-white outline-none w-24 text-sm placeholder-teal-400">
+            </div>
+            <button onclick="joinRoom()" class="bg-teal-500 hover:bg-teal-400 transition px-3 py-1 rounded text-sm font-medium">
+                连接
+            </button>
+        </div>
+        <div id="status" class="flex items-center gap-2 text-sm font-medium">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+            离线模式
+        </div>
+    </header>
+
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></main>
+
+    <footer class="bg-white p-4 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div class="max-w-4xl mx-auto flex items-end gap-3 relative">
+            <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)">
+            <button onclick="document.getElementById('file-input').click()" class="p-3 text-gray-500 hover:text-teal-600 transition bg-gray-100 rounded-full flex-shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+            </button>
+            
+            <textarea id="msg-input" placeholder="输入文本、粘贴代码... (Enter 发送，Shift+Enter 换行)" class="flex-1 max-h-32 min-h-[50px] bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-teal-500 resize-none overflow-y-auto transition-all"></textarea>
+            
+            <button onclick="handleSendText()" class="p-3 bg-teal-600 hover:bg-teal-700 text-white rounded-full transition shadow-md flex-shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    </footer>
+
+    <script src="/p/lan-clipboard/script.js"></script>
+</body>
+</html>
