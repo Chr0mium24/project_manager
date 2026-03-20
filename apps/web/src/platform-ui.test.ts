@@ -16,6 +16,8 @@ void test("renderPlatformDocument returns a platform shell with the boot asset",
   assert.match(html, /Project Versions/);
   assert.match(html, /data-section-nav/);
   assert.match(html, /data-overview-panel/);
+  assert.match(html, /data-ai-compose-toggle/);
+  assert.match(html, /data-ai-compose-body/);
   assert.match(html, /data-file-tree/);
   assert.match(html, /data-file-preview/);
   assert.match(html, /data-version-list/);
@@ -40,6 +42,7 @@ void test("readPlatformAsset returns the platform ui module asset", () => {
   assert.match(asset.body, /data-version-id/);
   assert.match(asset.body, /renderFocusedView/);
   assert.match(asset.body, /buildProjectPath/);
+  assert.match(asset.body, /renderAiComposer/);
   assert.match(asset.body, /method: 'PUT'/);
   assert.match(asset.body, /data-restore-version/);
   assert.match(asset.body, /data-save-file/);
