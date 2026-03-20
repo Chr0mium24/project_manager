@@ -1,14 +1,12 @@
 import { h, type VNode } from "vue";
-import { renderStatusMessage, renderWriteAccessFields } from "./project-manager-view-shared.ts";
+import { renderStatusMessage } from "./project-manager-view-shared.ts";
 
 export interface ProjectAiWriteActionsProps {
-  adminToken: string;
   composeOpen: boolean;
   taskSlug: string;
   prompt: string;
   isBusy: boolean;
   canApplySelectedTask: boolean;
-  setAdminToken(value: string): void;
   setTaskSlug(value: string): void;
   setPrompt(value: string): void;
   toggleComposer(): void;
@@ -69,7 +67,7 @@ export function renderAiWriteActions(props: ProjectAiWriteActionsProps): VNode {
         h(
           "p",
           { class: "pm-copy" },
-          "Create a new AI task or apply the selected completed task. Review stays in the main panel above."
+          "Write actions are protected by the global admin token. Use the header Admin access entry when you need task creation or apply."
         )
       ]),
       h(
@@ -84,13 +82,6 @@ export function renderAiWriteActions(props: ProjectAiWriteActionsProps): VNode {
         props.composeOpen ? "Hide task form" : "New task"
       )
     ]),
-    renderWriteAccessFields(
-      props.adminToken,
-      (value) => {
-        props.setAdminToken(value);
-      },
-      "Required only for AI task creation and apply on this page."
-    ),
     renderAiComposer(props),
     !props.canApplySelectedTask
       ? renderStatusMessage("Select a completed task in the queue before applying it.")

@@ -1,6 +1,6 @@
 import type { App } from "vue";
 import { createApp } from "vue";
-import { createProjectManagerPinia } from "./project-context-store.ts";
+import { createProjectManagerPinia, useProjectContextStore } from "./project-context-store.ts";
 import { ProjectManagerShell } from "./project-manager-shell.ts";
 import { createProjectManagerMemoryRouter, createProjectManagerRouter } from "./project-manager-router.ts";
 
@@ -18,6 +18,7 @@ export function createProjectManagerApp(
   options: CreateProjectManagerAppOptions = {}
 ): ProjectManagerApp {
   const pinia = createProjectManagerPinia();
+  useProjectContextStore(pinia).initializeAdminToken();
   const router = options.useMemoryHistory
     ? createProjectManagerMemoryRouter(pinia)
     : createProjectManagerRouter(pinia);

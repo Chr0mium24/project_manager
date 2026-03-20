@@ -17,13 +17,11 @@ import {
 } from "../gateway-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
 import {
-  type ProjectManagerMetric,
   renderPageHeader,
-  renderMetricGrid,
   renderSectionHeader,
-  renderStatusMessage,
-  renderWriteAccessCard
+  renderStatusMessage
 } from "./project-manager-view-shared.ts";
+import { runtimeHrefForSlug } from "./project-runtime-link.ts";
 
 const client = new GatewayProjectApiClient();
 
@@ -116,7 +114,7 @@ function createWorkspaceActions(context: WorkspaceActionContext) {
       return;
     }
     if (context.adminToken.value.length === 0) {
-      context.error.value = "Admin token is required for file writes.";
+      context.error.value = "Admin access is required for file writes. Open Admin access from the header.";
       return;
     }
     context.isSaving.value = true;
@@ -268,66 +266,48 @@ function renderWorkspaceBody(state: WorkspaceState): VNode {
   ]);
 }
 
-function workspaceMetrics(state: WorkspaceState): ProjectManagerMetric[] {
-  return [
-    {
-      label: "Current file",
-      value: state.selectedFilePath.value || "No file selected"
-    },
-    {
-      label: "Editor state",
-      value: state.isDirty.value ? "Unsaved changes" : "Saved"
-    },
-    {
-      label: "Layout",
-      value: state.navOpen.value ? "Browser open" : "Focused"
-    }
-  ];
-}
-
 function renderWorkspaceView(
   projectSlug: string,
-  adminToken: string,
-  setAdminToken: (value: string) => void,
-  state: WorkspaceState
+  state: WorkspaceState,
+  publicHref: string | null
 ): VNode {
   return h("div", { class: "pm-view", "data-view": "workspace" }, [
-    renderPageHeader(
+    renderPageHeader({
       projectSlug,
-      "workspace",
-      "Repository workspace",
-      "Browse repository files, edit the selected file, and save changes back to the managed project."
-    ),
-    renderMetricGrid(workspaceMetrics(state)),
-    h("div", { class: "pm-column-grid" }, [
-      h("section", { class: "pm-card pm-workspace-card" }, [
-        renderSectionHeader(
-          "Files",
-          state.selectedFilePath.value
-            ? `Editing ${state.selectedFilePath.value}`
-            : "Choose a file from the repository tree, then edit it in the main panel.",
-          h(
-            "button",
+      currentView: "workspace",
+      title: "Repository workspace",
+      description: "Browse repository files, edit the selected file, and save changes back to the managed project.",
+      action: publicHref
+        ? h(
+            "a",
             {
-              type: "button",
-              class: "pm-button pm-button-ghost",
-              onClick: () => {
-                state.navOpen.value = !state.navOpen.value;
-              }
+              href: publicHref,
+              class: "pm-project-link"
             },
-            state.navOpen.value ? "Hide tree" : "Show tree"
+            "Open page"
           )
-        ),
-        state.error.value ? renderStatusMessage(state.error.value, "error") : null,
-        renderWorkspaceBody(state)
-      ]),
-      renderWriteAccessCard(
-        adminToken,
-        (value) => {
-          setAdminToken(value);
-        },
-        "Only required when you want to save the current file back to the repository."
-      )
+        : null
+    }),
+    h("section", { class: "pm-card pm-workspace-card" }, [
+      renderSectionHeader(
+        "Files",
+        state.selectedFilePath.value
+          ? `Editing ${state.selectedFilePath.value}`
+          : "Choose a file from the repository tree, then edit it in the main panel.",
+        h(
+          "button",
+          {
+            type: "button",
+            class: "pm-button pm-button-ghost",
+            onClick: () => {
+              state.navOpen.value = !state.navOpen.value;
+            }
+          },
+          state.navOpen.value ? "Hide tree" : "Show tree"
+        )
+      ),
+      state.error.value ? renderStatusMessage(state.error.value, "error") : null,
+      renderWorkspaceBody(state)
     ])
   ]);
 }
@@ -339,6 +319,7 @@ export const ProjectWorkspaceView = defineComponent({
     const context = useProjectContextStore();
     const projectSlug = computed(() => String(route.params.slug ?? ""));
     const adminToken = computed(() => context.adminToken.trim());
+    const publicHref = computed(() => runtimeHrefForSlug(context.projects, projectSlug.value));
     const state = createWorkspaceState(projectSlug, adminToken);
 
     onMounted(() => {
@@ -348,9 +329,6 @@ export const ProjectWorkspaceView = defineComponent({
       void state.loadWorkspace(slug);
     });
 
-    return () =>
-      renderWorkspaceView(projectSlug.value, context.adminToken, (value) => {
-        context.setAdminToken(value);
-      }, state);
+    return () => renderWorkspaceView(projectSlug.value, state, publicHref.value);
   }
 });

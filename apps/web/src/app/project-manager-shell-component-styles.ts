@@ -1,4 +1,25 @@
 export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
+.pm-directory-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.pm-directory-card {
+  display: grid;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--pm-text);
+  border: 1px solid var(--pm-line);
+  border-radius: 12px;
+  background: var(--pm-panel);
+  padding: 18px;
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+.pm-directory-card:hover {
+  border-color: var(--pm-accent);
+  box-shadow: 0 8px 24px rgba(9, 105, 218, 0.08);
+  transform: translateY(-1px);
+}
 .pm-project-list,
 .pm-list,
 .pm-tree-list,
@@ -225,10 +246,9 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   font-size: 0.8rem;
 }
 @media (max-width: 1040px) {
-  .pm-layout,
+  .pm-directory-grid,
   .pm-column-grid,
   .pm-grid,
-  .pm-stat-row,
   .pm-workspace-grid,
   .pm-version-grid,
   .pm-form-grid,
@@ -236,17 +256,5 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
     grid-template-columns: 1fr;
   }
   .pm-project-actions { justify-content: start; grid-auto-flow: row; grid-auto-columns: 1fr; }
-}
-@media (max-width: 840px) {
-  .pm-layout { grid-template-columns: 1fr; }
-  .pm-sidebar {
-    position: static;
-    order: 2;
-  }
-  .pm-main { order: 1; }
-  .pm-topbar-inner,
-  .pm-layout {
-    width: min(100% - 20px, 1360px);
-  }
 }
 `;

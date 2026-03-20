@@ -3,6 +3,7 @@ import { useRoute } from "vue-router";
 import { AiTaskApiClient, type AiTaskRecord, type ManagedTaskSummary } from "../ai-task-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
 import { renderPageHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
+import { runtimeHrefForSlug } from "./project-runtime-link.ts";
 import { renderAiWriteActions } from "./project-manager-ai-write-actions.ts";
 interface AiState {
   tasks: Ref<AiTaskRecord[]>;
@@ -83,7 +84,7 @@ function validateTaskCreation(
     return "project slug is required";
   }
   if (adminToken.length === 0) {
-    return "Admin token is required for AI task creation.";
+    return "Admin access is required for AI task creation. Open Admin access from the header.";
   }
   if (taskSlug.trim().length === 0 || prompt.trim().length === 0) {
     return "Task slug and prompt are required.";
@@ -130,7 +131,7 @@ function createAiMutations(context: AiMutationContext) {
       return;
     }
     if (context.adminToken.value.length === 0) {
-      context.error.value = "Admin token is required for apply.";
+      context.error.value = "Admin access is required for apply. Open Admin access from the header.";
       return;
     }
     context.isBusy.value = true;
@@ -270,17 +271,26 @@ function renderAiTaskChanges(state: AiState): VNode {
 }
 function renderAiView(
   projectSlug: string,
-  adminToken: string,
-  setAdminToken: (value: string) => void,
-  state: AiState
+  state: AiState,
+  publicHref: string | null
 ): VNode {
   return h("div", { class: "pm-view", "data-view": "ai" }, [
-    renderPageHeader(
+    renderPageHeader({
       projectSlug,
-      "ai",
-      "Repository AI tasks",
-      "Review queued and completed AI tasks here, then apply a completed task when the summary is ready."
-    ),
+      currentView: "ai",
+      title: "Repository AI tasks",
+      description: "Review queued and completed AI tasks here, then apply a completed task when the summary is ready.",
+      action: publicHref
+        ? h(
+            "a",
+            {
+              href: publicHref,
+              class: "pm-project-link"
+            },
+            "Open page"
+          )
+        : null
+    }),
     h("section", { class: "pm-card pm-stack" }, [
       h("div", { class: "pm-page-copy" }, [
         h("h2", { class: "pm-section-title" }, "Task queue"),
@@ -290,15 +300,11 @@ function renderAiView(
       renderAiBody(state)
     ]),
     renderAiWriteActions({
-      adminToken,
       composeOpen: state.composeOpen.value,
       taskSlug: state.taskSlug.value,
       prompt: state.prompt.value,
       isBusy: state.isBusy.value,
       canApplySelectedTask: state.selectedTask.value?.status === "completed",
-      setAdminToken: (value) => {
-        setAdminToken(value);
-      },
       setTaskSlug: (value) => {
         state.taskSlug.value = value;
       },
@@ -324,6 +330,7 @@ export const ProjectAiTasksView = defineComponent({
     const context = useProjectContextStore();
     const projectSlug = computed(() => String(route.params.slug ?? ""));
     const adminToken = computed(() => context.adminToken.trim());
+    const publicHref = computed(() => runtimeHrefForSlug(context.projects, projectSlug.value));
     const state = createAiState(projectSlug, adminToken);
 
     onMounted(() => {
@@ -334,9 +341,6 @@ export const ProjectAiTasksView = defineComponent({
       void state.refreshTasks();
     });
 
-    return () =>
-      renderAiView(projectSlug.value, context.adminToken, (value) => {
-        context.setAdminToken(value);
-      }, state);
+    return () => renderAiView(projectSlug.value, state, publicHref.value);
   }
 });

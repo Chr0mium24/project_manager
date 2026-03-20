@@ -1,13 +1,11 @@
 import { h, type VNode } from "vue";
-import { renderStatusMessage, renderWriteAccessFields } from "./project-manager-view-shared.ts";
+import { renderStatusMessage } from "./project-manager-view-shared.ts";
 
 export interface ProjectVersionsWriteActionsProps {
-  adminToken: string;
   selectedVersionId: string;
   composeOpen: boolean;
   message: string;
   isBusy: boolean;
-  setAdminToken(value: string): void;
   setMessage(value: string): void;
   toggleComposer(): void;
   createVersion(): void;
@@ -56,7 +54,7 @@ export function renderVersionsWriteActions(props: ProjectVersionsWriteActionsPro
         h(
           "p",
           { class: "pm-copy" },
-          "Create a new checkpoint or restore the selected one. These are the only write actions on this page."
+          "Write actions are global-token protected. Use the header Admin access entry when you need create or restore."
         )
       ]),
       h(
@@ -71,13 +69,6 @@ export function renderVersionsWriteActions(props: ProjectVersionsWriteActionsPro
         props.composeOpen ? "Hide create form" : "New snapshot"
       )
     ]),
-    renderWriteAccessFields(
-      props.adminToken,
-      (value) => {
-        props.setAdminToken(value);
-      },
-      "Required only for creating snapshots and restoring a selected version."
-    ),
     renderVersionsComposer(props),
     props.selectedVersionId.length === 0
       ? renderStatusMessage("Select a snapshot in the history panel before restoring.")

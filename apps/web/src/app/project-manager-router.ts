@@ -53,6 +53,12 @@ export type { ProjectRouteTab };
 
 function syncProjectContext(router: Router, pinia: Pinia) {
   const store = useProjectContextStore(pinia);
+  router.beforeEach((to) => {
+    if (to.name !== "projects-index" && store.adminToken.trim().length === 0) {
+      return { name: "projects-index" };
+    }
+    return true;
+  });
   router.afterEach((to) => {
     const slug = typeof to.params.slug === "string" ? to.params.slug : "";
     store.setProjectSlug(slug);

@@ -3,12 +3,11 @@ import { useRoute } from "vue-router";
 import { GatewayProjectApiClient, type ProjectVersionDiff, type ProjectVersionRecord } from "../gateway-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
 import {
-  type ProjectManagerMetric,
   renderPageHeader,
-  renderMetricGrid,
   renderSectionHeader,
   renderStatusMessage
 } from "./project-manager-view-shared.ts";
+import { runtimeHrefForSlug } from "./project-runtime-link.ts";
 import { renderVersionsWriteActions } from "./project-manager-versions-write-actions.ts";
 
 const client = new GatewayProjectApiClient();
@@ -93,7 +92,7 @@ function createVersionMutations(context: VersionMutationContext) {
       return;
     }
     if (context.adminToken.value.length === 0) {
-      context.error.value = "Admin token is required for snapshots.";
+      context.error.value = "Admin access is required for snapshots. Open Admin access from the header.";
       return;
     }
     if (context.message.value.trim().length === 0) {
@@ -124,7 +123,7 @@ function createVersionMutations(context: VersionMutationContext) {
       return;
     }
     if (context.adminToken.value.length === 0) {
-      context.error.value = "Admin token is required for restore.";
+      context.error.value = "Admin access is required for restore. Open Admin access from the header.";
       return;
     }
     context.isBusy.value = true;
@@ -260,38 +259,28 @@ function renderVersionDetail(state: VersionsState): VNode {
   ]);
 }
 
-function versionMetrics(state: VersionsState): ProjectManagerMetric[] {
-  const changedFiles = state.diff.value === null ? "No diff loaded" : `${String(state.diff.value.changedFiles)} files`;
-  return [
-    {
-      label: "Snapshots",
-      value: String(state.versions.value.length)
-    },
-    {
-      label: "Selected",
-      value: state.selectedVersionId.value || "None"
-    },
-    {
-      label: "Current diff",
-      value: changedFiles
-    }
-  ];
-}
-
 function renderVersionsView(
   projectSlug: string,
-  adminToken: string,
-  setAdminToken: (value: string) => void,
-  state: VersionsState
+  state: VersionsState,
+  publicHref: string | null
 ): VNode {
   return h("div", { class: "pm-view", "data-view": "versions" }, [
-    renderPageHeader(
+    renderPageHeader({
       projectSlug,
-      "versions",
-      "Repository history",
-      "Review snapshots and diffs here before restoring any repository state."
-    ),
-    renderMetricGrid(versionMetrics(state)),
+      currentView: "versions",
+      title: "Repository history",
+      description: "Review snapshots and diffs here before restoring any repository state.",
+      action: publicHref
+        ? h(
+            "a",
+            {
+              href: publicHref,
+              class: "pm-project-link"
+            },
+            "Open page"
+          )
+        : null
+    }),
     h("section", { class: "pm-card pm-stack" }, [
       renderSectionHeader(
         "Snapshot history",
@@ -301,14 +290,10 @@ function renderVersionsView(
       renderVersionsBody(state)
     ]),
     renderVersionsWriteActions({
-      adminToken,
       selectedVersionId: state.selectedVersionId.value,
       composeOpen: state.composeOpen.value,
       message: state.message.value,
       isBusy: state.isBusy.value,
-      setAdminToken: (value) => {
-        setAdminToken(value);
-      },
       setMessage: (value) => {
         state.message.value = value;
       },
@@ -332,6 +317,7 @@ export const ProjectVersionsView = defineComponent({
     const context = useProjectContextStore();
     const projectSlug = computed(() => String(route.params.slug ?? ""));
     const adminToken = computed(() => context.adminToken.trim());
+    const publicHref = computed(() => runtimeHrefForSlug(context.projects, projectSlug.value));
     const state = createVersionsState(projectSlug, adminToken);
 
     onMounted(() => {
@@ -341,9 +327,6 @@ export const ProjectVersionsView = defineComponent({
       void state.loadVersions(slug);
     });
 
-    return () =>
-      renderVersionsView(projectSlug.value, context.adminToken, (value) => {
-        context.setAdminToken(value);
-      }, state);
+    return () => renderVersionsView(projectSlug.value, state, publicHref.value);
   }
 });
