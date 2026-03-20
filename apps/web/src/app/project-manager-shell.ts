@@ -1,6 +1,7 @@
 import { computed, defineComponent, h, onMounted, ref, type Ref, type VNode } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 import { useProjectContextStore } from "./project-context-store.ts";
+import { GatewayProjectApiClient } from "../gateway-api.ts";
 
 export { PROJECT_MANAGER_SHELL_STYLES } from "./project-manager-shell-styles.ts";
 
@@ -39,14 +40,16 @@ function renderTopbar(
 interface AccessPanelOptions {
   isAdminMode: boolean;
   tokenDraft: Ref<string>;
+  errorMessage: string | null;
+  isSubmitting: boolean;
   onCancel: () => void;
   onContinue: () => void;
   onExitAdminMode: () => void;
 }
 
 function renderAccessPanel(options: AccessPanelOptions): VNode {
-  return h("section", { class: "pm-access-panel" }, [
-    h("div", { class: "pm-access-panel-inner" }, [
+  return h("div", { class: "pm-modal-backdrop" }, [
+    h("section", { class: "pm-access-modal pm-card", role: "dialog", "aria-modal": "true" }, [
       h("div", { class: "pm-page-copy" }, [
         h("p", { class: "pm-kicker" }, "Admin access"),
         h("h2", { class: "pm-page-title" }, options.isAdminMode ? "Update admin token" : "Enter admin token"),
@@ -56,7 +59,14 @@ function renderAccessPanel(options: AccessPanelOptions): VNode {
           "Visitors stay on the project directory. Enter a valid admin token to open repository management routes."
         )
       ]),
-      h("div", { class: "pm-access-form" }, [
+      options.errorMessage === null ? null : h("p", { class: "pm-error" }, options.errorMessage),
+      h("form", {
+        class: "pm-access-form",
+        onSubmit: (event: Event) => {
+          event.preventDefault();
+          options.onContinue();
+        }
+      }, [
         h("label", { class: "pm-field pm-field-full" }, [
           h("span", "Admin token"),
           h("input", {
@@ -64,6 +74,7 @@ function renderAccessPanel(options: AccessPanelOptions): VNode {
             type: "password",
             value: options.tokenDraft.value,
             placeholder: "Paste bearer token",
+            disabled: options.isSubmitting,
             onInput: (event: Event) => {
               options.tokenDraft.value = (event.target as HTMLInputElement).value;
             }
@@ -76,6 +87,7 @@ function renderAccessPanel(options: AccessPanelOptions): VNode {
                 {
                   type: "button",
                   class: "pm-button pm-button-ghost",
+                  disabled: options.isSubmitting,
                   onClick: () => {
                     options.onExitAdminMode();
                   }
@@ -88,6 +100,7 @@ function renderAccessPanel(options: AccessPanelOptions): VNode {
             {
               type: "button",
               class: "pm-button pm-button-ghost",
+              disabled: options.isSubmitting,
               onClick: () => {
                 options.onCancel();
               }
@@ -97,13 +110,11 @@ function renderAccessPanel(options: AccessPanelOptions): VNode {
           h(
             "button",
             {
-              type: "button",
+              type: "submit",
               class: "pm-button",
-              onClick: () => {
-                options.onContinue();
-              }
+              disabled: options.isSubmitting
             },
-            "Continue"
+            options.isSubmitting ? "Checking..." : "Continue"
           )
         ])
       ])
@@ -116,8 +127,11 @@ export const ProjectManagerShell = defineComponent({
   setup() {
     const route = useRoute();
     const context = useProjectContextStore();
+    const gatewayClient = new GatewayProjectApiClient();
     const accessPanelOpen = ref(false);
     const tokenDraft = ref("");
+    const accessError = ref<string | null>(null);
+    const accessSubmitting = ref(false);
     const isAdminMode = computed(() => context.adminToken.trim().length > 0);
 
     function syncTokenDraft() {
@@ -126,10 +140,12 @@ export const ProjectManagerShell = defineComponent({
 
     function openAccessPanel() {
       syncTokenDraft();
+      accessError.value = null;
       accessPanelOpen.value = true;
     }
 
     function closeAccessPanel() {
+      accessError.value = null;
       accessPanelOpen.value = false;
     }
 
@@ -141,9 +157,24 @@ export const ProjectManagerShell = defineComponent({
       openAccessPanel();
     }
 
-    function saveAdminToken() {
-      context.setAdminToken(tokenDraft.value.trim());
-      closeAccessPanel();
+    async function saveAdminToken() {
+      const nextToken = tokenDraft.value.trim();
+      if (nextToken.length === 0) {
+        accessError.value = "Admin token is required.";
+        return;
+      }
+
+      accessSubmitting.value = true;
+      accessError.value = null;
+      try {
+        await gatewayClient.verifyAdminSession(nextToken);
+        context.setAdminToken(nextToken);
+        closeAccessPanel();
+      } catch (error) {
+        accessError.value = error instanceof Error ? error.message : "Unable to verify admin token.";
+      } finally {
+        accessSubmitting.value = false;
+      }
     }
 
     function clearAdminToken() {
@@ -166,8 +197,12 @@ export const ProjectManagerShell = defineComponent({
           ? renderAccessPanel({
               isAdminMode: isAdminMode.value,
               tokenDraft,
+              errorMessage: accessError.value,
+              isSubmitting: accessSubmitting.value,
               onCancel: closeAccessPanel,
-              onContinue: saveAdminToken,
+              onContinue: () => {
+                void saveAdminToken();
+              },
               onExitAdminMode: clearAdminToken
             })
           : null,

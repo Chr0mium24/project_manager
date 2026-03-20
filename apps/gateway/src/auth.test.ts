@@ -64,3 +64,25 @@ void test("createGatewayApp rejects protected writes when auth is not configured
   });
   await app.close();
 });
+
+void test("createGatewayApp verifies admin session tokens through the protected auth endpoint", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir, { adminToken: TEST_ADMIN_TOKEN });
+
+  const unauthorized = await app.inject({
+    method: "POST",
+    url: "/api/admin/session"
+  });
+  const authorized = await app.inject({
+    method: "POST",
+    url: "/api/admin/session",
+    headers: authHeaders()
+  });
+
+  assert.equal(unauthorized.statusCode, 401);
+  assert.deepEqual(authorized.json(), {
+    ok: true
+  });
+  await app.close();
+});

@@ -6,12 +6,14 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import { z } from "zod";
 import { createAiTaskQueue, type CodexExecutor } from "@project-manager/ai-core";
 import { sendAiTaskApi, type GatewayAiOptions } from "./ai-api.ts";
+import { sendAdminApi } from "./admin-api.ts";
 import {
   sendAdminAuthRejection,
   resolveGatewayAuthConfig,
   type GatewayAuthConfig,
   type GatewayAuthOptions
 } from "./auth.ts";
+import { isControlApiPath, isPlatformUiPath } from "./gateway-paths.ts";
 import { executeDynamicRuntimeRequest, normalizeRuntimeQuery } from "./runtime-api.ts";
 import { sendManagedTaskApi } from "./managed-task-api.ts";
 import { sendManagedTaskQueryApi } from "./managed-task-query-api.ts";
@@ -105,15 +107,6 @@ function findBestManagedRoute(pathname: string, routes: RouteRecord[]): RouteRec
   return matches[0] ?? null;
 }
 
-function isPlatformUiPath(pathname: string): boolean {
-  return pathname === "/" || pathname === "/projects"
-    || pathname.startsWith("/projects/") || pathname.startsWith("/assets/");
-}
-
-function isControlApiPath(pathname: string): boolean {
-  return pathname.startsWith("/api/projects") || pathname.startsWith("/api/ai") || pathname.startsWith("/api/publish");
-}
-
 export function resolveGatewayRequest(rootDir: string, pathname: string): GatewayResolution {
   if (pathname === "/healthz") {
     return {
@@ -199,6 +192,10 @@ function sendControlApiRoutes(
   }
 
   if (sendManagedTaskApi(rootDir, pathname, request, reply)) {
+    return true;
+  }
+
+  if (sendAdminApi(pathname, request.method, reply)) {
     return true;
   }
 

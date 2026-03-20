@@ -57,18 +57,21 @@ button { color: inherit; }
   align-items: center;
   gap: 12px;
 }
-.pm-access-panel {
-  width: min(1360px, calc(100% - 32px));
-  margin: 16px auto 0;
+.pm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.28);
 }
-.pm-access-panel-inner {
-  border: 1px solid var(--pm-line);
-  border-radius: var(--pm-radius);
-  background: var(--pm-panel);
-  box-shadow: var(--pm-shadow);
-  padding: 20px;
+.pm-access-modal {
+  width: min(520px, 100%);
+  padding: 24px;
   display: grid;
   gap: 16px;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
 }
 .pm-access-form {
   display: grid;
@@ -267,10 +270,15 @@ button { color: inherit; }
     flex-direction: column;
   }
   .pm-topbar-inner,
-  .pm-access-panel,
   .pm-layout,
   .pm-layout-home {
     width: min(100% - 20px, 1360px);
+  }
+  .pm-modal-backdrop {
+    padding: 16px;
+  }
+  .pm-access-modal {
+    padding: 20px;
   }
 }
 `;

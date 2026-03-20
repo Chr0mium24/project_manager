@@ -39,6 +39,7 @@ export function requiresAdminAuth(pathname: string, method: string): boolean {
   }
 
   return pathname.startsWith("/api/projects")
+    || pathname.startsWith("/api/admin")
     || pathname.startsWith("/api/publish")
     || pathname.startsWith("/api/ai");
 }

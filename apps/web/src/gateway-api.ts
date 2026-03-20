@@ -59,6 +59,7 @@ export interface ProjectVersionDiff {
 
 interface GatewayApiClientOptions {
   baseUrl?: string;
+  adminToken?: string;
   fetch?: typeof fetch;
 }
 
@@ -205,10 +206,12 @@ function parseProjectVersionDiff(value: unknown): ProjectVersionDiff {
 
 export class GatewayProjectApiClient {
   private readonly baseUrl: string;
+  private readonly adminToken: string | null;
   private readonly fetchImpl: typeof fetch;
 
   public constructor(options: GatewayApiClientOptions = {}) {
     this.baseUrl = options.baseUrl ?? "";
+    this.adminToken = options.adminToken?.trim() || null;
     this.fetchImpl = resolveFetch(options.fetch);
   }
 
@@ -286,6 +289,13 @@ export class GatewayProjectApiClient {
     return parseProjectVersionRecord(payload.restoredVersion);
   }
 
+  public async verifyAdminSession(adminToken: string = this.requireAdminToken()): Promise<void> {
+    await this.requestJson("/api/admin/session", {
+      method: "POST",
+      headers: this.requestHeaders(adminToken)
+    });
+  }
+
   private async requestJson(pathname: string, init: RequestInit = {}): Promise<unknown> {
     const response = await this.fetchImpl(this.resolveUrl(pathname), init);
     const payload: unknown = await response.json();
@@ -300,6 +310,14 @@ export class GatewayProjectApiClient {
       authorization: `Bearer ${adminToken}`,
       "content-type": "application/json"
     };
+  }
+
+  private requireAdminToken(): string {
+    if (this.adminToken === null) {
+      throw new Error("admin token is required");
+    }
+
+    return this.adminToken;
   }
 
   private resolveUrl(pathname: string): string {

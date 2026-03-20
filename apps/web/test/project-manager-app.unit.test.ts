@@ -67,6 +67,13 @@ describe("project manager app", () => {
     expect(wrapper.text()).toContain("Admin access");
   });
 
+  it("renders admin access as a modal", async () => {
+    const { wrapper } = await createMountedShell("/projects");
+    await wrapper.get("button.pm-project-link").trigger("click");
+    expect(wrapper.html()).toContain("pm-modal-backdrop");
+    expect(wrapper.text()).toContain("Admin access");
+  });
+
   it("uses overview as a workflow hand-off route", async () => {
     const { wrapper } = await createMountedShell("/projects/landing-a", "test-admin-token");
     await wrapper.vm.$nextTick();

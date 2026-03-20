@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AiTaskApiClient } from "../src/ai-task-api.ts";
 import { GatewayProjectApiClient } from "../src/gateway-api.ts";
 
@@ -60,6 +60,25 @@ describe("browser api clients", () => {
       slug: "landing-a",
       path: "projects/landing-a",
       route: "/p/landing-a"
+    });
+  });
+
+  it("verifies an admin session with bearer auth", async () => {
+    let capturedInit: RequestInit | undefined;
+    const fetchSpy: typeof fetch = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => {
+      capturedInit = _init;
+      return Promise.resolve(Response.json({ ok: true }));
+    }) as typeof fetch;
+    const client = new GatewayProjectApiClient({
+      adminToken: "secret-token",
+      fetch: fetchSpy
+    });
+
+    await expect(client.verifyAdminSession()).resolves.toBeUndefined();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(capturedInit?.method).toBe("POST");
+    expect(capturedInit?.headers).toMatchObject({
+      authorization: "Bearer secret-token"
     });
   });
 });
