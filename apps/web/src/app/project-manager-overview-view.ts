@@ -1,44 +1,9 @@
 import { computed, defineComponent, h, onMounted, ref, watch } from "vue";
-import { RouterLink, useRoute } from "vue-router";
+import { useRoute } from "vue-router";
 import { GatewayProjectApiClient, type ManagedProjectRecord } from "../gateway-api.ts";
 import { renderPageHeader, renderSectionTitle, renderStatusMessage } from "./project-manager-view-shared.ts";
 
 const client = new GatewayProjectApiClient();
-
-function renderRouteLinks(projectSlug: string) {
-  const links = [
-    {
-      path: "workspace",
-      title: "Workspace",
-      copy: "Open this route when you need to edit source files and save them back."
-    },
-    {
-      path: "versions",
-      title: "Versions",
-      copy: "Open this route when you need to checkpoint, compare, or restore history."
-    },
-    {
-      path: "ai",
-      title: "AI Tasks",
-      copy: "Open this route when you need to enqueue prompts, inspect output, or apply changes."
-    }
-  ];
-
-  return h(
-    "div",
-    { class: "pm-flow-grid" },
-    links.map((link) =>
-      h(
-        RouterLink,
-        {
-          to: `/projects/${projectSlug}/${link.path}`,
-          class: "pm-flow-card"
-        },
-        () => [h("strong", link.title), h("p", { class: "pm-copy" }, link.copy)]
-      )
-    )
-  );
-}
 
 function renderIdentityCard(project: ManagedProjectRecord) {
   return h("section", { class: "pm-card pm-stack" }, [
@@ -100,18 +65,7 @@ export const ProjectOverviewView = defineComponent({
                 ? renderStatusMessage("Loading project summary...")
                 : renderStatusMessage(error.value ?? "No project selected.", error.value ? "error" : "neutral")
             ])
-          : h("div", { class: "pm-view" }, [
-              renderIdentityCard(project.value),
-              h("section", { class: "pm-card pm-stack" }, [
-                renderSectionTitle("Choose a workflow"),
-                h(
-                  "p",
-                  { class: "pm-copy" },
-                  "Overview does not edit files, checkpoint history, or run AI. It only hands you into the route that owns that job."
-                ),
-                renderRouteLinks(projectSlug.value)
-              ])
-            ])
+          : h("div", { class: "pm-view" }, [renderIdentityCard(project.value)])
       ]);
   }
 });
