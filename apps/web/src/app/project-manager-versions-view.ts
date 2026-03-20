@@ -7,9 +7,9 @@ import {
   renderPageHeader,
   renderMetricGrid,
   renderSectionHeader,
-  renderStatusMessage,
-  renderWriteAccessCard
+  renderStatusMessage
 } from "./project-manager-view-shared.ts";
+import { renderVersionsWriteActions } from "./project-manager-versions-write-actions.ts";
 
 const client = new GatewayProjectApiClient();
 
@@ -188,37 +188,6 @@ function createVersionsState(projectSlug: ComputedRef<string>, adminToken: Compu
     restoreSelectedVersion: mutations.restoreSelectedVersion
   };
 }
-function renderVersionsComposer(state: VersionsState): VNode | null {
-  if (!state.composeOpen.value) {
-    return null;
-  }
-  return h("div", { class: "pm-form-grid" }, [
-    h("label", { class: "pm-field" }, [
-      h("span", "Snapshot message"),
-      h("input", {
-        class: "pm-input",
-        value: state.message.value,
-        onInput: (event: Event) => {
-          state.message.value = (event.target as HTMLInputElement).value;
-        }
-      })
-    ]),
-    h("div", { class: "pm-actions pm-actions-end" }, [
-      h(
-        "button",
-        {
-          type: "button",
-          class: "pm-button",
-          disabled: state.isBusy.value,
-          onClick: () => {
-            void state.createVersion();
-          }
-        },
-        state.isBusy.value ? "Saving..." : "Create Snapshot"
-      )
-    ])
-  ]);
-}
 function renderVersionsBody(state: VersionsState): VNode {
   if (state.isLoading.value) {
     return renderStatusMessage("Loading snapshots...");
@@ -286,21 +255,7 @@ function renderVersionDetail(state: VersionsState): VNode {
           : state.diff.value.changes.map((change) =>
               h("li", { class: "pm-focus-item" }, `${change.kind} · ${change.path}`)
             )
-      ),
-      h("div", { class: "pm-actions pm-actions-end" }, [
-        h(
-          "button",
-          {
-            type: "button",
-            class: "pm-button pm-button-ghost",
-            disabled: state.isBusy.value,
-            onClick: () => {
-              void state.restoreSelectedVersion();
-            }
-          },
-          state.isBusy.value ? "Restoring..." : "Restore Selected"
-        )
-      ])
+      )
     ])
   ]);
 }
@@ -339,31 +294,34 @@ function renderVersionsView(
     h("section", { class: "pm-card pm-stack" }, [
       renderMetricGrid(versionMetrics(state)),
       renderSectionHeader(
-        "Snapshots",
-        "Review history and diff here. Open the composer only when you need a new checkpoint.",
-        h(
-          "button",
-          {
-            type: "button",
-            class: "pm-button pm-button-ghost",
-            onClick: () => {
-              state.composeOpen.value = !state.composeOpen.value;
-            }
-          },
-          state.composeOpen.value ? "Hide Composer" : "New Snapshot"
-        )
+        "Snapshot history",
+        "Review versions and diffs here first. Write actions stay in their own section below."
       ),
-      renderWriteAccessCard(
-        adminToken,
-        (value) => {
-          setAdminToken(value);
-        },
-        "Required only for creating snapshots and restoring a selected version."
-      ),
-      renderVersionsComposer(state),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderVersionsBody(state)
-    ])
+    ]),
+    renderVersionsWriteActions({
+        adminToken,
+        selectedVersionId: state.selectedVersionId.value,
+        composeOpen: state.composeOpen.value,
+        message: state.message.value,
+        isBusy: state.isBusy.value,
+        setAdminToken: (value) => {
+          setAdminToken(value);
+        },
+        setMessage: (value) => {
+          state.message.value = value;
+        },
+        toggleComposer: () => {
+          state.composeOpen.value = !state.composeOpen.value;
+        },
+        createVersion: () => {
+          void state.createVersion();
+        },
+        restoreSelectedVersion: () => {
+          void state.restoreSelectedVersion();
+        }
+      })
   ]);
 }
 

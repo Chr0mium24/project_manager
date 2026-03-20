@@ -5,23 +5,6 @@ import { renderPageHeader, renderSectionTitle, renderStatusMessage } from "./pro
 
 const client = new GatewayProjectApiClient();
 
-function renderMetaList(project: ManagedProjectRecord) {
-  const items = [
-    ["Runtime", project.runtime],
-    ["Route", project.route],
-    ["Entry", project.entry],
-    ["Framework", project.framework],
-    ["Language", project.mainLanguage],
-    ["Owner", project.owner]
-  ];
-
-  return h(
-    "dl",
-    { class: "pm-meta-list" },
-    items.flatMap(([label, value]) => [h("dt", label), h("dd", value)])
-  );
-}
-
 function renderRouteLinks(projectSlug: string) {
   const links = [
     {
@@ -67,13 +50,6 @@ function renderIdentityCard(project: ManagedProjectRecord) {
       h("div", { class: "pm-stat-card" }, [h("strong", project.route), h("small", "Public route")]),
       h("div", { class: "pm-stat-card" }, [h("strong", project.entry), h("small", "Entry file")])
     ])
-  ]);
-}
-
-function renderFactsCard(project: ManagedProjectRecord) {
-  return h("section", { class: "pm-card pm-stack" }, [
-    renderSectionTitle("Project facts"),
-    renderMetaList(project)
   ]);
 }
 
@@ -134,8 +110,7 @@ export const ProjectOverviewView = defineComponent({
                   "Overview does not edit files, checkpoint history, or run AI. It only hands you into the route that owns that job."
                 ),
                 renderRouteLinks(projectSlug.value)
-              ]),
-              renderFactsCard(project.value)
+              ])
             ])
       ]);
   }

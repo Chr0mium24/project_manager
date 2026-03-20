@@ -2,7 +2,8 @@ import { computed, defineComponent, h, onMounted, ref, watch, type ComputedRef, 
 import { useRoute } from "vue-router";
 import { AiTaskApiClient, type AiTaskRecord, type ManagedTaskSummary } from "../ai-task-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
-import { renderPageHeader, renderStatusMessage, renderWriteAccessCard } from "./project-manager-view-shared.ts";
+import { renderPageHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
+import { renderAiWriteActions } from "./project-manager-ai-write-actions.ts";
 interface AiState {
   tasks: Ref<AiTaskRecord[]>;
   selectedTask: Ref<AiTaskRecord | null>;
@@ -201,53 +202,13 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     reset
   };
 }
-function renderAiComposer(state: AiState): VNode | null {
-  if (!state.composeOpen.value) {
-    return null;
-  }
-  return h("div", { class: "pm-form-grid" }, [
-    h("label", { class: "pm-field" }, [
-      h("span", "Task slug"),
-      h("input", {
-        class: "pm-input",
-        value: state.taskSlug.value,
-        onInput: (event: Event) => {
-          state.taskSlug.value = (event.target as HTMLInputElement).value;
-        }
-      })
-    ]),
-    h("label", { class: "pm-field pm-field-full" }, [
-      h("span", "Prompt"),
-      h("textarea", {
-        class: "pm-textarea",
-        value: state.prompt.value,
-        onInput: (event: Event) => {
-          state.prompt.value = (event.target as HTMLTextAreaElement).value;
-        }
-      })
-    ]),
-    h("div", { class: "pm-actions pm-actions-end" }, [
-      h(
-        "button",
-        {
-          type: "button",
-          class: "pm-button",
-          disabled: state.isBusy.value,
-          onClick: () => {
-            void state.createTask();
-          }
-        },
-        state.isBusy.value ? "Running..." : "Enqueue Task"
-      )
-    ])
-  ]);
-}
 function renderAiBody(state: AiState): VNode {
   return h("div", { class: "pm-version-grid" }, [
     renderAiTaskList(state),
     renderAiTaskSummary(state)
   ]);
 }
+
 function renderAiTaskList(state: AiState): VNode {
   return h("aside", { class: "pm-card pm-subcard" }, [
     state.tasks.value.length === 0
@@ -289,21 +250,7 @@ function renderAiTaskSummary(state: AiState): VNode {
       state.selectedTask.value.appliedAt
         ? h("p", { class: "pm-copy" }, `Applied at ${state.selectedTask.value.appliedAt}`)
         : null,
-      renderAiTaskChanges(state),
-      h("div", { class: "pm-actions pm-actions-end" }, [
-        h(
-          "button",
-          {
-            type: "button",
-            class: "pm-button pm-button-ghost",
-            disabled: state.isBusy.value || state.selectedTask.value.status !== "completed",
-            onClick: () => {
-              void state.applySelectedTask();
-            }
-          },
-          state.isBusy.value ? "Applying..." : "Apply Selected"
-        )
-      ])
+      renderAiTaskChanges(state)
     ])
   ]);
 }
@@ -335,34 +282,39 @@ function renderAiView(
       "This route owns AI task creation, task review, and apply. It should not also act as the file editor or version browser."
     ),
     h("section", { class: "pm-card pm-stack" }, [
-      h("div", { class: "pm-card-head" }, [
-        h("div", { class: "pm-page-copy" }, [
-          h("h3", { class: "pm-section-title" }, "AI Tasks"),
-          h("p", { class: "pm-copy" }, "Inspect the queue here. Open the composer only when you need a new prompt.")
-        ]),
-        h(
-          "button",
-          {
-            type: "button",
-            class: "pm-button pm-button-ghost",
-            onClick: () => {
-              state.composeOpen.value = !state.composeOpen.value;
-            }
-          },
-          state.composeOpen.value ? "Hide Composer" : "New Task"
-        )
+      h("div", { class: "pm-page-copy" }, [
+        h("h3", { class: "pm-section-title" }, "AI task queue"),
+        h("p", { class: "pm-copy" }, "Inspect queued and completed tasks here first. Write actions stay in their own section below.")
       ]),
-      renderWriteAccessCard(
-        adminToken,
-        (value) => {
-          setAdminToken(value);
-        },
-        "Required only for AI task creation and apply on this route."
-      ),
-      renderAiComposer(state),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderAiBody(state)
-    ])
+    ]),
+    renderAiWriteActions({
+      adminToken,
+      composeOpen: state.composeOpen.value,
+      taskSlug: state.taskSlug.value,
+      prompt: state.prompt.value,
+      isBusy: state.isBusy.value,
+      canApplySelectedTask: state.selectedTask.value?.status === "completed",
+      setAdminToken: (value) => {
+        setAdminToken(value);
+      },
+      setTaskSlug: (value) => {
+        state.taskSlug.value = value;
+      },
+      setPrompt: (value) => {
+        state.prompt.value = value;
+      },
+      toggleComposer: () => {
+        state.composeOpen.value = !state.composeOpen.value;
+      },
+      createTask: () => {
+        void state.createTask();
+      },
+      applySelectedTask: () => {
+        void state.applySelectedTask();
+      }
+    })
   ]);
 }
 export const ProjectAiTasksView = defineComponent({

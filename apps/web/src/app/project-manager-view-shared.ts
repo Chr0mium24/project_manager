@@ -79,12 +79,12 @@ export function renderStatusMessage(message: string, tone: "error" | "neutral" =
   return h("p", { class: ["pm-copy", tone === "error" ? "pm-error" : "pm-muted-block"] }, message);
 }
 
-export function renderWriteAccessCard(
+export function renderWriteAccessFields(
   adminToken: string,
   onInput: (value: string) => void,
   purpose: string
 ): VNode {
-  return h("section", { class: "pm-card pm-subcard pm-stack" }, [
+  return h("div", { class: "pm-stack" }, [
     h("div", { class: "pm-page-copy" }, [
       renderSectionTitle("Write Access"),
       h("p", { class: "pm-copy" }, purpose)
@@ -101,4 +101,12 @@ export function renderWriteAccessCard(
       })
     ])
   ]);
+}
+
+export function renderWriteAccessCard(
+  adminToken: string,
+  onInput: (value: string) => void,
+  purpose: string
+): VNode {
+  return h("section", { class: "pm-card pm-subcard" }, [renderWriteAccessFields(adminToken, onInput, purpose)]);
 }
