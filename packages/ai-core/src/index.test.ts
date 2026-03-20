@@ -7,6 +7,7 @@ import {
   createAiTask,
   listAiTasks,
   readAiTask,
+  readAiTaskDiagnostics,
   readAiTaskSummary,
   runAiTask
 } from "./index.ts";
@@ -35,7 +36,8 @@ void test("runAiTask completes a queued ai task and records artifacts", async ()
         exitCode: 0,
         stdout: "{\"status\":\"ok\"}\n",
         stderr: "",
-        error: null
+        error: null,
+        sessionId: "session-1"
       };
     }
   });
@@ -47,6 +49,7 @@ void test("runAiTask completes a queued ai task and records artifacts", async ()
   assert.notEqual(completedTask.validationPath, null);
   assert.notEqual(completedTask.stdoutPath, null);
   assert.notEqual(completedTask.completedAt, null);
+  assert.equal(completedTask.sessionId, "session-1");
   assert.notEqual(persistedTask, null);
   assert.equal(listAiTasks(rootDir).length, 1);
 });
@@ -68,7 +71,8 @@ void test("runAiTask records failed codex executions", async () => {
       exitCode: 1,
       stdout: "",
       stderr: "failed\n",
-      error: null
+      error: null,
+      sessionId: "session-2"
     })
   });
 
@@ -98,14 +102,15 @@ void test("readAiTaskSummary returns the managed task summary for a completed ai
         "<!doctype html>\n<html><body><h1>Summary Updated</h1></body></html>\n",
         "utf8"
       );
-      return {
-        exitCode: 0,
-        stdout: "{\"status\":\"ok\"}\n",
-        stderr: "",
-        error: null
-      };
-    }
-  });
+        return {
+          exitCode: 0,
+          stdout: "{\"status\":\"ok\"}\n",
+          stderr: "",
+          error: null,
+          sessionId: "session-3"
+        };
+      }
+    });
 
   const summary = readAiTaskSummary(rootDir, task.taskId);
 
@@ -132,14 +137,15 @@ void test("applyAiTask applies a completed ai task back to the managed project",
         "<!doctype html>\n<html><body><h1>Applied Updated</h1></body></html>\n",
         "utf8"
       );
-      return {
-        exitCode: 0,
-        stdout: "{\"status\":\"ok\"}\n",
-        stderr: "",
-        error: null
-      };
-    }
-  });
+        return {
+          exitCode: 0,
+          stdout: "{\"status\":\"ok\"}\n",
+          stderr: "",
+          error: null,
+          sessionId: "session-4"
+        };
+      }
+    });
 
   const result = applyAiTask(rootDir, task.taskId);
   const updatedProject = fs.readFileSync(
@@ -152,4 +158,80 @@ void test("applyAiTask applies a completed ai task back to the managed project",
   assert.match(updatedProject, /Applied Updated/);
   assert.notEqual(persistedTask, null);
   assert.notEqual(persistedTask.appliedAt, null);
+});
+
+void test("readAiTaskDiagnostics returns stdout, stderr, and session metadata", async () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const task = createAiTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "diagnostics-copy",
+    prompt: "Update the landing page heading."
+  });
+
+  await runAiTask(rootDir, task.taskId, {
+    executor: ({ cwd }) => {
+      fs.writeFileSync(
+        path.join(cwd, "src", "index.html"),
+        "<!doctype html>\n<html><body><h1>Diagnostics Updated</h1></body></html>\n",
+        "utf8"
+      );
+      return {
+        exitCode: 0,
+        stdout: "{\"type\":\"thread.started\",\"thread_id\":\"session-5\"}\n",
+        stderr: "trace\n",
+        error: null,
+        sessionId: "session-5"
+      };
+    }
+  });
+
+  const diagnostics = readAiTaskDiagnostics(rootDir, task.taskId);
+
+  assert.equal(diagnostics.sessionId, "session-5");
+  assert.match(diagnostics.stdout, /thread.started/);
+  assert.equal(diagnostics.stderr, "trace\n");
+});
+
+void test("createAiTask can continue from a previous task workspace", async () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const initialTask = createAiTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "first-pass",
+    prompt: "Update the landing page heading."
+  });
+  await runAiTask(rootDir, initialTask.taskId, {
+    executor: ({ cwd }) => {
+      fs.writeFileSync(
+        path.join(cwd, "src", "index.html"),
+        "<!doctype html>\n<html><body><h1>First Pass</h1></body></html>\n",
+        "utf8"
+      );
+      return {
+        exitCode: 0,
+        stdout: "{\"status\":\"ok\"}\n",
+        stderr: "",
+        error: null,
+        sessionId: "session-6"
+      };
+    }
+  });
+
+  const followUpTask = createAiTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "second-pass",
+    prompt: "Add a paragraph under the heading.",
+    parentTaskId: initialTask.taskId
+  });
+  const seededWorkspace = fs.readFileSync(
+    path.join(rootDir, followUpTask.workspaceProjectPath, "src", "index.html"),
+    "utf8"
+  );
+
+  assert.equal(followUpTask.parentTaskId, initialTask.taskId);
+  assert.equal(followUpTask.sessionId, "session-6");
+  assert.match(seededWorkspace, /First Pass/);
 });

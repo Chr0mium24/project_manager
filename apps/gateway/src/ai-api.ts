@@ -3,7 +3,9 @@ import {
   createAiTask,
   listAiTasks,
   readAiTask,
+  readAiTaskDiagnostics,
   readAiTaskSummary,
+  type AiTaskDiagnostics,
   type AiTaskRecord,
   type CodexExecutor
 } from "@project-manager/ai-core";
@@ -28,6 +30,7 @@ interface CreateAiTaskBody {
   taskSlug?: string;
   prompt?: string;
   force?: boolean;
+  parentTaskId?: string;
 }
 
 interface AiTaskPayload {
@@ -42,17 +45,71 @@ interface AiTaskSummaryPayload {
   summary: ManagedTaskSummary;
 }
 
+interface AiTaskDiagnosticsPayload {
+  diagnostics: AiTaskDiagnostics;
+}
+
 interface AiTaskApplyPayload {
   task: AiTaskRecord;
   result: ManagedTaskApplyResult;
+}
+
+interface CreateErrorMatch {
+  code: string;
+  prefix: string;
+  statusCode: 404 | 409;
 }
 
 const createAiTaskBodySchema = z.object({
   projectSlug: z.string().min(1),
   taskSlug: z.string().min(1),
   prompt: z.string().min(1),
-  force: z.boolean().optional()
+  force: z.boolean().optional(),
+  parentTaskId: z.string().min(1).optional()
 }).strict();
+
+const createErrorMatches: CreateErrorMatch[] = [
+  { code: "project-not-found", prefix: "managed project not found:", statusCode: 404 },
+  { code: "managed-task-already-exists", prefix: "managed task already exists:", statusCode: 409 },
+  { code: "parent-ai-task-project-mismatch", prefix: "parent ai task project mismatch:", statusCode: 409 },
+  { code: "parent-ai-task-not-ready", prefix: "parent ai task is not ready to continue:", statusCode: 409 },
+  { code: "parent-ai-task-workspace-not-found", prefix: "parent ai task workspace not found:", statusCode: 409 },
+  { code: "parent-ai-task-not-found", prefix: "ai task not found:", statusCode: 404 }
+];
+
+function sendAiTaskCreateError(
+  reply: FastifyReply,
+  error: Error,
+  body: z.infer<typeof createAiTaskBodySchema>
+): boolean {
+  const matchedError = createErrorMatches.find((match) => error.message.startsWith(match.prefix));
+  if (!matchedError) {
+    return false;
+  }
+
+  if (matchedError.code === "project-not-found") {
+    void reply.code(matchedError.statusCode).send({
+      error: matchedError.code,
+      slug: body.projectSlug
+    });
+    return true;
+  }
+
+  if (matchedError.code === "managed-task-already-exists") {
+    void reply.code(matchedError.statusCode).send({
+      error: matchedError.code,
+      slug: body.projectSlug,
+      taskSlug: body.taskSlug
+    });
+    return true;
+  }
+
+  void reply.code(matchedError.statusCode).send({
+    error: matchedError.code,
+    taskId: body.parentTaskId ?? null
+  });
+  return true;
+}
 
 function sendAiTaskList(rootDir: string, pathname: string, reply: FastifyReply): boolean {
   if (pathname !== "/api/ai/tasks") {
@@ -112,6 +169,35 @@ function sendAiTaskSummary(rootDir: string, pathname: string, reply: FastifyRepl
       throw error;
     }
 
+    if (error.message.startsWith("ai task not found:")) {
+      void reply.code(404).send({
+        error: "ai-task-not-found",
+        taskId
+      });
+      return true;
+    }
+
+    throw error;
+  }
+}
+
+function sendAiTaskDiagnostics(rootDir: string, pathname: string, reply: FastifyReply): boolean {
+  const taskMatch = pathname.match(/^\/api\/ai\/tasks\/([a-z0-9-]+)\/diagnostics$/);
+  if (!taskMatch) {
+    return false;
+  }
+
+  const taskId = taskMatch[1] ?? "";
+  try {
+    const payload: AiTaskDiagnosticsPayload = {
+      diagnostics: readAiTaskDiagnostics(rootDir, taskId)
+    };
+    void reply.code(200).send(payload);
+    return true;
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
     if (error.message.startsWith("ai task not found:")) {
       void reply.code(404).send({
         error: "ai-task-not-found",
@@ -197,21 +283,7 @@ function sendAiTaskCreate(
     if (!(error instanceof Error)) {
       throw error;
     }
-
-    if (error.message.startsWith("managed project not found:")) {
-      void reply.code(404).send({
-        error: "project-not-found",
-        slug: parsedBody.data.projectSlug
-      });
-      return true;
-    }
-
-    if (error.message.startsWith("managed task already exists:")) {
-      void reply.code(409).send({
-        error: "managed-task-already-exists",
-        slug: parsedBody.data.projectSlug,
-        taskSlug: parsedBody.data.taskSlug
-      });
+    if (sendAiTaskCreateError(reply, error, parsedBody.data)) {
       return true;
     }
 
@@ -227,6 +299,7 @@ export function sendAiTaskApi(
 ): boolean {
   if (request.method === "GET") {
     return sendAiTaskList(context.rootDir, pathname, reply)
+      || sendAiTaskDiagnostics(context.rootDir, pathname, reply)
       || sendAiTaskSummary(context.rootDir, pathname, reply)
       || sendAiTaskRead(context.rootDir, pathname, reply);
   }

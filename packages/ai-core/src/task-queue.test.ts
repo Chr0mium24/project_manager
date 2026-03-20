@@ -25,7 +25,8 @@ void test("AiTaskQueue enqueues and completes tasks asynchronously", async () =>
         exitCode: 0,
         stdout: "{\"status\":\"ok\"}\n",
         stderr: "",
-        error: null
+        error: null,
+        sessionId: "session-queue"
       };
     }
   });

@@ -245,6 +245,31 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   font-family: "JetBrains Mono", "SFMono-Regular", monospace;
   font-size: 0.8rem;
 }
+.pm-log-block {
+  border: 1px solid var(--pm-line);
+  border-radius: 8px;
+  background: var(--pm-panel-soft);
+}
+.pm-log-summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--pm-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.pm-log-pre {
+  margin: 0;
+  padding: 0 12px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--pm-text);
+}
 @media (max-width: 1040px) {
   .pm-directory-grid,
   .pm-column-grid,

@@ -7,9 +7,12 @@ export interface ProjectAiWriteActionsProps {
   prompt: string;
   isBusy: boolean;
   canApplySelectedTask: boolean;
+  canContinueSelectedTask: boolean;
+  continueTaskLabel: string | null;
   setTaskSlug(value: string): void;
   setPrompt(value: string): void;
-  toggleComposer(): void;
+  openNewTaskComposer(): void;
+  openFollowUpComposer(): void;
   createTask(): void;
   applySelectedTask(): void;
 }
@@ -20,6 +23,9 @@ function renderAiComposer(props: ProjectAiWriteActionsProps): VNode | null {
   }
 
   return h("div", { class: "pm-form-grid" }, [
+    props.continueTaskLabel
+      ? h("p", { class: "pm-muted-block pm-field-full" }, `Continuing ${props.continueTaskLabel}`)
+      : null,
     h("label", { class: "pm-field" }, [
       h("span", "Task slug"),
       h("input", {
@@ -76,11 +82,24 @@ export function renderAiWriteActions(props: ProjectAiWriteActionsProps): VNode {
           type: "button",
           class: "pm-button pm-button-ghost",
           onClick: () => {
-            props.toggleComposer();
+            props.openNewTaskComposer();
           }
         },
-        props.composeOpen ? "Hide task form" : "New task"
-      )
+        props.composeOpen && props.continueTaskLabel === null ? "Hide task form" : "New task"
+      ),
+      props.canContinueSelectedTask
+        ? h(
+            "button",
+            {
+              type: "button",
+              class: "pm-button pm-button-ghost",
+              onClick: () => {
+                props.openFollowUpComposer();
+              }
+            },
+            props.continueTaskLabel === null ? "Follow up selected" : "Editing follow-up"
+          )
+        : null
     ]),
     renderAiComposer(props),
     !props.canApplySelectedTask

@@ -1,7 +1,13 @@
 import { computed, defineComponent, h, onMounted, ref, watch, type ComputedRef, type Ref, type VNode } from "vue";
 import { useRoute } from "vue-router";
-import { AiTaskApiClient, type AiTaskRecord, type ManagedTaskSummary } from "../ai-task-api.ts";
+import {
+  AiTaskApiClient,
+  type AiTaskDiagnostics,
+  type AiTaskRecord,
+  type ManagedTaskSummary
+} from "../ai-task-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
+import { renderAiTaskSummaryPanel } from "./project-manager-ai-task-details.ts";
 import { renderPageHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
 import { runtimeHrefForSlug } from "./project-runtime-link.ts";
 import { renderAiWriteActions } from "./project-manager-ai-write-actions.ts";
@@ -9,15 +15,19 @@ interface AiState {
   tasks: Ref<AiTaskRecord[]>;
   selectedTask: Ref<AiTaskRecord | null>;
   summary: Ref<ManagedTaskSummary | null>;
+  diagnostics: Ref<AiTaskDiagnostics | null>;
   error: Ref<string | null>;
   isBusy: Ref<boolean>;
   composeOpen: Ref<boolean>;
   taskSlug: Ref<string>;
   prompt: Ref<string>;
+  parentTaskId: Ref<string | null>;
   refreshTasks(): Promise<void>;
   selectTask(taskId: string): Promise<void>;
   createTask(): Promise<void>;
   applySelectedTask(): Promise<void>;
+  openNewTaskComposer(): void;
+  openFollowUpComposer(): void;
   reset(): void;
 }
 interface AiQueryContext {
@@ -26,6 +36,7 @@ interface AiQueryContext {
   tasks: Ref<AiTaskRecord[]>;
   selectedTask: Ref<AiTaskRecord | null>;
   summary: Ref<ManagedTaskSummary | null>;
+  diagnostics: Ref<AiTaskDiagnostics | null>;
   error: Ref<string | null>;
 }
 interface AiMutationContext {
@@ -37,6 +48,7 @@ interface AiMutationContext {
   composeOpen: Ref<boolean>;
   taskSlug: Ref<string>;
   prompt: Ref<string>;
+  parentTaskId: Ref<string | null>;
   queries: ReturnType<typeof createAiQueries>;
 }
 function createClient(adminToken: string): AiTaskApiClient {
@@ -52,9 +64,13 @@ function createAiQueries(context: AiQueryContext) {
       return;
     }
     try {
+      context.error.value = null;
+      context.summary.value = null;
+      context.diagnostics.value = null;
       const client = createClient(context.adminToken.value);
       const task = await client.readTask(taskId);
       context.selectedTask.value = task;
+      context.diagnostics.value = await client.readDiagnostics(taskId);
       context.summary.value = task.summaryPath === null ? null : await client.readSummary(taskId);
     } catch (selectError) {
       context.error.value = selectError instanceof Error ? selectError.message : "unknown ai task error";
@@ -65,8 +81,9 @@ function createAiQueries(context: AiQueryContext) {
       const client = createClient(context.adminToken.value);
       const allTasks = await client.listTasks();
       context.tasks.value = allTasks.filter((task) => task.projectSlug === context.projectSlug.value);
-      if (context.tasks.value.length > 0 && context.selectedTask.value === null) {
-        await selectTask(context.tasks.value[0]?.taskId ?? "");
+      const selectedTaskId = context.selectedTask.value?.taskId ?? context.tasks.value[0]?.taskId ?? "";
+      if (selectedTaskId) {
+        await selectTask(selectedTaskId);
       }
     } catch (refreshError) {
       context.error.value = refreshError instanceof Error ? refreshError.message : "unknown ai task error";
@@ -107,16 +124,21 @@ function createAiMutations(context: AiMutationContext) {
     context.error.value = null;
     try {
       const client = createClient(context.adminToken.value);
-      const created = await client.createTask({
+      const input = {
         projectSlug: context.projectSlug.value,
         taskSlug: context.taskSlug.value.trim(),
         prompt: context.prompt.value.trim()
+      };
+      const created = await client.createTask({
+        ...input,
+        ...(context.parentTaskId.value === null ? {} : { parentTaskId: context.parentTaskId.value })
       });
       const settled = await client.waitForTask(created.taskId, {
         pollIntervalMs: 500
       });
       context.taskSlug.value = "";
       context.prompt.value = "";
+      context.parentTaskId.value = null;
       context.composeOpen.value = false;
       await context.queries.refreshTasks();
       await context.queries.selectTask(settled.taskId);
@@ -153,20 +175,36 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
   const tasks = ref<AiTaskRecord[]>([]);
   const selectedTask = ref<AiTaskRecord | null>(null);
   const summary = ref<ManagedTaskSummary | null>(null);
+  const diagnostics = ref<AiTaskDiagnostics | null>(null);
   const error = ref<string | null>(null);
   const isBusy = ref(false);
   const composeOpen = ref(false);
   const taskSlug = ref("");
   const prompt = ref("");
+  const parentTaskId = ref<string | null>(null);
+  function openNewTaskComposer() {
+    const shouldSwitchFromFollowUp = parentTaskId.value !== null;
+    parentTaskId.value = null;
+    composeOpen.value = shouldSwitchFromFollowUp ? true : !composeOpen.value;
+  }
+  function openFollowUpComposer() {
+    if (selectedTask.value === null) {
+      return;
+    }
+    parentTaskId.value = selectedTask.value.taskId;
+    composeOpen.value = true;
+  }
   function reset() {
     tasks.value = [];
     selectedTask.value = null;
     summary.value = null;
+    diagnostics.value = null;
     error.value = null;
     isBusy.value = false;
     composeOpen.value = false;
     taskSlug.value = "";
     prompt.value = "";
+    parentTaskId.value = null;
   }
   const queries = createAiQueries({
     projectSlug,
@@ -174,6 +212,7 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     tasks,
     selectedTask,
     summary,
+    diagnostics,
     error
   });
   const mutations = createAiMutations({
@@ -185,28 +224,37 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     composeOpen,
     taskSlug,
     prompt,
+    parentTaskId,
     queries
   });
   return {
     tasks,
     selectedTask,
     summary,
+    diagnostics,
     error,
     isBusy,
     composeOpen,
     taskSlug,
     prompt,
+    parentTaskId,
     refreshTasks: queries.refreshTasks,
     selectTask: queries.selectTask,
     createTask: mutations.createTask,
     applySelectedTask: mutations.applySelectedTask,
+    openNewTaskComposer,
+    openFollowUpComposer,
     reset
   };
 }
 function renderAiBody(state: AiState): VNode {
   return h("div", { class: "pm-version-grid" }, [
     renderAiTaskList(state),
-    renderAiTaskSummary(state)
+    renderAiTaskSummaryPanel({
+      selectedTask: state.selectedTask,
+      summary: state.summary,
+      diagnostics: state.diagnostics
+    })
   ]);
 }
 
@@ -234,40 +282,6 @@ function renderAiTaskList(state: AiState): VNode {
           )
         )
   ]);
-}
-function renderAiTaskSummary(state: AiState): VNode {
-  if (state.selectedTask.value === null) {
-    return h("section", { class: "pm-card pm-subcard" }, [
-      renderStatusMessage("Select a task to inspect its summary.")
-    ]);
-  }
-  return h("section", { class: "pm-card pm-subcard" }, [
-    h("div", { class: "pm-stack" }, [
-      h("div", { class: "pm-badge-row" }, [
-        h("span", { class: "pm-badge" }, state.selectedTask.value.status),
-        h("p", { class: "pm-kicker" }, state.selectedTask.value.createdAt)
-      ]),
-      h("p", { class: "pm-copy" }, state.selectedTask.value.taskSlug),
-      state.selectedTask.value.appliedAt
-        ? h("p", { class: "pm-copy" }, `Applied at ${state.selectedTask.value.appliedAt}`)
-        : null,
-      renderAiTaskChanges(state)
-    ])
-  ]);
-}
-function renderAiTaskChanges(state: AiState): VNode {
-  if (state.summary.value === null) {
-    return renderStatusMessage("No summary artifact yet.");
-  }
-  return h(
-    "ul",
-    { class: "pm-list" },
-    state.summary.value.changes.length === 0
-      ? [h("li", { class: "pm-focus-item" }, "No changed files in the summary artifact.")]
-      : state.summary.value.changes.map((change) =>
-          h("li", { class: "pm-focus-item" }, `${change.kind} · ${change.path}`)
-        )
-  );
 }
 function renderAiView(
   projectSlug: string,
@@ -305,14 +319,22 @@ function renderAiView(
       prompt: state.prompt.value,
       isBusy: state.isBusy.value,
       canApplySelectedTask: state.selectedTask.value?.status === "completed",
+      canContinueSelectedTask:
+        state.selectedTask.value !== null
+        && state.selectedTask.value.status !== "queued"
+        && state.selectedTask.value.status !== "running",
+      continueTaskLabel: state.parentTaskId.value === null ? null : state.selectedTask.value?.taskSlug ?? null,
       setTaskSlug: (value) => {
         state.taskSlug.value = value;
       },
       setPrompt: (value) => {
         state.prompt.value = value;
       },
-      toggleComposer: () => {
-        state.composeOpen.value = !state.composeOpen.value;
+      openNewTaskComposer: () => {
+        state.openNewTaskComposer();
+      },
+      openFollowUpComposer: () => {
+        state.openFollowUpComposer();
       },
       createTask: () => {
         void state.createTask();

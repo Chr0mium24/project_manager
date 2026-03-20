@@ -4,11 +4,11 @@ import { GatewayProjectApiClient } from "../src/gateway-api.ts";
 
 const originalFetch = globalThis.fetch;
 
-describe("browser api clients", () => {
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
 
+describe("ai task api client", () => {
   it("binds the default fetch for ai task requests", async () => {
     globalThis.fetch = function fetchWithRequiredThis(this: unknown): Promise<Response> {
       expect(this).toBe(globalThis);
@@ -21,6 +21,33 @@ describe("browser api clients", () => {
     await expect(client.listTasks()).resolves.toEqual([]);
   });
 
+  it("reads ai task diagnostics payloads with empty logs", async () => {
+    const client = new AiTaskApiClient({
+      fetch: () =>
+        Promise.resolve(Response.json({
+          diagnostics: {
+            taskId: "task-1",
+            parentTaskId: null,
+            sessionId: "session-1",
+            status: "failed",
+            codexExitCode: 1,
+            error: "sandbox denied write",
+            stdout: "",
+            stderr: ""
+          }
+        }))
+    });
+
+    await expect(client.readDiagnostics("task-1")).resolves.toMatchObject({
+      sessionId: "session-1",
+      error: "sandbox denied write",
+      stdout: "",
+      stderr: ""
+    });
+  });
+});
+
+describe("gateway project api client", () => {
   it("binds the default fetch for project api requests", async () => {
     globalThis.fetch = function fetchWithRequiredThis(this: unknown): Promise<Response> {
       expect(this).toBe(globalThis);
@@ -65,8 +92,8 @@ describe("browser api clients", () => {
 
   it("verifies an admin session with bearer auth", async () => {
     let capturedInit: RequestInit | undefined;
-    const fetchSpy: typeof fetch = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => {
-      capturedInit = _init;
+    const fetchSpy: typeof fetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      capturedInit = init;
       return Promise.resolve(Response.json({ ok: true }));
     }) as typeof fetch;
     const client = new GatewayProjectApiClient({

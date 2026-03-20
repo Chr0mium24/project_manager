@@ -18,6 +18,8 @@ function createTaskRecord(overrides: Partial<AiTaskRecord> = {}): AiTaskRecord {
     projectSlug: "landing-a",
     taskSlug: "fix-copy",
     prompt: "Update the heading.",
+    parentTaskId: null,
+    sessionId: null,
     createdAt: "2026-03-20T00:00:00.000Z",
     completedAt: null,
     managedTaskPath: "storage/managed-tasks/landing-a/fix-copy/task.json",
@@ -95,6 +97,9 @@ void test("AiTaskPanelController waits for completion and loads the summary arti
     },
     readSummary() {
       return Promise.resolve(summary);
+    },
+    readDiagnostics() {
+      return Promise.reject(new Error("diagnostics should not be called"));
     },
     createTask(input: CreateAiTaskInput) {
       assert.equal(input.projectSlug, "landing-a");

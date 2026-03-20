@@ -40,7 +40,8 @@ function createSecuredApp(rootDir: string) {
         exitCode: 0,
         stdout: "{\"status\":\"ok\"}\n",
         stderr: "",
-        error: null
+        error: null,
+        sessionId: "session-gateway"
       };
     }
   });
@@ -96,6 +97,54 @@ void test("createGatewayApp creates and reads an ai task", async () => {
   await app.close();
 });
 
+void test("createGatewayApp reads ai task diagnostics", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir, {
+    adminToken: TEST_ADMIN_TOKEN,
+    aiExecutor: ({ cwd }) => {
+      fs.writeFileSync(
+        path.join(cwd, "src", "index.html"),
+        "<!doctype html>\n<html><body><h1>Codex Updated</h1></body></html>\n",
+        "utf8"
+      );
+      return {
+        exitCode: 0,
+        stdout: "{\"type\":\"thread.started\",\"thread_id\":\"session-diagnostics\"}\n",
+        stderr: "trace\n",
+        error: null,
+        sessionId: "session-diagnostics"
+      };
+    }
+  });
+
+  const createResponse = await app.inject({
+    method: "POST",
+    url: "/api/ai/tasks",
+    headers: authHeaders(),
+    payload: {
+      projectSlug: "landing-a",
+      taskSlug: "inspect-copy",
+      prompt: "Update the heading."
+    }
+  });
+  const createPayload: { task: { taskId: string } } = createResponse.json();
+  await waitForCompletedTask(app, createPayload.task.taskId);
+  const diagnosticsResponse = await app.inject({
+    method: "GET",
+    url: `/api/ai/tasks/${createPayload.task.taskId}/diagnostics`
+  });
+  const diagnosticsPayload: {
+    diagnostics: { sessionId: string | null; stderr: string };
+  } = diagnosticsResponse.json();
+
+  assert.equal(diagnosticsResponse.statusCode, 200);
+  assert.equal(diagnosticsPayload.diagnostics.sessionId, "session-diagnostics");
+  assert.equal(diagnosticsPayload.diagnostics.stderr, "trace\n");
+
+  await app.close();
+});
+
 void test("createGatewayApp validates ai task create body and missing task reads", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);
@@ -116,6 +165,46 @@ void test("createGatewayApp validates ai task create body and missing task reads
 
   assert.equal(invalidCreate.statusCode, 400);
   assert.equal(missingRead.statusCode, 404);
+
+  await app.close();
+});
+
+void test("createGatewayApp continues an ai task from a completed parent task", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createSecuredApp(rootDir);
+
+  const firstCreate = await app.inject({
+    method: "POST",
+    url: "/api/ai/tasks",
+    headers: authHeaders(),
+    payload: {
+      projectSlug: "landing-a",
+      taskSlug: "first-pass",
+      prompt: "Update the heading."
+    }
+  });
+  const firstPayload: { task: { taskId: string } } = firstCreate.json();
+  await waitForCompletedTask(app, firstPayload.task.taskId);
+
+  const followUpCreate = await app.inject({
+    method: "POST",
+    url: "/api/ai/tasks",
+    headers: authHeaders(),
+    payload: {
+      projectSlug: "landing-a",
+      taskSlug: "second-pass",
+      prompt: "Continue refining the page.",
+      parentTaskId: firstPayload.task.taskId
+    }
+  });
+  const followUpPayload: {
+    task: { parentTaskId: string | null; sessionId: string | null };
+  } = followUpCreate.json();
+
+  assert.equal(followUpCreate.statusCode, 202);
+  assert.equal(followUpPayload.task.parentTaskId, firstPayload.task.taskId);
+  assert.equal(followUpPayload.task.sessionId, "session-gateway");
 
   await app.close();
 });

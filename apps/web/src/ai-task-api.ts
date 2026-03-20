@@ -8,6 +8,8 @@ export interface AiTaskRecord {
   projectSlug: string;
   taskSlug: string;
   prompt: string;
+  parentTaskId: string | null;
+  sessionId: string | null;
   createdAt: string;
   completedAt: string | null;
   managedTaskPath: string;
@@ -37,6 +39,18 @@ export interface CreateAiTaskInput {
   taskSlug: string;
   prompt: string;
   force?: boolean;
+  parentTaskId?: string;
+}
+
+export interface AiTaskDiagnostics {
+  taskId: string;
+  parentTaskId: string | null;
+  sessionId: string | null;
+  status: AiTaskStatus;
+  codexExitCode: number | null;
+  error: string | null;
+  stdout: string;
+  stderr: string;
 }
 
 export interface AiTaskApplyResult {
@@ -51,6 +65,7 @@ export interface AiTaskClient {
   listTasks(): Promise<AiTaskRecord[]>;
   readTask(taskId: string): Promise<AiTaskRecord>;
   readSummary(taskId: string): Promise<ManagedTaskSummary>;
+  readDiagnostics(taskId: string): Promise<AiTaskDiagnostics>;
   createTask(input: CreateAiTaskInput): Promise<AiTaskRecord>;
   applyTask(taskId: string): Promise<{ task: AiTaskRecord; result: AiTaskApplyResult }>;
   waitForTask(taskId: string, options?: WaitForAiTaskOptions): Promise<AiTaskRecord>;
@@ -170,6 +185,8 @@ function parseAiTaskRecord(value: unknown): AiTaskRecord {
     projectSlug: expectString(record.projectSlug, "ai task projectSlug"),
     taskSlug: expectString(record.taskSlug, "ai task taskSlug"),
     prompt: expectString(record.prompt, "ai task prompt"),
+    parentTaskId: expectNullableString(record.parentTaskId, "ai task parentTaskId"),
+    sessionId: expectNullableString(record.sessionId, "ai task sessionId"),
     createdAt: expectString(record.createdAt, "ai task createdAt"),
     completedAt: expectNullableString(record.completedAt, "ai task completedAt"),
     managedTaskPath: expectString(record.managedTaskPath, "ai task managedTaskPath"),
@@ -223,8 +240,25 @@ function parseCreateAiTaskInput(value: CreateAiTaskInput): CreateAiTaskInput {
   if (input.force !== undefined) {
     parsed.force = expectBoolean(input.force, "create ai task input force");
   }
+  if (input.parentTaskId !== undefined) {
+    parsed.parentTaskId = expectString(input.parentTaskId, "create ai task input parentTaskId");
+  }
 
   return parsed;
+}
+
+function parseAiTaskDiagnostics(value: unknown): AiTaskDiagnostics {
+  const diagnostics = expectRecord(value, "ai task diagnostics");
+  return {
+    taskId: expectString(diagnostics.taskId, "ai task diagnostics taskId"),
+    parentTaskId: expectNullableString(diagnostics.parentTaskId, "ai task diagnostics parentTaskId"),
+    sessionId: expectNullableString(diagnostics.sessionId, "ai task diagnostics sessionId"),
+    status: parseAiTaskStatus(diagnostics.status),
+    codexExitCode: expectNullableInt(diagnostics.codexExitCode, "ai task diagnostics codexExitCode"),
+    error: expectNullableString(diagnostics.error, "ai task diagnostics error"),
+    stdout: typeof diagnostics.stdout === "string" ? diagnostics.stdout : "",
+    stderr: typeof diagnostics.stderr === "string" ? diagnostics.stderr : ""
+  };
 }
 
 function parseAiTaskApplyResult(value: unknown): AiTaskApplyResult {
@@ -286,6 +320,14 @@ export class AiTaskApiClient implements AiTaskClient {
       "ai task summary payload"
     );
     return parseManagedTaskSummary(payload.summary);
+  }
+
+  public async readDiagnostics(taskId: string): Promise<AiTaskDiagnostics> {
+    const payload = expectRecord(
+      await this.requestJson(`/api/ai/tasks/${taskId}/diagnostics`, {}),
+      "ai task diagnostics payload"
+    );
+    return parseAiTaskDiagnostics(payload.diagnostics);
   }
 
   public async createTask(input: CreateAiTaskInput): Promise<AiTaskRecord> {

@@ -30,17 +30,30 @@ export interface CreateAiTaskOptions {
   taskSlug: string;
   prompt: string;
   force?: boolean;
+  parentTaskId?: string;
 }
 
 export interface AiTaskRunnerOptions {
   executor?: CodexExecutor;
 }
 
+export interface AiTaskDiagnostics {
+  taskId: string;
+  parentTaskId: string | null;
+  sessionId: string | null;
+  status: AiTaskRecord["status"];
+  codexExitCode: number | null;
+  error: string | null;
+  stdout: string;
+  stderr: string;
+}
+
 const createAiTaskOptionsSchema = z.object({
   projectSlug: z.string().min(1),
   taskSlug: z.string().min(1),
   prompt: z.string().min(1),
-  force: z.boolean().optional()
+  force: z.boolean().optional(),
+  parentTaskId: z.string().min(1).optional()
 });
 const aiTaskSummarySchema = z.object({
   projectSlug: z.string().min(1),
@@ -72,6 +85,8 @@ function buildQueuedTask(rootDir: string, input: {
   projectSlug: string;
   taskSlug: string;
   prompt: string;
+  parentTaskId: string | null;
+  sessionId: string | null;
 }): AiTaskRecord {
   const taskPaths = getManagedTaskPaths(rootDir, input.projectSlug, input.taskSlug);
   return {
@@ -82,6 +97,8 @@ function buildQueuedTask(rootDir: string, input: {
     projectSlug: input.projectSlug,
     taskSlug: input.taskSlug,
     prompt: input.prompt,
+    parentTaskId: input.parentTaskId,
+    sessionId: input.sessionId,
     createdAt: nowIso(),
     completedAt: null,
     managedTaskPath: path.relative(rootDir, taskPaths.manifestPath),
@@ -119,8 +136,49 @@ function completeTask(
     validationPath: result.validationPath ?? null,
     codexExitCode: result.exitCode,
     error: result.error,
+    sessionId: result.sessionId ?? task.sessionId,
     appliedAt: task.appliedAt
   });
+}
+
+function readTextArtifact(rootDir: string, relativePath: string | null): string {
+  if (relativePath === null) {
+    return "";
+  }
+
+  const artifactPath = path.join(rootDir, relativePath);
+  if (!fs.existsSync(artifactPath) || !fs.statSync(artifactPath).isFile()) {
+    return "";
+  }
+
+  return fs.readFileSync(artifactPath, "utf8");
+}
+
+function writeWorkspaceFromParent(rootDir: string, task: AiTaskRecord, parentTask: AiTaskRecord): void {
+  const workspaceProjectDir = path.join(rootDir, task.workspaceProjectPath);
+  const parentWorkspaceProjectDir = path.join(rootDir, parentTask.workspaceProjectPath);
+  if (!fs.existsSync(parentWorkspaceProjectDir) || !fs.statSync(parentWorkspaceProjectDir).isDirectory()) {
+    throw new Error(`parent ai task workspace not found: ${parentTask.taskId}`);
+  }
+
+  fs.rmSync(workspaceProjectDir, { recursive: true, force: true });
+  fs.cpSync(parentWorkspaceProjectDir, workspaceProjectDir, { recursive: true });
+}
+
+function readTaskParent(rootDir: string, parentTaskId: string | undefined, projectSlug: string): AiTaskRecord | null {
+  if (parentTaskId === undefined) {
+    return null;
+  }
+
+  const parentTask = readRequiredAiTask(rootDir, parentTaskId);
+  if (parentTask.projectSlug !== projectSlug) {
+    throw new Error(`parent ai task project mismatch: ${parentTaskId}`);
+  }
+  if (parentTask.status === "queued" || parentTask.status === "running") {
+    throw new Error(`parent ai task is not ready to continue: ${parentTaskId}`);
+  }
+
+  return parentTask;
 }
 
 function readRequiredAiTask(rootDir: string, taskId: string): AiTaskRecord {
@@ -159,6 +217,7 @@ export function createAiTask(
   options: CreateAiTaskOptions
 ): AiTaskRecord {
   const normalizedOptions = createAiTaskOptionsSchema.parse(options);
+  const parentTask = readTaskParent(rootDir, normalizedOptions.parentTaskId, normalizedOptions.projectSlug);
   const taskId = createTaskId(normalizedOptions.taskSlug);
   startManagedTask(rootDir, {
     projectSlug: normalizedOptions.projectSlug,
@@ -166,15 +225,22 @@ export function createAiTask(
     force: normalizedOptions.force,
     mode: "workspace"
   });
-  return writeAiTaskRecord(
+  const task = writeAiTaskRecord(
     rootDir,
     buildQueuedTask(rootDir, {
       taskId,
       projectSlug: normalizedOptions.projectSlug,
       taskSlug: normalizedOptions.taskSlug,
-      prompt: normalizedOptions.prompt
+      prompt: normalizedOptions.prompt,
+      parentTaskId: parentTask?.taskId ?? null,
+      sessionId: parentTask?.sessionId ?? null
     })
   );
+  if (parentTask !== null) {
+    writeWorkspaceFromParent(rootDir, task, parentTask);
+  }
+
+  return task;
 }
 
 export async function runAiTask(
@@ -198,14 +264,16 @@ export async function runAiTask(
   try {
     execResult = await executor({
       cwd: workspaceProjectDir,
-      prompt: runningTask.prompt
+      prompt: runningTask.prompt,
+      sessionId: runningTask.sessionId ?? undefined
     });
   } catch (error) {
     return completeTask(rootDir, runningTask, "failed", {
       exitCode: null,
       stdout: "",
       stderr: "",
-      error: getErrorMessage(error)
+      error: getErrorMessage(error),
+      sessionId: runningTask.sessionId
     });
   }
 
@@ -244,6 +312,20 @@ export async function runAiTask(
 export function readAiTaskSummary(rootDir: string, taskId: string): ManagedTaskSummary | null {
   const task = readRequiredAiTask(rootDir, taskId);
   return readAiTaskArtifact(rootDir, task.summaryPath, aiTaskSummarySchema);
+}
+
+export function readAiTaskDiagnostics(rootDir: string, taskId: string): AiTaskDiagnostics {
+  const task = readRequiredAiTask(rootDir, taskId);
+  return {
+    taskId: task.taskId,
+    parentTaskId: task.parentTaskId,
+    sessionId: task.sessionId,
+    status: task.status,
+    codexExitCode: task.codexExitCode,
+    error: task.error,
+    stdout: readTextArtifact(rootDir, task.stdoutPath),
+    stderr: readTextArtifact(rootDir, task.stderrPath)
+  };
 }
 
 export function applyAiTask(rootDir: string, taskId: string): ManagedTaskApplyResult {

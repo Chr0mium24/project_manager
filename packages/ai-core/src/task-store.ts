@@ -12,6 +12,8 @@ export const aiTaskRecordSchema = z.object({
   projectSlug: z.string().min(1),
   taskSlug: z.string().min(1),
   prompt: z.string().min(1),
+  parentTaskId: z.string().nullable(),
+  sessionId: z.string().nullable(),
   createdAt: z.string().min(1),
   completedAt: z.string().nullable(),
   managedTaskPath: z.string().min(1),
@@ -61,7 +63,11 @@ export function readAiTask(rootDir: string, taskId: string): AiTaskRecord | null
     return null;
   }
 
-  return readJson(taskPath, aiTaskRecordSchema);
+  try {
+    return readJson(taskPath, aiTaskRecordSchema);
+  } catch {
+    return null;
+  }
 }
 
 export function listAiTasks(rootDir: string): AiTaskRecord[] {
