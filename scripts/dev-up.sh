@@ -19,6 +19,23 @@ cleanup() {
   done
 }
 
+kill_listener_on_port() {
+  local port="$1"
+  local listener_pids
+
+  listener_pids="$(lsof -ti "tcp:${port}" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -z "${listener_pids}" ]]; then
+    return 0
+  fi
+
+  echo "[dev-up] stopping existing listener(s) on tcp:${port}: ${listener_pids}"
+  for pid in ${listener_pids}; do
+    kill "${pid}" >/dev/null 2>&1 || true
+  done
+
+  sleep 1
+}
+
 wait_for_url() {
   local service_name="$1"
   local service_pid="$2"
@@ -81,6 +98,9 @@ else
 fi
 
 trap cleanup EXIT INT TERM
+
+kill_listener_on_port "${PORT}"
+kill_listener_on_port "${GATEWAY_PORT}"
 
 echo "[dev-up] starting gateway on http://127.0.0.1:${GATEWAY_PORT}/"
 env PORT="${GATEWAY_PORT}" PROJECT_MANAGER_ADMIN_TOKEN="${PROJECT_MANAGER_ADMIN_TOKEN}" corepack pnpm dev:gateway &
