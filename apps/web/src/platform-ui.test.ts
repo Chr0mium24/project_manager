@@ -26,6 +26,9 @@ void test("readPlatformAsset returns the platform ui module asset", () => {
   const asset = readPlatformAsset("/assets/platform-ui.js");
 
   assert.notEqual(asset, null);
+  if (asset === null) {
+    throw new Error("expected platform ui asset");
+  }
   assert.equal(asset.contentType, "text/javascript; charset=utf-8");
   assert.match(asset.body, /requestJson/);
   assert.match(asset.body, /\/api\/projects\/\$\{state\.selectedProject\.slug\}\/file-tree/);

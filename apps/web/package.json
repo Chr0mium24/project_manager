@@ -2,5 +2,24 @@
   "name": "@project-manager/web",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts"
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "test": "vitest run --config ./vitest.config.ts --project unit",
+    "test:smoke": "vitest run --config ./vitest.config.ts --project smoke",
+    "typecheck": "tsc --noEmit -p ./tsconfig.app.json"
+  },
+  "dependencies": {
+    "pinia": "3.0.3",
+    "vue": "3.5.22",
+    "vue-router": "4.5.1"
+  },
+  "devDependencies": {
+    "@vue/test-utils": "2.4.6",
+    "jsdom": "26.1.0",
+    "vite": "7.1.7",
+    "vitest": "3.2.4",
+    "vue-tsc": "2.2.12"
+  }
 }

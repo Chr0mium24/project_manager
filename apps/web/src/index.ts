@@ -4,6 +4,21 @@ export function describeModule(): string {
   return 'web module placeholder';
 }
 
+export {
+  createProjectManagerApp,
+  type ProjectManagerApp
+} from "./app/create-project-manager-app.ts";
+export {
+  createProjectManagerRouter,
+  projectManagerRoutes,
+  projectRouteTabs,
+  type ProjectRouteTab
+} from "./app/project-manager-router.ts";
+export {
+  createProjectManagerPinia,
+  useProjectContextStore
+} from "./app/project-context-store.ts";
+
 export { AiTaskApiClient, GatewayApiError } from "./ai-task-api.ts";
 export type {
   AiTaskApplyResult,
