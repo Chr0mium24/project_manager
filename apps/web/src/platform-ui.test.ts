@@ -5,6 +5,34 @@ import {
   renderPlatformDocument
 } from "./platform-ui.ts";
 
+function expectAsset(pathname: string) {
+  const asset = readPlatformAsset(pathname);
+  assert.notEqual(asset, null);
+  if (asset === null) {
+    throw new Error(`expected platform asset: ${pathname}`);
+  }
+  return asset;
+}
+
+function assertPlatformAssetGraph() {
+  const asset = expectAsset("/assets/platform-ui.js");
+  const shellAsset = expectAsset("/assets/platform-ui/app/project-manager-shell.js");
+  const vueAsset = expectAsset("/assets/platform-ui/vendor/vue.js");
+  const piniaAsset = expectAsset("/assets/platform-ui/vendor/pinia.js");
+  const devtoolsAsset = expectAsset("/assets/platform-ui/vendor/vue-devtools-api.js");
+  const devtoolsEnvAsset = expectAsset("/assets/platform-ui/vendor-modules/@vue__devtools-api/lib/esm/env.js");
+
+  assert.equal(asset.contentType, "text/javascript; charset=utf-8");
+  assert.match(asset.body, /createProjectManagerApp/);
+  assert.match(asset.body, /\/assets\/platform-ui\/app\/project-manager-shell\.js/);
+  assert.match(shellAsset.body, /PROJECT_MANAGER_SHELL_STYLES/);
+  assert.match(shellAsset.body, /\/assets\/platform-ui\/vendor\/vue\.js/);
+  assert.match(vueAsset.body, /defineComponent/);
+  assert.match(piniaAsset.body, /\/assets\/platform-ui\/vendor\/vue-devtools-api\.js/);
+  assert.match(devtoolsAsset.body, /\/assets\/platform-ui\/vendor-modules\/@vue__devtools-api\/lib\/esm\/env\.js/);
+  assert.match(devtoolsEnvAsset.body, /getDevtoolsGlobalHook/);
+}
+
 void test("renderPlatformDocument returns a platform shell with the boot asset", () => {
   const html = renderPlatformDocument({
     pathname: "/projects/landing-a"
@@ -16,21 +44,6 @@ void test("renderPlatformDocument returns a platform shell with the boot asset",
 });
 
 void test("readPlatformAsset returns the platform ui module asset", () => {
-  const asset = readPlatformAsset("/assets/platform-ui.js");
-  const shellAsset = readPlatformAsset("/assets/platform-ui/app/project-manager-shell.js");
-  const vueAsset = readPlatformAsset("/assets/platform-ui/vendor/vue.js");
-
-  assert.notEqual(asset, null);
-  if (asset === null) {
-    throw new Error("expected platform ui asset");
-  }
-  assert.notEqual(shellAsset, null);
-  assert.notEqual(vueAsset, null);
-  assert.equal(asset.contentType, "text/javascript; charset=utf-8");
-  assert.match(asset.body, /createProjectManagerApp/);
-  assert.match(asset.body, /\/assets\/platform-ui\/app\/project-manager-shell\.js/);
-  assert.match(shellAsset?.body ?? "", /PROJECT_MANAGER_SHELL_STYLES/);
-  assert.match(shellAsset?.body ?? "", /\/assets\/platform-ui\/vendor\/vue\.js/);
-  assert.match(vueAsset?.body ?? "", /defineComponent/);
+  assertPlatformAssetGraph();
   assert.equal(readPlatformAsset("/assets/missing.js"), null);
 });
