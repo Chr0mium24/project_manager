@@ -27,6 +27,7 @@ if (missing.length > 0) {
 console.log('[config] required files present');
 
 const requiredExecutables = [
+  'scripts/dev-up.sh',
   'scripts/run-quality-gate.sh',
   'scripts/register-dev-route.sh',
   'scripts/codex-safe-git.sh',

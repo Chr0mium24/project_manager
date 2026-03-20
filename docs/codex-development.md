@@ -172,6 +172,14 @@ Authorization: Bearer <token>
 
 for control-plane mutations.
 
+For one-command local startup, use:
+
+```bash
+./scripts/dev-up.sh
+```
+
+This helper installs dependencies on first run, defaults the local admin token if needed, and starts the gateway on `127.0.0.1:3100`.
+
 ## Development behavior policy
 
 Codex should:
