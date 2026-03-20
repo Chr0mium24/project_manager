@@ -60,6 +60,10 @@ const PLATFORM_UI_STYLES = [
   ".file-editor { display: grid; gap: 12px; margin-top: 14px; }",
   ".file-editor textarea { min-height: 420px; padding: 16px; border: 1px solid var(--line); background: rgba(30,24,18,0.94); color: #f9efe4; font-family: 'SFMono-Regular', 'JetBrains Mono', Consolas, monospace; font-size: 0.86rem; line-height: 1.5; }",
   ".file-actions { display: flex; justify-content: flex-end; }",
+  ".version-grid { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }",
+  ".version-actions { display: flex; justify-content: flex-end; }",
+  ".version-diff p { margin: 0 0 10px; color: var(--muted); }",
+  ".version-diff code { color: var(--accent); }",
   ".meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }",
   ".meta-grid span { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); background: rgba(255,255,255,0.62); color: var(--muted); }",
   ".meta-grid strong { color: var(--text); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; }",
@@ -67,7 +71,7 @@ const PLATFORM_UI_STYLES = [
   ".summary h3 { margin: 0 0 12px; font-size: 1.4rem; }",
   ".summary p { margin: 0 0 10px; color: var(--muted); }",
   ".error { color: #9a2c1f; }",
-  "@media (max-width: 900px) { .metrics, .layout, .meta-grid, .workspace-grid { grid-template-columns: 1fr; } .shell { width: min(100% - 20px, 1180px); margin-top: 20px; } .hero, .panel { padding: 18px; } }"
+  "@media (max-width: 900px) { .metrics, .layout, .meta-grid, .workspace-grid, .version-grid { grid-template-columns: 1fr; } .shell { width: min(100% - 20px, 1180px); margin-top: 20px; } .hero, .panel { padding: 18px; } }"
 ].join("\n");
 
 function renderPlatformBody(pathname: string): string {
@@ -116,6 +120,22 @@ function renderPlatformBody(pathname: string): string {
     "          <div class=\"workspace-grid\">",
     "            <div data-file-tree><p>Loading workspace...</p></div>",
     "            <div data-file-preview><p>Select a file to inspect its current project content.</p></div>",
+    "          </div>",
+    "        </section>",
+    "        <section class=\"panel stack\">",
+    "          <h2>Project Versions</h2>",
+    "          <label>Snapshot Message<input data-version-message placeholder=\"capture landing-a before homepage rewrite\"></label>",
+    "          <div class=\"version-actions\">",
+    "            <button type=\"button\" data-create-version>Create Snapshot</button>",
+    "          </div>",
+    "          <div class=\"version-grid\">",
+    "            <ul data-version-list><li>No versions yet.</li></ul>",
+    "            <div class=\"stack version-diff\">",
+    "              <div data-version-diff><p>Select a version to inspect its diff against the current project.</p></div>",
+    "              <div class=\"version-actions\">",
+    "                <button type=\"button\" class=\"ghost\" data-restore-version disabled>Restore Selected</button>",
+    "              </div>",
+    "            </div>",
     "          </div>",
     "        </section>",
     "        <section class=\"panel stack\">",

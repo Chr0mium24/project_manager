@@ -1,4 +1,6 @@
-export const PLATFORM_UI_SCRIPT = [
+import { PLATFORM_UI_VERSION_SCRIPT } from "./platform-ui-version-script.ts";
+
+const PLATFORM_UI_BASE_SCRIPT = [
   "const boot = window.__PROJECT_MANAGER_PLATFORM__ ?? { pathname: '/' };",
   "const state = {",
   "  pathname: boot.pathname,",
@@ -9,6 +11,9 @@ export const PLATFORM_UI_SCRIPT = [
   "  selectedFilePath: '',",
   "  fileContent: null,",
   "  fileDraft: '',",
+  "  versions: [],",
+  "  selectedVersionId: '',",
+  "  versionDiff: null,",
   "  tasks: [],",
   "  selectedTask: null,",
   "  summary: null,",
@@ -26,6 +31,11 @@ export const PLATFORM_UI_SCRIPT = [
   "  projectDetail: document.querySelector('[data-project-detail]'),",
   "  fileTree: document.querySelector('[data-file-tree]'),",
   "  filePreview: document.querySelector('[data-file-preview]'),",
+  "  versionMessage: document.querySelector('[data-version-message]'),",
+  "  versionCreate: document.querySelector('[data-create-version]'),",
+  "  versions: document.querySelector('[data-version-list]'),",
+  "  versionDiff: document.querySelector('[data-version-diff]'),",
+  "  restore: document.querySelector('[data-restore-version]'),",
   "  tasks: document.querySelector('[data-task-list]'),",
   "  summary: document.querySelector('[data-task-summary]'),",
   "  status: document.querySelector('[data-status]'),",
@@ -35,6 +45,8 @@ export const PLATFORM_UI_SCRIPT = [
   "  if (els.status) els.status.textContent = state.message;",
   "  if (els.route) els.route.textContent = state.pathname;",
   "  if (els.apply) els.apply.disabled = state.selectedTask === null || state.selectedTask.status !== 'completed' || state.busy;",
+  "  if (els.restore) els.restore.disabled = state.selectedVersionId.length === 0 || state.busy;",
+  "  if (els.versionCreate) els.versionCreate.disabled = state.busy;",
   "}",
   "function currentFileIsDirty() {",
   "  return state.selectedFilePath.length > 0 && state.fileContent !== null && state.fileDraft !== state.fileContent;",
@@ -220,6 +232,7 @@ export const PLATFORM_UI_SCRIPT = [
   "  renderProjects();",
   "  renderProjectDetail();",
   "  await refreshProjectWorkspace();",
+  "  await refreshProjectVersions();",
   "}",
   "async function selectFile(path) {",
   "  if (!state.selectedProject || !path) return;",
@@ -250,7 +263,8 @@ export const PLATFORM_UI_SCRIPT = [
   "    });",
   "    state.fileContent = state.fileDraft;",
   "    state.message = `Saved ${state.selectedFilePath}.`;",
-  "    await refreshProjectWorkspace();",
+    "    await refreshProjectWorkspace();",
+  "    if (state.selectedVersionId) await selectVersion(state.selectedVersionId);",
   "  } catch (error) {",
   "    state.message = error instanceof Error ? error.message : 'unknown project file error';",
   "  } finally {",
@@ -326,6 +340,7 @@ export const PLATFORM_UI_SCRIPT = [
   "    await refreshTasks();",
   "    if (state.selectedProject && state.selectedTask.projectSlug === state.selectedProject.slug) {",
   "      await refreshProjectWorkspace();",
+  "      await refreshProjectVersions();",
   "    }",
   "    renderSummary();",
   "  } catch (error) {",
@@ -339,6 +354,8 @@ export const PLATFORM_UI_SCRIPT = [
   "  if (els.token) els.token.addEventListener('input', () => { state.token = els.token.value.trim(); });",
   "  if (els.form) els.form.addEventListener('submit', handleCreate);",
   "  if (els.apply) els.apply.addEventListener('click', handleApply);",
+  "  if (els.versionCreate) els.versionCreate.addEventListener('click', () => { void handleCreateVersion(); });",
+  "  if (els.restore) els.restore.addEventListener('click', () => { void handleRestoreVersion(); });",
   "  window.addEventListener('popstate', async () => {",
   "    state.pathname = window.location.pathname;",
   "    await refreshProjects();",
@@ -350,4 +367,9 @@ export const PLATFORM_UI_SCRIPT = [
   "  setInterval(() => { void refreshTasks(); }, 5000);",
   "}",
   "void start();"
+];
+
+export const PLATFORM_UI_SCRIPT = [
+  ...PLATFORM_UI_BASE_SCRIPT,
+  ...PLATFORM_UI_VERSION_SCRIPT
 ].join("\n");
