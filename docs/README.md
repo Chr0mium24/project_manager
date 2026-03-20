@@ -19,6 +19,7 @@ These docs are the source of truth for:
 - [Testing Strategy](./testing-strategy.md)
 - [Quality Gate](./quality-gate.md)
 - [Code Standards](./code-standards.md)
+- [Lint And Policy Matrix](./lint-and-policy-matrix.md)
 - [Routing Strategy](./routing-strategy.md)
 - [Codex Development](./codex-development.md)
 - [Managed Project Codex Workflow](./managed-project-codex-workflow.md)

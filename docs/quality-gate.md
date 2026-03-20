@@ -12,6 +12,10 @@ Canonical command:
 ./scripts/run-quality-gate.sh
 ```
 
+For a current inventory of lint lanes, policy scripts, and hard thresholds, see:
+
+- `docs/lint-and-policy-matrix.md`
+
 Local commit enforcement:
 
 - repository installs a tracked `pre-commit` hook through `core.hooksPath=.githooks`

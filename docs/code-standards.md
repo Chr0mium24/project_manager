@@ -4,6 +4,10 @@
 
 Code quality rules are mandatory and enforced by tooling.
 
+For the current repository enforcement matrix, entrypoints, and exact threshold summary, see:
+
+- `docs/lint-and-policy-matrix.md`
+
 ## Required standards
 
 ### TypeScript
