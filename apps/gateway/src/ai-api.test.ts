@@ -209,6 +209,42 @@ void test("createGatewayApp continues an ai task from a completed parent task", 
   await app.close();
 });
 
+void test("createGatewayApp auto-resolves repeated ai task slugs", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createSecuredApp(rootDir);
+
+  const firstCreate = await app.inject({
+    method: "POST",
+    url: "/api/ai/tasks",
+    headers: authHeaders(),
+    payload: {
+      projectSlug: "landing-a",
+      taskSlug: "repeatable",
+      prompt: "Update the heading."
+    }
+  });
+  const secondCreate = await app.inject({
+    method: "POST",
+    url: "/api/ai/tasks",
+    headers: authHeaders(),
+    payload: {
+      projectSlug: "landing-a",
+      taskSlug: "repeatable",
+      prompt: "Continue updating the heading."
+    }
+  });
+  const firstPayload: { task: { taskSlug: string } } = firstCreate.json();
+  const secondPayload: { task: { taskSlug: string } } = secondCreate.json();
+
+  assert.equal(firstCreate.statusCode, 202);
+  assert.equal(secondCreate.statusCode, 202);
+  assert.equal(firstPayload.task.taskSlug, "repeatable");
+  assert.equal(secondPayload.task.taskSlug, "repeatable-2");
+
+  await app.close();
+});
+
 void test("createGatewayApp applies a completed ai task back to the managed project", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);

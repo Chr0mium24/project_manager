@@ -126,10 +126,12 @@ function expectString(value: unknown, label: string): string {
 }
 
 function expectNullableString(value: unknown, label: string): string | null {
+  if (value === undefined) {
+    return null;
+  }
   if (value === null) {
     return null;
   }
-
   return expectString(value, label);
 }
 
@@ -145,7 +147,6 @@ function expectNullableInt(value: unknown, label: string): number | null {
   if (value === null) {
     return null;
   }
-
   return expectInt(value, label);
 }
 
@@ -241,9 +242,11 @@ function parseCreateAiTaskInput(value: CreateAiTaskInput): CreateAiTaskInput {
     parsed.force = expectBoolean(input.force, "create ai task input force");
   }
   if (input.parentTaskId !== undefined) {
-    parsed.parentTaskId = expectString(input.parentTaskId, "create ai task input parentTaskId");
+    const parentTaskId = expectString(input.parentTaskId, "create ai task input parentTaskId").trim();
+    if (parentTaskId.length > 0) {
+      parsed.parentTaskId = parentTaskId;
+    }
   }
-
   return parsed;
 }
 
@@ -350,7 +353,6 @@ export class AiTaskApiClient implements AiTaskClient {
       }),
       "apply ai task payload"
     );
-
     return {
       task: parseAiTaskRecord(payload.task),
       result: parseAiTaskApplyResult(payload.result)

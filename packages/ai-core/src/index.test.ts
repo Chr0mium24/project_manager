@@ -235,3 +235,23 @@ void test("createAiTask can continue from a previous task workspace", async () =
   assert.equal(followUpTask.sessionId, "session-6");
   assert.match(seededWorkspace, /First Pass/);
 });
+
+void test("createAiTask auto-resolves a repeated task slug", () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const firstTask = createAiTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "repeatable",
+    prompt: "First run."
+  });
+  const secondTask = createAiTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "repeatable",
+    prompt: "Second run."
+  });
+
+  assert.equal(firstTask.taskSlug, "repeatable");
+  assert.equal(secondTask.taskSlug, "repeatable-2");
+  assert.match(secondTask.taskId, /^repeatable-2-/);
+});

@@ -45,6 +45,39 @@ describe("ai task api client", () => {
       stderr: ""
     });
   });
+
+  it("treats missing task parent and session fields as null for older payloads", async () => {
+    const client = new AiTaskApiClient({
+      fetch: () =>
+        Promise.resolve(Response.json({
+          task: {
+            schemaVersion: 1,
+            taskId: "task-1",
+            kind: "managed-project-edit",
+            status: "completed",
+            projectSlug: "landing-a",
+            taskSlug: "legacy-task",
+            prompt: "Update the heading.",
+            createdAt: "2026-03-20T00:00:00.000Z",
+            completedAt: "2026-03-20T00:00:05.000Z",
+            managedTaskPath: "storage/managed-tasks/landing-a/legacy-task/task.json",
+            workspaceProjectPath: "storage/managed-tasks/landing-a/legacy-task/workspace/landing-a",
+            stdoutPath: null,
+            stderrPath: null,
+            summaryPath: null,
+            validationPath: null,
+            codexExitCode: 0,
+            error: null,
+            appliedAt: null
+          }
+        }))
+    });
+
+    await expect(client.readTask("task-1")).resolves.toMatchObject({
+      parentTaskId: null,
+      sessionId: null
+    });
+  });
 });
 
 describe("gateway project api client", () => {

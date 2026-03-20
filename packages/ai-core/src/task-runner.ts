@@ -80,6 +80,32 @@ function createTaskId(taskSlug: string): string {
   return `${taskSlug}-${randomUUID().slice(0, 8)}`;
 }
 
+function resolveAvailableTaskSlug(
+  rootDir: string,
+  projectSlug: string,
+  taskSlug: string,
+  force: boolean | undefined
+): string {
+  if (force) {
+    return taskSlug;
+  }
+
+  const basePaths = getManagedTaskPaths(rootDir, projectSlug, taskSlug);
+  if (!fs.existsSync(basePaths.taskRoot)) {
+    return taskSlug;
+  }
+
+  for (let suffix = 2; suffix < 10_000; suffix += 1) {
+    const candidateTaskSlug = `${taskSlug}-${String(suffix)}`;
+    const candidatePaths = getManagedTaskPaths(rootDir, projectSlug, candidateTaskSlug);
+    if (!fs.existsSync(candidatePaths.taskRoot)) {
+      return candidateTaskSlug;
+    }
+  }
+
+  throw new Error(`managed task slug exhausted: ${projectSlug}/${taskSlug}`);
+}
+
 function buildQueuedTask(rootDir: string, input: {
   taskId: string;
   projectSlug: string;
@@ -218,10 +244,16 @@ export function createAiTask(
 ): AiTaskRecord {
   const normalizedOptions = createAiTaskOptionsSchema.parse(options);
   const parentTask = readTaskParent(rootDir, normalizedOptions.parentTaskId, normalizedOptions.projectSlug);
-  const taskId = createTaskId(normalizedOptions.taskSlug);
+  const resolvedTaskSlug = resolveAvailableTaskSlug(
+    rootDir,
+    normalizedOptions.projectSlug,
+    normalizedOptions.taskSlug,
+    normalizedOptions.force
+  );
+  const taskId = createTaskId(resolvedTaskSlug);
   startManagedTask(rootDir, {
     projectSlug: normalizedOptions.projectSlug,
-    taskSlug: normalizedOptions.taskSlug,
+    taskSlug: resolvedTaskSlug,
     force: normalizedOptions.force,
     mode: "workspace"
   });
@@ -230,7 +262,7 @@ export function createAiTask(
     buildQueuedTask(rootDir, {
       taskId,
       projectSlug: normalizedOptions.projectSlug,
-      taskSlug: normalizedOptions.taskSlug,
+      taskSlug: resolvedTaskSlug,
       prompt: normalizedOptions.prompt,
       parentTaskId: parentTask?.taskId ?? null,
       sessionId: parentTask?.sessionId ?? null
