@@ -2,35 +2,8 @@ import { computed, defineComponent, h, onMounted } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 import { useProjectContextStore } from "./project-context-store.ts";
 
-function renderTopNav(projectSlug: string) {
-  return h("div", { class: "pm-topbar" }, [
-    h("div", { class: "pm-topbar-copy" }, [
-      h("div", { class: "pm-brand-block" }, [
-        h("p", { class: "pm-kicker" }, "Frontend rebuild"),
-        h("strong", { class: "pm-brand" }, "Project Manager")
-      ]),
-      h(
-        "p",
-        { class: "pm-copy" },
-        projectSlug
-          ? "Project routes now own the control plane. The shell only handles navigation and project context."
-          : "Choose a project first. Once selected, each route handles exactly one workflow."
-      )
-    ]),
-    projectSlug
-      ? h("div", { class: "pm-topbar-context" }, [
-          h("p", { class: "pm-kicker" }, "Current project"),
-          h("strong", { class: "pm-context-label" }, projectSlug)
-        ])
-      : h(
-          RouterLink,
-          {
-            to: "/projects",
-            class: "pm-plain-link"
-          },
-          () => "Browse projects"
-        )
-  ]);
+function renderTopNav() {
+  return h("header", { class: "pm-topbar" }, [h("h1", { class: "pm-shell-title" }, "Project Manager")]);
 }
 
 function renderProjectLink(pathname: string, slug: string, runtime: string, routePath: string) {
@@ -54,12 +27,10 @@ export const PROJECT_MANAGER_SHELL_STYLES = `
 body { margin: 0; background: linear-gradient(180deg, #f8f7f2 0%, #fafaf8 22%, #f5f5f4 100%); color: var(--pm-text); font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif; }
 .pm-shell { width: min(1180px, calc(100% - 28px)); margin: 20px auto 40px; display: grid; gap: 18px; }
 .pm-topbar, .pm-sidebar, .pm-card { border: 1px solid var(--pm-line); background: var(--pm-panel); box-shadow: var(--pm-shadow); }
-.pm-topbar { display: flex; justify-content: space-between; gap: 18px; align-items: start; padding: 18px 20px; }
-.pm-topbar-copy { display: grid; gap: 8px; }
-.pm-topbar-context, .pm-brand-block, .pm-link-copy, .pm-page-copy, .pm-main, .pm-view, .pm-stack, .pm-sidebar-section, .pm-link-list, .pm-context-card, .pm-flow-grid { display: grid; gap: 8px; }
+.pm-topbar { padding: 18px 20px; }
+.pm-shell-title { margin: 0; font-size: 1.2rem; letter-spacing: -0.03em; }
+.pm-link-copy, .pm-page-copy, .pm-main, .pm-view, .pm-stack, .pm-link-list, .pm-flow-grid, .pm-project-grid, .pm-project-card, .pm-project-actions { display: grid; gap: 8px; }
 .pm-kicker { margin: 0; color: var(--pm-muted); font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; }
-.pm-brand { font-size: 1.05rem; }
-.pm-context-label { font-size: 0.95rem; font-weight: 700; }
 .pm-plain-link { color: var(--pm-text); text-decoration: none; font-size: 0.88rem; font-weight: 700; }
 .pm-plain-link:hover { color: var(--pm-accent); }
 .pm-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 18px; }
@@ -70,8 +41,6 @@ body { margin: 0; background: linear-gradient(180deg, #f8f7f2 0%, #fafaf8 22%, #
 .pm-tab-link { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--pm-muted); text-decoration: none; padding: 10px 4px; font-size: 0.9rem; font-weight: 700; transition: color 120ms ease, border-color 120ms ease; }
 .pm-tab-link:hover { color: var(--pm-text); border-bottom-color: var(--pm-line-strong); }
 .pm-tab-link.is-active { color: var(--pm-text); border-bottom-color: var(--pm-accent); }
-.pm-context-card { border: 1px solid var(--pm-line); background: var(--pm-panel-soft); padding: 14px; }
-.pm-context-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--pm-muted); font-size: 0.82rem; }
 .pm-card { padding: 20px; }
 .pm-page-header-card { gap: 16px; }
 .pm-hero { padding: 24px; }
@@ -124,7 +93,13 @@ body { margin: 0; background: linear-gradient(180deg, #f8f7f2 0%, #fafaf8 22%, #
 .pm-details summary { cursor: pointer; list-style: none; font-weight: 700; color: var(--pm-text); }
 .pm-details summary::-webkit-details-marker { display: none; }
 .pm-details-body { display: grid; gap: 12px; padding-top: 12px; }
-@media (max-width: 960px) { .pm-layout, .pm-grid, .pm-tab-row, .pm-quick-grid, .pm-stat-row, .pm-flow-grid { grid-template-columns: 1fr; } .pm-shell { width: min(100% - 18px, 1180px); margin-top: 16px; } .pm-topbar, .pm-card-head, .pm-actions { align-items: start; flex-direction: column; } }
+.pm-project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pm-project-card { border: 1px solid var(--pm-line); background: var(--pm-panel); padding: 16px; }
+.pm-project-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--pm-muted); font-size: 0.82rem; }
+.pm-project-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pm-project-link { border: 1px solid var(--pm-line); background: var(--pm-panel-soft); color: var(--pm-text); text-decoration: none; padding: 10px 12px; font-weight: 700; }
+.pm-project-link:hover { border-color: var(--pm-line-strong); }
+@media (max-width: 960px) { .pm-layout, .pm-grid, .pm-quick-grid, .pm-stat-row, .pm-flow-grid, .pm-project-grid, .pm-project-actions { grid-template-columns: 1fr; } .pm-shell { width: min(100% - 18px, 1180px); margin-top: 16px; } .pm-card-head, .pm-actions { align-items: start; flex-direction: column; } }
 @media (max-width: 960px) { .pm-form-grid, .pm-workspace-grid, .pm-version-grid { grid-template-columns: 1fr; } }
 `;
 
@@ -144,47 +119,38 @@ export const ProjectManagerShell = defineComponent({
 
     return () =>
       h("div", { class: "pm-shell" }, [
-        renderTopNav(projectSlug.value),
+        renderTopNav(),
         h("div", { class: "pm-layout" }, [
           h("aside", { class: "pm-sidebar" }, [
-            h("section", { class: "pm-sidebar-section" }, [
-              h("p", { class: "pm-kicker" }, "Projects"),
-              h(
-                RouterLink,
-                {
-                  to: "/projects",
-                  class: ["pm-side-link", route.path === "/projects" ? "is-active" : ""]
-                },
-                () => "All Projects"
-              )
-            ]),
+            h(
+              RouterLink,
+              {
+                to: "/projects",
+                class: ["pm-side-link", route.path === "/projects" ? "is-active" : ""]
+              },
+              () => "Projects"
+            ),
             selectedProject.value === null
               ? null
-              : h("section", { class: "pm-sidebar-section" }, [
-                  h("p", { class: "pm-kicker" }, "Current context"),
-                  h("div", { class: "pm-context-card" }, [
-                    h("strong", selectedProject.value.name),
-                    h("p", { class: "pm-copy" }, selectedProject.value.slug),
-                    h("div", { class: "pm-context-meta" }, [
-                      h("span", selectedProject.value.runtime),
-                      h("span", selectedProject.value.route)
-                    ])
-                  ])
-                ]),
-            h("section", { class: "pm-sidebar-section" }, [
-              h("p", { class: "pm-kicker" }, "Project switcher"),
-              context.projectsLoading
-                ? h("p", { class: "pm-copy" }, "Loading projects...")
-                : context.projectsError
-                  ? h("p", { class: "pm-error" }, context.projectsError)
-                  : h(
-                      "nav",
-                      { class: "pm-link-list", "aria-label": "Managed projects" },
-                      context.projects.map((project) =>
-                        renderProjectLink(route.path, project.slug, project.runtime, project.route)
-                      )
-                    )
-            ])
+              : h(
+                  "a",
+                  {
+                    href: selectedProject.value.route,
+                    class: "pm-side-link"
+                  },
+                  "Open page"
+                ),
+            context.projectsLoading
+              ? h("p", { class: "pm-copy" }, "Loading projects...")
+              : context.projectsError
+                ? h("p", { class: "pm-error" }, context.projectsError)
+                : h(
+                    "nav",
+                    { class: "pm-link-list", "aria-label": "Managed projects" },
+                    context.projects
+                      .filter((project) => project.slug !== selectedProject.value?.slug)
+                      .map((project) => renderProjectLink(route.path, project.slug, project.runtime, project.route))
+                  )
           ]),
           h("main", { class: "pm-main" }, [h(RouterView)])
         ])

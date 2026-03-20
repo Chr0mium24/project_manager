@@ -1,4 +1,5 @@
 import { computed, defineComponent, h, onMounted, ref, watch } from "vue";
+import { RouterLink } from "vue-router";
 import { useRoute } from "vue-router";
 import { GatewayProjectApiClient, type ManagedProjectRecord } from "../gateway-api.ts";
 import { renderPageHeader, renderSectionTitle, renderStatusMessage } from "./project-manager-view-shared.ts";
@@ -6,6 +7,8 @@ import { renderPageHeader, renderSectionTitle, renderStatusMessage } from "./pro
 const client = new GatewayProjectApiClient();
 
 function renderIdentityCard(project: ManagedProjectRecord) {
+  const runtimeHref = project.runtime === "static" ? `/p/${project.slug}` : `/app/${project.slug}`;
+
   return h("section", { class: "pm-card pm-stack" }, [
     renderSectionTitle("Project identity"),
     h("h3", { class: "pm-page-title" }, project.name),
@@ -14,6 +17,24 @@ function renderIdentityCard(project: ManagedProjectRecord) {
       h("div", { class: "pm-stat-card" }, [h("strong", project.runtime), h("small", "Runtime")]),
       h("div", { class: "pm-stat-card" }, [h("strong", project.route), h("small", "Public route")]),
       h("div", { class: "pm-stat-card" }, [h("strong", project.entry), h("small", "Entry file")])
+    ]),
+    h("div", { class: "pm-project-actions" }, [
+      h(
+        RouterLink,
+        {
+          to: `/projects/${project.slug}/workspace`,
+          class: "pm-project-link"
+        },
+        () => "Open workspace"
+      ),
+      h(
+        "a",
+        {
+          href: runtimeHref,
+          class: "pm-project-link"
+        },
+        "Open page"
+      )
     ])
   ]);
 }
