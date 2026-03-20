@@ -5,32 +5,40 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "${ROOT_DIR}"
 
 PORT="${PORT:-3100}"
+GATEWAY_PORT="${GATEWAY_PORT:-3101}"
 BASE_URL="http://127.0.0.1:${PORT}"
-HEALTH_URL="${BASE_URL}/healthz"
+VITE_HEALTH_URL="${BASE_URL}/"
+GATEWAY_HEALTH_URL="http://127.0.0.1:${GATEWAY_PORT}/healthz"
 OPEN_BROWSER="${PROJECT_MANAGER_OPEN_BROWSER:-1}"
 
 cleanup() {
-  if [[ -n "${SERVER_PID:-}" ]] && kill -0 "${SERVER_PID}" >/dev/null 2>&1; then
-    kill "${SERVER_PID}" >/dev/null 2>&1 || true
-  fi
+  for pid in "${WEB_PID:-}" "${GATEWAY_PID:-}"; do
+    if [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1; then
+      kill "${pid}" >/dev/null 2>&1 || true
+    fi
+  done
 }
 
-wait_for_gateway() {
+wait_for_url() {
+  local service_name="$1"
+  local service_pid="$2"
+  local service_url="$3"
   local attempt
+
   for attempt in $(seq 1 60); do
-    if ! kill -0 "${SERVER_PID}" >/dev/null 2>&1; then
-      echo "[dev-up] gateway exited before becoming ready" >&2
+    if ! kill -0 "${service_pid}" >/dev/null 2>&1; then
+      echo "[dev-up] ${service_name} exited before becoming ready" >&2
       return 1
     fi
 
-    if node --input-type=module -e "const url = process.argv[1]; try { const response = await fetch(url); process.exit(response.ok ? 0 : 1); } catch { process.exit(1); }" "${HEALTH_URL}"; then
+    if node --input-type=module -e "const url = process.argv[1]; try { const response = await fetch(url); process.exit(response.ok ? 0 : 1); } catch { process.exit(1); }" "${service_url}"; then
       return 0
     fi
 
     sleep 1
   done
 
-  echo "[dev-up] gateway did not become healthy within 60s" >&2
+  echo "[dev-up] ${service_name} did not become healthy within 60s" >&2
   return 1
 }
 
@@ -74,16 +82,22 @@ fi
 
 trap cleanup EXIT INT TERM
 
-echo "[dev-up] starting gateway on ${BASE_URL}/"
+echo "[dev-up] starting gateway on http://127.0.0.1:${GATEWAY_PORT}/"
+env PORT="${GATEWAY_PORT}" PROJECT_MANAGER_ADMIN_TOKEN="${PROJECT_MANAGER_ADMIN_TOKEN}" corepack pnpm dev:gateway &
+GATEWAY_PID=$!
+
+wait_for_url "gateway" "${GATEWAY_PID}" "${GATEWAY_HEALTH_URL}"
+
+echo "[dev-up] starting Vite on ${BASE_URL}/"
 echo "[dev-up] admin token: ${PROJECT_MANAGER_ADMIN_TOKEN}"
-echo "[dev-up] override with: PORT=3200 PROJECT_MANAGER_ADMIN_TOKEN=my-token PROJECT_MANAGER_OPEN_BROWSER=0 ./scripts/dev-up.sh"
+echo "[dev-up] override with: PORT=3200 GATEWAY_PORT=3201 PROJECT_MANAGER_ADMIN_TOKEN=my-token PROJECT_MANAGER_OPEN_BROWSER=0 ./scripts/dev-up.sh"
 
-env PORT="${PORT}" PROJECT_MANAGER_ADMIN_TOKEN="${PROJECT_MANAGER_ADMIN_TOKEN}" corepack pnpm dev:gateway &
-SERVER_PID=$!
+env VITE_GATEWAY_ORIGIN="http://127.0.0.1:${GATEWAY_PORT}" corepack pnpm --filter @project-manager/web dev -- --host 127.0.0.1 --port "${PORT}" &
+WEB_PID=$!
 
-if wait_for_gateway; then
-  echo "[dev-up] gateway is healthy at ${BASE_URL}/"
+if wait_for_url "vite" "${WEB_PID}" "${VITE_HEALTH_URL}"; then
+  echo "[dev-up] management UI is ready at ${BASE_URL}/"
   open_browser
 fi
 
-wait "${SERVER_PID}"
+wait "${WEB_PID}"

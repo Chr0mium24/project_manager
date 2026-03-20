@@ -24,6 +24,14 @@ function parseJsonResponse(body: string): unknown {
   return JSON.parse(body);
 }
 
+function readBuiltScriptPath(html: string): string {
+  const match = html.match(/<script[^>]+src="([^"]+)"[^>]*><\/script>/);
+  if (!match?.[1]) {
+    throw new Error("expected built script tag");
+  }
+  return match[1];
+}
+
 void test("readRouteRegistry falls back to an empty registry", () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   const registry = readRouteRegistry(rootDir);
@@ -135,11 +143,13 @@ void test("createGatewayApp serves platform ui html and asset routes", async () 
 
   const home = await app.inject({ method: "GET", url: "/" });
   const projectsPage = await app.inject({ method: "GET", url: "/projects/landing-a" });
-  const asset = await app.inject({ method: "GET", url: "/assets/platform-ui.js" });
+  const builtScriptPath = readBuiltScriptPath(home.body);
+  const asset = await app.inject({ method: "GET", url: builtScriptPath });
 
   assert.equal(home.statusCode, 200);
-  assert.match(home.body, /Project Manager Control Plane/);
+  assert.match(home.body, /Project Manager Web/);
   assert.match(home.body, /data-project-manager-app/);
+  assert.match(home.body, /\/assets\/.+\.js/);
   assert.match(String(home.headers["content-type"]), /^text\/html/);
 
   assert.equal(projectsPage.statusCode, 200);
@@ -147,7 +157,7 @@ void test("createGatewayApp serves platform ui html and asset routes", async () 
   assert.match(String(projectsPage.headers["content-type"]), /^text\/html/);
 
   assert.equal(asset.statusCode, 200);
-  assert.match(asset.body, /createProjectManagerApp/);
+  assert.match(asset.body, /createProjectManagerApp|ProjectManagerShell/);
   assert.match(String(asset.headers["content-type"]), /^text\/javascript/);
 
   await app.close();

@@ -178,7 +178,13 @@ For one-command local startup, use:
 ./scripts/dev-up.sh
 ```
 
-This helper installs dependencies on first run, defaults the local admin token if needed, waits for the local health check, and starts the gateway on `127.0.0.1:3100`.
+This helper installs dependencies on first run, defaults the local admin token if needed, starts the gateway backend on `127.0.0.1:3101`, and starts the Vue/Vite management UI on `127.0.0.1:3100`. The Vite dev server proxies control API and managed project routes back to the gateway.
+
+For packaged management UI output, use:
+
+```bash
+corepack pnpm build:web
+```
 
 If generated local artifacts need to be cleaned, use repository cleanup scripts instead of ad hoc `rm` commands.
 

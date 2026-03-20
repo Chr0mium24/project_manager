@@ -44,9 +44,3 @@ export type {
   ProjectVersionDiff,
   ProjectVersionRecord
 } from "./gateway-api.ts";
-export {
-  readPlatformAsset,
-  renderPlatformDocument,
-  type PlatformAsset,
-  type PlatformDocumentInput
-} from "./platform-ui.ts";

@@ -30,6 +30,7 @@ const restrictedCompatPatterns = [
 export default tseslint.config(
   {
     ignores: [
+      "apps/**/dist/**",
       "content-repo/**",
       "storage/**",
       "tmp/**",
