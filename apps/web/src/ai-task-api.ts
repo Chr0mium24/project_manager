@@ -126,9 +126,6 @@ function expectString(value: unknown, label: string): string {
 }
 
 function expectNullableString(value: unknown, label: string): string | null {
-  if (value === undefined) {
-    return null;
-  }
   if (value === null) {
     return null;
   }

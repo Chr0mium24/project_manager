@@ -63,11 +63,7 @@ export function readAiTask(rootDir: string, taskId: string): AiTaskRecord | null
     return null;
   }
 
-  try {
-    return readJson(taskPath, aiTaskRecordSchema);
-  } catch {
-    return null;
-  }
+  return readJson(taskPath, aiTaskRecordSchema);
 }
 
 export function listAiTasks(rootDir: string): AiTaskRecord[] {
