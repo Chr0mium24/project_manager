@@ -15,6 +15,7 @@ import {
 import { executeDynamicRuntimeRequest, normalizeRuntimeQuery } from "./runtime-api.ts";
 import { sendManagedTaskApi } from "./managed-task-api.ts";
 import { sendManagedTaskQueryApi } from "./managed-task-query-api.ts";
+import { sendPlatformUi } from "./platform-ui.ts";
 import { sendProjectApi } from "./project-api.ts";
 import { sendProjectFilesApi } from "./project-files-api.ts";
 import { sendProjectVersionsApi } from "./project-versions-api.ts";
@@ -62,7 +63,6 @@ interface ResolutionRouteRegistration {
 export interface GatewayAppOptions extends GatewayAuthOptions {
   aiExecutor?: CodexExecutor;
 }
-
 const routeRecordSchema = z.object({
   routePrefix: z.string().min(1),
   targetKind: z.enum(["internal-handler", "static-build", "dynamic-handler"]),
@@ -75,9 +75,7 @@ const routeRegistrySchema = z.object({
   updatedAt: z.string().nullable(),
   routes: z.array(routeRecordSchema)
 });
-
 const portSchema = z.coerce.number().int().min(1).max(65535);
-
 export const moduleName = "@project-manager/gateway";
 export const REGISTRY_VERSION = 1;
 
@@ -294,6 +292,9 @@ async function sendResolution(
 ): Promise<void> {
   const { rootDir } = context;
   const pathname = resolveRequestPath(request);
+  if (sendPlatformUi(pathname, reply)) {
+    return;
+  }
   if (sendStaticProject(rootDir, pathname, reply)) {
     return;
   }

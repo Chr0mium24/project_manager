@@ -128,6 +128,30 @@ void test("createGatewayApp serves healthz and control API routes", async () => 
   await app.close();
 });
 
+void test("createGatewayApp serves platform ui html and asset routes", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir);
+
+  const home = await app.inject({ method: "GET", url: "/" });
+  const projectsPage = await app.inject({ method: "GET", url: "/projects/landing-a" });
+  const asset = await app.inject({ method: "GET", url: "/assets/platform-ui.js" });
+
+  assert.equal(home.statusCode, 200);
+  assert.match(home.body, /Project Manager Control Plane/);
+  assert.match(String(home.headers["content-type"]), /^text\/html/);
+
+  assert.equal(projectsPage.statusCode, 200);
+  assert.match(projectsPage.body, /\/projects\/landing-a/);
+  assert.match(String(projectsPage.headers["content-type"]), /^text\/html/);
+
+  assert.equal(asset.statusCode, 200);
+  assert.match(asset.body, /requestJson/);
+  assert.match(String(asset.headers["content-type"]), /^text\/javascript/);
+
+  await app.close();
+});
+
 void test("createGatewayApp serves a single project document and 404 for missing slug", async () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   writeContentRepo(rootDir);

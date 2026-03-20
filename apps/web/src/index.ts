@@ -17,3 +17,9 @@ export {
   AiTaskPanelController,
   type AiTaskPanelState
 } from "./ai-task-panel.ts";
+export {
+  readPlatformAsset,
+  renderPlatformDocument,
+  type PlatformAsset,
+  type PlatformDocumentInput
+} from "./platform-ui.ts";
