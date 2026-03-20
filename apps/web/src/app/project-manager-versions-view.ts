@@ -1,25 +1,8 @@
-import {
-  computed,
-  defineComponent,
-  h,
-  onMounted,
-  ref,
-  watch,
-  type ComputedRef,
-  type Ref,
-  type VNode
-} from "vue";
+import { computed, defineComponent, h, onMounted, ref, watch, type ComputedRef, type Ref, type VNode } from "vue";
 import { useRoute } from "vue-router";
-import {
-  GatewayProjectApiClient,
-  type ProjectVersionDiff,
-  type ProjectVersionRecord
-} from "../gateway-api.ts";
+import { GatewayProjectApiClient, type ProjectVersionDiff, type ProjectVersionRecord } from "../gateway-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
-import {
-  renderPageHeader,
-  renderStatusMessage
-} from "./project-manager-view-shared.ts";
+import { type ProjectManagerMetric, renderPageHeader, renderMetricGrid, renderSectionHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
 
 const client = new GatewayProjectApiClient();
 
@@ -331,6 +314,24 @@ function renderVersionDetail(state: VersionsState): VNode {
   ]);
 }
 
+function versionMetrics(state: VersionsState): ProjectManagerMetric[] {
+  const changedFiles = state.diff.value === null ? "No diff loaded" : `${String(state.diff.value.changedFiles)} files`;
+  return [
+    {
+      label: "Snapshots",
+      value: String(state.versions.value.length)
+    },
+    {
+      label: "Selected",
+      value: state.selectedVersionId.value || "None"
+    },
+    {
+      label: "Current diff",
+      value: changedFiles
+    }
+  ];
+}
+
 function renderVersionsView(projectSlug: string, state: VersionsState): VNode {
   return h("div", { class: "pm-view", "data-view": "versions" }, [
     renderPageHeader(
@@ -340,11 +341,10 @@ function renderVersionsView(projectSlug: string, state: VersionsState): VNode {
       "Diff review and restore stay on their own route, while snapshot creation stays behind an explicit toggle."
     ),
     h("section", { class: "pm-card pm-stack" }, [
-      h("div", { class: "pm-card-head" }, [
-        h("div", { class: "pm-page-copy" }, [
-          h("h3", { class: "pm-section-title" }, "Snapshots"),
-          h("p", { class: "pm-copy" }, "Review diffs first, then open the composer when you need a new checkpoint.")
-        ]),
+      renderMetricGrid(versionMetrics(state)),
+      renderSectionHeader(
+        "Snapshots",
+        "Review diffs first, then open the composer when you need a new checkpoint.",
         h(
           "button",
           {
@@ -356,7 +356,7 @@ function renderVersionsView(projectSlug: string, state: VersionsState): VNode {
           },
           state.composeOpen.value ? "Hide Composer" : "New Snapshot"
         )
-      ]),
+      ),
       renderVersionsComposer(state),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderVersionsBody(state)

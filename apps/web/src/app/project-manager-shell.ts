@@ -75,7 +75,7 @@ body { margin: 0; background: linear-gradient(180deg, #f8f7f2 0%, #fafaf8 22%, #
 .pm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .pm-quick-grid, .pm-stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .pm-quick-link, .pm-stat-card { border: 1px solid var(--pm-line); background: var(--pm-panel-soft); padding: 14px; display: grid; gap: 6px; color: inherit; text-decoration: none; }
-.pm-quick-link strong, .pm-stat-card strong { font-size: 0.98rem; }
+.pm-quick-link strong, .pm-stat-card strong { font-size: 0.98rem; overflow-wrap: anywhere; }
 .pm-quick-link small, .pm-stat-card small, .pm-link-copy small, .pm-list-button small, .pm-tree-button small { color: var(--pm-muted); font-size: 0.78rem; letter-spacing: 0.04em; }
 .pm-section-title { margin: 0; font-size: 0.8rem; color: var(--pm-muted); text-transform: uppercase; letter-spacing: 0.16em; }
 .pm-focus-list, .pm-list, .pm-tree-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }

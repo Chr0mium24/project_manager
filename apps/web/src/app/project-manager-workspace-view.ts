@@ -17,7 +17,10 @@ import {
 } from "../gateway-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
 import {
+  type ProjectManagerMetric,
   renderPageHeader,
+  renderMetricGrid,
+  renderSectionHeader,
   renderStatusMessage
 } from "./project-manager-view-shared.ts";
 
@@ -264,10 +267,24 @@ function renderWorkspaceBody(state: WorkspaceState): VNode {
   ]);
 }
 
-function renderWorkspaceView(projectSlug: string, state: WorkspaceState): VNode {
-  const fileLabel = state.selectedFilePath.value || "No file selected";
-  const saveLabel = state.isDirty.value ? "Unsaved changes" : "Saved";
+function workspaceMetrics(state: WorkspaceState): ProjectManagerMetric[] {
+  return [
+    {
+      label: "Current file",
+      value: state.selectedFilePath.value || "No file selected"
+    },
+    {
+      label: "Editor state",
+      value: state.isDirty.value ? "Unsaved changes" : "Saved"
+    },
+    {
+      label: "Layout",
+      value: state.navOpen.value ? "Browser open" : "Focused"
+    }
+  ];
+}
 
+function renderWorkspaceView(projectSlug: string, state: WorkspaceState): VNode {
   return h("div", { class: "pm-view", "data-view": "workspace" }, [
     renderPageHeader(
       projectSlug,
@@ -276,23 +293,10 @@ function renderWorkspaceView(projectSlug: string, state: WorkspaceState): VNode 
       "Browse files and edit one thing at a time without competing review panels."
     ),
     h("section", { class: "pm-card pm-workspace-card" }, [
-      h("div", { class: "pm-stat-row" }, [
-        h("div", { class: "pm-stat-card" }, [h("strong", fileLabel), h("small", "Current file")]),
-        h("div", { class: "pm-stat-card" }, [h("strong", saveLabel), h("small", "Editor state")]),
-        h("div", { class: "pm-stat-card" }, [
-          h("strong", state.navOpen.value ? "Browser open" : "Focused"),
-          h("small", "Layout")
-        ])
-      ]),
-      h("div", { class: "pm-card-head" }, [
-        h("div", { class: "pm-page-copy" }, [
-          h("h3", { class: "pm-section-title" }, "Workspace"),
-          h(
-            "p",
-            { class: "pm-copy" },
-            state.selectedFilePath.value ? state.selectedFilePath.value : "Select a file to begin editing."
-          )
-        ]),
+      renderMetricGrid(workspaceMetrics(state)),
+      renderSectionHeader(
+        "Workspace",
+        state.selectedFilePath.value ? state.selectedFilePath.value : "Select a file to begin editing.",
         h(
           "button",
           {
@@ -304,7 +308,7 @@ function renderWorkspaceView(projectSlug: string, state: WorkspaceState): VNode 
           },
           state.navOpen.value ? "Focus Editor" : "Show Tree"
         )
-      ]),
+      ),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderWorkspaceBody(state)
     ])

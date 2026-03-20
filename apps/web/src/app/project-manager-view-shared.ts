@@ -2,6 +2,11 @@ import { h, type VNode } from "vue";
 import { RouterLink } from "vue-router";
 import { createProjectRouteTabs } from "./project-route-tabs.ts";
 
+export interface ProjectManagerMetric {
+  label: string;
+  value: string;
+}
+
 export function renderPageHeader(
   projectSlug: string,
   currentView: string,
@@ -38,6 +43,16 @@ export function renderSectionTitle(title: string): VNode {
   return h("h3", { class: "pm-section-title" }, title);
 }
 
+export function renderSectionHeader(title: string, description: string, action?: VNode | null): VNode {
+  return h("div", { class: "pm-card-head" }, [
+    h("div", { class: "pm-page-copy" }, [
+      renderSectionTitle(title),
+      h("p", { class: "pm-copy" }, description)
+    ]),
+    action ?? null
+  ]);
+}
+
 export function renderFocusList(items: string[]): VNode {
   return h(
     "ul",
@@ -48,6 +63,16 @@ export function renderFocusList(items: string[]): VNode {
 
 export function renderInfoCard(title: string, children: VNode[]): VNode {
   return h("section", { class: "pm-card" }, [renderSectionTitle(title), ...children]);
+}
+
+export function renderMetricGrid(metrics: ProjectManagerMetric[]): VNode {
+  return h(
+    "div",
+    { class: "pm-stat-row" },
+    metrics.map((metric) =>
+      h("div", { class: "pm-stat-card" }, [h("strong", metric.value), h("small", metric.label)])
+    )
+  );
 }
 
 export function renderStatusMessage(message: string, tone: "error" | "neutral" = "neutral"): VNode {
