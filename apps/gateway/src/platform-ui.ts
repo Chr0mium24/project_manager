@@ -3,6 +3,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type FastifyReply } from "fastify";
 
+const PROJECT_MANAGER_UI_SOURCE_HEADER = "x-project-manager-ui-source";
+const GATEWAY_DIST_UI_SOURCE = "gateway-dist";
+const GATEWAY_DIST_ASSET_SOURCE = "gateway-dist-asset";
 const CURRENT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(CURRENT_DIR, "..", "..", "..");
 const WEB_DIST_ROOT = path.join(REPO_ROOT, "apps", "web", "dist");
@@ -28,15 +31,21 @@ function contentTypeFor(filePath: string): string {
   return "application/octet-stream";
 }
 
-function sendDistFile(filePath: string, reply: FastifyReply): boolean {
+function sendDistFile(
+  filePath: string,
+  reply: FastifyReply,
+  headers: Record<string, string> = {}
+): boolean {
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
     return false;
   }
 
-  void reply
-    .header("content-type", contentTypeFor(filePath))
-    .code(200)
-    .send(fs.readFileSync(filePath));
+  let response = reply.header("content-type", contentTypeFor(filePath));
+  for (const [headerName, headerValue] of Object.entries(headers)) {
+    response = response.header(headerName, headerValue);
+  }
+
+  void response.code(200).send(fs.readFileSync(filePath));
   return true;
 }
 
@@ -52,7 +61,11 @@ function sendPlatformAsset(pathname: string, reply: FastifyReply): boolean {
     return true;
   }
 
-  if (sendDistFile(resolvedPath, reply)) {
+  if (
+    sendDistFile(resolvedPath, reply, {
+      [PROJECT_MANAGER_UI_SOURCE_HEADER]: GATEWAY_DIST_ASSET_SOURCE
+    })
+  ) {
     return true;
   }
 
@@ -65,7 +78,12 @@ function sendPlatformDocument(pathname: string, reply: FastifyReply): boolean {
     return false;
   }
 
-  if (sendDistFile(INDEX_HTML_PATH, reply)) {
+  if (
+    sendDistFile(INDEX_HTML_PATH, reply, {
+      "cache-control": "no-store",
+      [PROJECT_MANAGER_UI_SOURCE_HEADER]: GATEWAY_DIST_UI_SOURCE
+    })
+  ) {
     return true;
   }
 

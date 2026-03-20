@@ -2,14 +2,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
+import {
+  isPlatformDocumentPath,
+  PROJECT_MANAGER_UI_SOURCE_HEADER,
+  VITE_DEV_UI_SOURCE
+} from "./src/platform-dev-server.ts";
 
 const gatewayOrigin = process.env.VITE_GATEWAY_ORIGIN ?? "http://127.0.0.1:3101";
 const CURRENT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const INDEX_HTML_PATH = path.join(CURRENT_DIR, "index.html");
-
-function isPlatformPath(pathname: string): boolean {
-  return pathname === "/" || pathname === "/projects" || pathname.startsWith("/projects/");
-}
 
 function projectManagerSpaFallback(): Plugin {
   return {
@@ -20,9 +21,13 @@ function projectManagerSpaFallback(): Plugin {
         void (async () => {
           const method = request.method ?? "GET";
           const pathname = request.url?.split("?")[0] ?? "/";
-          const acceptsHtml = request.headers.accept?.includes("text/html") ?? false;
 
-          if (method !== "GET" || !acceptsHtml || !isPlatformPath(pathname)) {
+          if (method !== "GET") {
+            next();
+            return;
+          }
+
+          if (!isPlatformDocumentPath(pathname)) {
             next();
             return;
           }
@@ -31,6 +36,8 @@ function projectManagerSpaFallback(): Plugin {
           const html = await server.transformIndexHtml(pathname, template);
           response.statusCode = 200;
           response.setHeader("Content-Type", "text/html; charset=utf-8");
+          response.setHeader("Cache-Control", "no-store");
+          response.setHeader(PROJECT_MANAGER_UI_SOURCE_HEADER, VITE_DEV_UI_SOURCE);
           response.end(html);
         })().catch(next);
       });

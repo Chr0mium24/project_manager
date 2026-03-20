@@ -32,6 +32,17 @@ function readBuiltScriptPath(html: string): string {
   return match[1];
 }
 
+function assertPlatformDocumentResponse(
+  response: Awaited<ReturnType<ReturnType<typeof createGatewayApp>["inject"]>>
+): void {
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /Project Manager Web/);
+  assert.match(response.body, /data-project-manager-app/);
+  assert.match(String(response.headers["content-type"]), /^text\/html/);
+  assert.equal(response.headers["cache-control"], "no-store");
+  assert.equal(response.headers["x-project-manager-ui-source"], "gateway-dist");
+}
+
 void test("readRouteRegistry falls back to an empty registry", () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
   const registry = readRouteRegistry(rootDir);
@@ -146,19 +157,15 @@ void test("createGatewayApp serves platform ui html and asset routes", async () 
   const builtScriptPath = readBuiltScriptPath(home.body);
   const asset = await app.inject({ method: "GET", url: builtScriptPath });
 
-  assert.equal(home.statusCode, 200);
-  assert.match(home.body, /Project Manager Web/);
-  assert.match(home.body, /data-project-manager-app/);
+  assertPlatformDocumentResponse(home);
   assert.match(home.body, /\/assets\/.+\.js/);
-  assert.match(String(home.headers["content-type"]), /^text\/html/);
 
-  assert.equal(projectsPage.statusCode, 200);
-  assert.match(projectsPage.body, /data-project-manager-app/);
-  assert.match(String(projectsPage.headers["content-type"]), /^text\/html/);
+  assertPlatformDocumentResponse(projectsPage);
 
   assert.equal(asset.statusCode, 200);
   assert.match(asset.body, /createProjectManagerApp|ProjectManagerShell/);
   assert.match(String(asset.headers["content-type"]), /^text\/javascript/);
+  assert.equal(asset.headers["x-project-manager-ui-source"], "gateway-dist-asset");
 
   await app.close();
 });
