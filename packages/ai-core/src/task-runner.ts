@@ -18,6 +18,12 @@ import {
   type CodexExecutor
 } from "./codex-executor.ts";
 import {
+  appendTextArtifact,
+  readJsonArtifact,
+  readTextArtifact,
+  writeTextArtifact
+} from "./task-artifacts.ts";
+import {
   getAiTaskRoot,
   listAiTasks,
   readAiTask,
@@ -70,12 +76,6 @@ const aiTaskSummarySchema = z.object({
 
 function nowIso(): string {
   return new Date().toISOString();
-}
-
-function writeText(filePath: string, value: string): string {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, value, "utf8");
-  return filePath;
 }
 
 function createTaskId(taskSlug: string): string {
@@ -153,8 +153,8 @@ function completeTask(
   }
 ): AiTaskRecord {
   const taskRoot = getAiTaskRoot(rootDir, task.taskId);
-  const stdoutPath = writeText(path.join(taskRoot, "stdout.log"), result.stdout);
-  const stderrPath = writeText(path.join(taskRoot, "stderr.log"), result.stderr);
+  const stdoutPath = writeTextArtifact(path.join(taskRoot, "stdout.log"), result.stdout);
+  const stderrPath = writeTextArtifact(path.join(taskRoot, "stderr.log"), result.stderr);
 
   return writeAiTaskRecord(rootDir, {
     ...task,
@@ -171,17 +171,18 @@ function completeTask(
   });
 }
 
-function readTextArtifact(rootDir: string, relativePath: string | null): string {
-  if (relativePath === null) {
-    return "";
-  }
-
-  const artifactPath = path.join(rootDir, relativePath);
-  if (!fs.existsSync(artifactPath) || !fs.statSync(artifactPath).isFile()) {
-    return "";
-  }
-
-  return fs.readFileSync(artifactPath, "utf8");
+function markTaskRunning(rootDir: string, task: AiTaskRecord): AiTaskRecord {
+  const taskRoot = getAiTaskRoot(rootDir, task.taskId);
+  const stdoutPath = path.join(taskRoot, "stdout.log");
+  const stderrPath = path.join(taskRoot, "stderr.log");
+  writeTextArtifact(stdoutPath, "");
+  writeTextArtifact(stderrPath, "");
+  return writeAiTaskRecord(rootDir, {
+    ...task,
+    status: "running",
+    stdoutPath: path.relative(rootDir, stdoutPath),
+    stderrPath: path.relative(rootDir, stderrPath)
+  });
 }
 
 function writeWorkspaceFromParent(rootDir: string, task: AiTaskRecord, parentTask: AiTaskRecord): void {
@@ -218,24 +219,6 @@ function readRequiredAiTask(rootDir: string, taskId: string): AiTaskRecord {
   }
 
   return task;
-}
-
-function readAiTaskArtifact<T>(
-  rootDir: string,
-  relativePath: string | null,
-  schema: z.ZodType<T>
-): T | null {
-  if (relativePath === null) {
-    return null;
-  }
-
-  const artifactPath = path.join(rootDir, relativePath);
-  if (!fs.existsSync(artifactPath) || !fs.statSync(artifactPath).isFile()) {
-    return null;
-  }
-
-  const rawValue: unknown = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-  return schema.parse(rawValue);
 }
 
 function getErrorMessage(error: unknown): string {
@@ -280,6 +263,51 @@ export function createAiTask(
   return task;
 }
 
+async function executeRunningTask(
+  rootDir: string,
+  task: AiTaskRecord,
+  executor: CodexExecutor
+): Promise<CodexExecResult> {
+  return executor({
+    cwd: path.join(rootDir, task.workspaceProjectPath),
+    prompt: task.prompt,
+    sandboxMode: task.sandboxMode,
+    sessionId: task.sessionId ?? undefined,
+    onStdout: task.stdoutPath === null
+      ? undefined
+      : (chunk) => {
+          appendTextArtifact(path.join(rootDir, task.stdoutPath ?? ""), chunk);
+        },
+    onStderr: task.stderrPath === null
+      ? undefined
+      : (chunk) => {
+          appendTextArtifact(path.join(rootDir, task.stderrPath ?? ""), chunk);
+        }
+  });
+}
+
+function finalizeSuccessfulTask(
+  rootDir: string,
+  task: AiTaskRecord,
+  execResult: CodexExecResult
+): AiTaskRecord {
+  summarizeManagedTask(rootDir, {
+    projectSlug: task.projectSlug,
+    taskSlug: task.taskSlug
+  });
+  validateManagedTask(rootDir, {
+    projectSlug: task.projectSlug,
+    taskSlug: task.taskSlug
+  });
+  const taskPaths = getManagedTaskPaths(rootDir, task.projectSlug, task.taskSlug);
+
+  return completeTask(rootDir, task, "completed", {
+    ...execResult,
+    summaryPath: path.relative(rootDir, taskPaths.summaryPath),
+    validationPath: path.relative(rootDir, taskPaths.validationPath)
+  });
+}
+
 export async function runAiTask(
   rootDir: string,
   taskId: string,
@@ -290,21 +318,12 @@ export async function runAiTask(
     return task;
   }
 
-  const runningTask = writeAiTaskRecord(rootDir, {
-    ...task,
-    status: "running"
-  });
+  const runningTask = markTaskRunning(rootDir, task);
   const executor = runnerOptions?.executor ?? runCodexExec;
-  const workspaceProjectDir = path.join(rootDir, runningTask.workspaceProjectPath);
   let execResult: CodexExecResult;
 
   try {
-    execResult = await executor({
-      cwd: workspaceProjectDir,
-      prompt: runningTask.prompt,
-      sandboxMode: runningTask.sandboxMode,
-      sessionId: runningTask.sessionId ?? undefined
-    });
+    execResult = await executeRunningTask(rootDir, runningTask, executor);
   } catch (error) {
     return completeTask(rootDir, runningTask, "failed", {
       exitCode: null,
@@ -320,25 +339,7 @@ export async function runAiTask(
   }
 
   try {
-    summarizeManagedTask(rootDir, {
-      projectSlug: runningTask.projectSlug,
-      taskSlug: runningTask.taskSlug
-    });
-    validateManagedTask(rootDir, {
-      projectSlug: runningTask.projectSlug,
-      taskSlug: runningTask.taskSlug
-    });
-    const taskPaths = getManagedTaskPaths(
-      rootDir,
-      runningTask.projectSlug,
-      runningTask.taskSlug
-    );
-
-    return completeTask(rootDir, runningTask, "completed", {
-      ...execResult,
-      summaryPath: path.relative(rootDir, taskPaths.summaryPath),
-      validationPath: path.relative(rootDir, taskPaths.validationPath)
-    });
+    return finalizeSuccessfulTask(rootDir, runningTask, execResult);
   } catch (error) {
     return completeTask(rootDir, runningTask, "failed", {
       ...execResult,
@@ -349,7 +350,7 @@ export async function runAiTask(
 
 export function readAiTaskSummary(rootDir: string, taskId: string): ManagedTaskSummary | null {
   const task = readRequiredAiTask(rootDir, taskId);
-  return readAiTaskArtifact(rootDir, task.summaryPath, aiTaskSummarySchema);
+  return readJsonArtifact(rootDir, task.summaryPath, aiTaskSummarySchema);
 }
 
 export function readAiTaskDiagnostics(rootDir: string, taskId: string): AiTaskDiagnostics {

@@ -41,7 +41,7 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: start;
 }
 .pm-project-title-row {
   display: flex;
@@ -54,10 +54,35 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   font-size: 1rem;
   font-weight: 800;
 }
+.pm-project-title-link {
+  color: var(--pm-text);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 800;
+}
+.pm-project-title-link:hover {
+  color: var(--pm-accent-strong);
+  text-decoration: underline;
+}
 .pm-project-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
+}
+.pm-project-open-page,
+.pm-entry-link {
+  color: var(--pm-muted);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.pm-project-open-page:hover,
+.pm-entry-link:hover {
+  color: var(--pm-accent-strong);
+}
+.pm-project-open-page {
+  justify-self: end;
+  white-space: nowrap;
 }
 .pm-project-actions {
   grid-auto-flow: column;
@@ -176,6 +201,13 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   color: var(--pm-text);
 }
 .pm-button-ghost:hover { background: var(--pm-panel-soft); }
+.pm-button-danger {
+  border-color: #cf222e;
+  color: #cf222e;
+}
+.pm-button-danger:hover {
+  background: rgba(207, 34, 46, 0.08);
+}
 .pm-list-button,
 .pm-tree-button {
   width: 100%;

@@ -1,17 +1,15 @@
-import { computed, defineComponent, h, onMounted, ref, watch, type ComputedRef, type Ref, type VNode } from "vue";
+import { computed, defineComponent, onBeforeUnmount, onMounted, ref, watch, type ComputedRef, type Ref } from "vue";
 import { useRoute } from "vue-router";
 import {
   AiTaskApiClient,
   type AiTaskSandboxMode,
-  type AiTaskDiagnostics,
   type AiTaskRecord,
+  type AiTaskDiagnostics,
   type ManagedTaskSummary
 } from "../ai-task-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
-import { renderAiTaskSummaryPanel } from "./project-manager-ai-task-details.ts";
-import { renderPageHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
+import { renderAiView } from "./project-manager-ai-render.ts";
 import { runtimeHrefForSlug } from "./project-runtime-link.ts";
-import { renderAiWriteActions } from "./project-manager-ai-write-actions.ts";
 import { createAiComposerControls } from "./project-manager-ai-composer-controls.ts";
 interface AiState {
   tasks: Ref<AiTaskRecord[]>;
@@ -138,15 +136,12 @@ function createAiMutations(context: AiMutationContext) {
         ...input,
         ...(context.parentTaskId.value === null ? {} : { parentTaskId: context.parentTaskId.value })
       });
-      const settled = await client.waitForTask(created.taskId, {
-        pollIntervalMs: 500
-      });
       context.taskSlug.value = "";
       context.prompt.value = "";
       context.parentTaskId.value = null;
       context.composeOpen.value = false;
       await context.queries.refreshTasks();
-      await context.queries.selectTask(settled.taskId);
+      await context.queries.selectTask(created.taskId);
     } catch (createError) {
       context.error.value = createError instanceof Error ? createError.message : "unknown ai task error";
     } finally {
@@ -245,108 +240,6 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     reset: composerControls.reset
   };
 }
-function renderAiBody(state: AiState): VNode {
-  return h("div", { class: "pm-version-grid" }, [
-    renderAiTaskList(state),
-    renderAiTaskSummaryPanel({
-      selectedTask: state.selectedTask,
-      summary: state.summary,
-      diagnostics: state.diagnostics
-    })
-  ]);
-}
-
-function renderAiTaskList(state: AiState): VNode {
-  return h("aside", { class: "pm-card pm-subcard" }, [
-    state.tasks.value.length === 0
-      ? renderStatusMessage("No AI tasks for this project yet.")
-      : h(
-          "ul",
-          { class: "pm-list" },
-          state.tasks.value.map((task) =>
-            h("li", [
-              h(
-                "button",
-                {
-                  type: "button",
-                  class: ["pm-list-button", state.selectedTask.value?.taskId === task.taskId ? "is-active" : ""],
-                  onClick: () => {
-                    void state.selectTask(task.taskId);
-                  }
-                },
-                [h("strong", task.taskSlug), h("small", task.status)]
-              )
-            ])
-          )
-        )
-  ]);
-}
-function renderAiView(
-  projectSlug: string,
-  state: AiState,
-  publicHref: string | null
-): VNode {
-  return h("div", { class: "pm-view", "data-view": "ai" }, [
-    renderPageHeader({
-      projectSlug,
-      currentView: "ai",
-      title: "Repository AI tasks",
-      description: "Review queued and completed AI tasks here, then apply a completed task when the summary is ready.",
-      action: publicHref
-        ? h(
-            "a",
-            {
-              href: publicHref,
-              class: "pm-project-link"
-            },
-            "Open page"
-          )
-        : null
-    }),
-    h("section", { class: "pm-card pm-stack" }, [
-      h("div", { class: "pm-page-copy" }, [
-        h("h2", { class: "pm-section-title" }, "Task queue"),
-        h("p", { class: "pm-copy" }, "The left column is the queue. The right column is the selected task summary.")
-      ]),
-      state.error.value ? renderStatusMessage(state.error.value, "error") : null,
-      renderAiBody(state)
-    ]),
-    renderAiWriteActions({
-      composeOpen: state.composeOpen.value,
-      taskSlug: state.taskSlug.value,
-      prompt: state.prompt.value,
-      sandboxMode: state.sandboxMode.value,
-      isBusy: state.isBusy.value,
-      canApplySelectedTask: state.selectedTask.value?.status === "completed",
-      canContinueSelectedTask:
-        state.selectedTask.value !== null
-        && state.selectedTask.value.status !== "queued"
-        && state.selectedTask.value.status !== "running",
-      continueTaskLabel: state.parentTaskId.value === null ? null : state.selectedTask.value?.taskSlug ?? null,
-      setTaskSlug: (value) => {
-        state.taskSlug.value = value;
-      },
-      setPrompt: (value) => {
-        state.prompt.value = value;
-      },
-      setSandboxMode: (value) => {
-        state.sandboxMode.value = value;
-      },
-      openNewTaskComposer: () => {
-        state.openNewTaskComposer();
-      },
-      openFollowUpComposer: () => {
-        state.openFollowUpComposer();
-      },
-      createTask: () => {
-        void state.createTask();
-      },
-      applySelectedTask: () => {
-        void state.applySelectedTask();
-      }
-    })
-  ]);
-}
 export const ProjectAiTasksView = defineComponent({
   name: "ProjectAiTasksView",
   setup() {
@@ -356,6 +249,31 @@ export const ProjectAiTasksView = defineComponent({
     const adminToken = computed(() => context.adminToken.trim());
     const publicHref = computed(() => runtimeHrefForSlug(context.projects, projectSlug.value));
     const state = createAiState(projectSlug, adminToken);
+    let pollHandle: number | null = null;
+
+    function stopPolling() {
+      if (pollHandle !== null) {
+        window.clearInterval(pollHandle);
+        pollHandle = null;
+      }
+    }
+
+    function startPolling() {
+      if (pollHandle !== null) {
+        return;
+      }
+
+      pollHandle = window.setInterval(() => {
+        const hasPendingTasks = state.tasks.value.some((task) => task.status === "queued" || task.status === "running");
+        const selectedTaskPending = state.selectedTask.value?.status === "queued" || state.selectedTask.value?.status === "running";
+        if (!hasPendingTasks && !selectedTaskPending) {
+          return;
+        }
+
+        void refreshFromRoute();
+      }, 1_000);
+    }
+
     async function refreshFromRoute() {
       await state.refreshTasks();
       const taskId = typeof route.query.taskId === "string" ? route.query.taskId : "";
@@ -368,7 +286,11 @@ export const ProjectAiTasksView = defineComponent({
     }
 
     onMounted(() => {
+      startPolling();
       void refreshFromRoute();
+    });
+    onBeforeUnmount(() => {
+      stopPolling();
     });
     watch(() => [projectSlug.value, route.query.taskId, route.query.compose], () => {
       state.reset();

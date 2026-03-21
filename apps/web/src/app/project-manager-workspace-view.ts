@@ -35,7 +35,7 @@ interface WorkspaceState {
   navOpen: Ref<boolean>;
   editorError: Ref<string | null>;
   isDirty: ComputedRef<boolean>;
-  loadWorkspace(slug: string): Promise<void>;
+  loadWorkspace(slug: string, preferredPath?: string): Promise<void>;
   loadFile(filePath: string): Promise<void>;
   createFile(): Promise<void>;
   deleteFile(): Promise<void>;
@@ -93,19 +93,27 @@ function requireAdminToken(adminToken: string): string {
 }
 
 function createWorkspaceQueries(context: WorkspaceActionContext) {
+  let fileRequestToken = 0;
+
   async function loadFile(filePath: string) {
     if (!context.projectSlug.value || !filePath) {
       return;
     }
+
+    const requestToken = ++fileRequestToken;
     context.selectedFilePath.value = filePath;
-    context.fileContent.value = null;
-    context.fileDraft.value = "";
     context.error.value = null;
     try {
       const content = await client.readProjectFile(context.projectSlug.value, filePath);
+      if (requestToken !== fileRequestToken) {
+        return;
+      }
       context.fileContent.value = content;
       context.fileDraft.value = content;
     } catch (loadError) {
+      if (requestToken !== fileRequestToken) {
+        return;
+      }
       context.error.value = loadError instanceof Error ? loadError.message : "unknown project file error";
     }
   }
@@ -117,7 +125,7 @@ function createWorkspaceQueries(context: WorkspaceActionContext) {
     context.selectedFilePath.value = nextSelectedPath;
   }
 
-  async function loadWorkspace(slug: string) {
+  async function loadWorkspace(slug: string, preferredPath = "") {
     if (!slug) {
       return;
     }
@@ -125,7 +133,7 @@ function createWorkspaceQueries(context: WorkspaceActionContext) {
     context.error.value = null;
     context.tree.value = null;
     try {
-      await refreshTree(context.selectedFilePath.value);
+      await refreshTree(preferredPath || context.selectedFilePath.value);
       if (context.selectedFilePath.value) {
         await loadFile(context.selectedFilePath.value);
       } else {
@@ -298,15 +306,16 @@ export const ProjectWorkspaceView = defineComponent({
     const route = useRoute();
     const context = useProjectContextStore();
     const projectSlug = computed(() => String(route.params.slug ?? ""));
+    const requestedFilePath = computed(() => typeof route.query.path === "string" ? route.query.path : "");
     const adminToken = computed(() => context.adminToken.trim());
     const publicHref = computed(() => runtimeHrefForSlug(context.projects, projectSlug.value));
     const state = createWorkspaceState(projectSlug, adminToken);
 
     onMounted(() => {
-      void state.loadWorkspace(projectSlug.value);
+      void state.loadWorkspace(projectSlug.value, requestedFilePath.value);
     });
-    watch(projectSlug, (slug) => {
-      void state.loadWorkspace(slug);
+    watch(() => [projectSlug.value, requestedFilePath.value], ([slug, preferredPath]) => {
+      void state.loadWorkspace(slug ?? "", preferredPath ?? "");
     });
 
     return () => renderWorkspaceView({

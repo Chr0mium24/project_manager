@@ -194,6 +194,54 @@ void test("readAiTaskDiagnostics returns stdout, stderr, and session metadata", 
   assert.equal(diagnostics.stderr, "trace\n");
 });
 
+void test("runAiTask exposes live diagnostics while a task is still running", async () => {
+  const rootDir = createTempRoot();
+  writeContentRepo(rootDir);
+
+  const task = createAiTask(rootDir, {
+    projectSlug: "landing-a",
+    taskSlug: "live-copy",
+    prompt: "Stream progress while editing."
+  });
+
+  let resolveExec: ((result: {
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+    error: null;
+    sessionId: string;
+  }) => void) | null = null;
+
+  const runPromise = runAiTask(rootDir, task.taskId, {
+    executor: (input) => new Promise((resolve) => {
+      input.onStdout?.("step 1\n");
+      input.onStderr?.("warn 1\n");
+      resolveExec = resolve;
+    })
+  });
+
+  await new Promise<void>((resolve) => {
+    setImmediate(resolve);
+  });
+
+  const runningDiagnostics = readAiTaskDiagnostics(rootDir, task.taskId);
+  const runningTask = readAiTask(rootDir, task.taskId);
+
+  assert.equal(runningTask?.status, "running");
+  assert.equal(runningDiagnostics.status, "running");
+  assert.match(runningDiagnostics.stdout, /step 1/);
+  assert.match(runningDiagnostics.stderr, /warn 1/);
+
+  resolveExec?.({
+    exitCode: 0,
+    stdout: "step 1\nstep 2\n",
+    stderr: "warn 1\n",
+    error: null,
+    sessionId: "session-live"
+  });
+  await runPromise;
+});
+
 void test("createAiTask can continue from a previous task workspace", async () => {
   const rootDir = createTempRoot();
   writeContentRepo(rootDir);

@@ -11,7 +11,7 @@ interface ProjectsState {
   actionError: Ref<string | null>;
   createBusy: Ref<boolean>;
   createForm: Ref<ProjectCreateInput>;
-  deleteBusySlug: Ref<string | null>;
+  createModalOpen: Ref<boolean>;
   filteredProjects: ComputedRef<ReturnType<typeof useProjectContextStore>["projects"]>;
   projectDetails: Ref<Record<string, ManagedProjectRecord>>;
   runningTasks: Ref<AiTaskRecord[]>;
@@ -68,7 +68,7 @@ function createProjectsState(context: ReturnType<typeof useProjectContextStore>)
   const projectDetails = ref<Record<string, ManagedProjectRecord>>({});
   const searchQuery = ref("");
   const createBusy = ref(false);
-  const deleteBusySlug = ref<string | null>(null);
+  const createModalOpen = ref(false);
   const actionError = ref<string | null>(null);
   const taskError = ref<string | null>(null);
   const tasksLoading = ref(false);
@@ -85,7 +85,7 @@ function createProjectsState(context: ReturnType<typeof useProjectContextStore>)
     actionError,
     createBusy,
     createForm,
-    deleteBusySlug,
+    createModalOpen,
     filteredProjects,
     projectDetails,
     runningTasks,
@@ -174,6 +174,7 @@ function createProjectsActions(
       await context.loadProjects();
       await Promise.all([loadProjectDetails(), loadRunningTasks()]);
       state.createForm.value = createInitialProjectForm();
+      state.createModalOpen.value = false;
       await router.push(created.task === null
         ? `/projects/${created.project.slug}`
         : `/projects/${created.project.slug}/ai?taskId=${encodeURIComponent(created.task.taskId)}`);
@@ -183,32 +184,8 @@ function createProjectsActions(
       state.createBusy.value = false;
     }
   }
-
-  async function deleteProject(slug: string) {
-    const adminToken = context.adminToken.trim();
-    if (adminToken.length === 0) {
-      state.actionError.value = "Admin access is required for project deletion.";
-      return;
-    }
-    if (typeof window !== "undefined" && !window.confirm(`Delete project ${slug}?`)) {
-      return;
-    }
-
-    state.deleteBusySlug.value = slug;
-    state.actionError.value = null;
-    try {
-      await client.deleteProject(slug, adminToken);
-      await context.loadProjects();
-      await Promise.all([loadProjectDetails(), loadRunningTasks()]);
-    } catch (error) {
-      state.actionError.value = error instanceof Error ? error.message : "Unable to delete project.";
-    } finally {
-      state.deleteBusySlug.value = null;
-    }
-  }
   return {
     createProjectFromForm,
-    deleteProject,
     loadProjectDetails,
     loadRunningTasks,
     startTaskPolling: polling.startTaskPolling,
@@ -260,7 +237,7 @@ export const ProjectsIndexView = defineComponent({
       adminMode: adminMode.value,
       createBusy: state.createBusy.value,
       createForm: state.createForm.value,
-      deleteBusySlug: state.deleteBusySlug.value,
+      createModalOpen: state.createModalOpen.value,
       filteredProjects: state.filteredProjects.value,
       projectDetails: state.projectDetails.value,
       projectsError: context.projectsError,
@@ -269,11 +246,15 @@ export const ProjectsIndexView = defineComponent({
       searchQuery: state.searchQuery.value,
       taskError: state.taskError.value,
       tasksLoading: state.tasksLoading.value,
+      closeCreateModal: () => {
+        state.createModalOpen.value = false;
+      },
       onCreateProject: () => {
         void actions.createProjectFromForm();
       },
-      onDeleteProject: (slug) => {
-        void actions.deleteProject(slug);
+      openCreateModal: () => {
+        state.actionError.value = null;
+        state.createModalOpen.value = true;
       },
       setCreateField: (key, value) => {
         state.createForm.value = {

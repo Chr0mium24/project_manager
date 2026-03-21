@@ -5,6 +5,8 @@ export interface CodexExecInput {
   prompt: string;
   sandboxMode?: "danger-full-access" | "workspace-write";
   sessionId?: string;
+  onStdout?: (chunk: string) => void;
+  onStderr?: (chunk: string) => void;
 }
 
 export interface CodexExecResult {
@@ -90,10 +92,14 @@ export function runCodexExec(input: CodexExecInput): Promise<CodexExecResult> {
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk) => {
-      stdoutChunks.push(String(chunk));
+      const text = String(chunk);
+      stdoutChunks.push(text);
+      input.onStdout?.(text);
     });
     child.stderr.on("data", (chunk) => {
-      stderrChunks.push(String(chunk));
+      const text = String(chunk);
+      stderrChunks.push(text);
+      input.onStderr?.(text);
     });
     child.on("error", (error) => {
       finish({

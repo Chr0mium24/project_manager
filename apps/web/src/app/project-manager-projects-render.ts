@@ -18,14 +18,20 @@ function renderPublicProjectCard(project: ProjectListEntry, detail: ManagedProje
 
 function renderAdminProjectRow(
   project: ProjectListEntry,
-  detail: ManagedProjectRecord | null,
-  deletingSlug: string | null,
-  onDelete: (slug: string) => void
+  detail: ManagedProjectRecord | null
 ) {
+  const projectName = detail?.name ?? project.slug;
   return h("li", { class: "pm-project-row" }, [
     h("div", { class: "pm-project-main" }, [
       h("div", { class: "pm-project-title-row" }, [
-        h("h2", { class: "pm-project-title" }, detail?.name ?? project.slug),
+        h(
+          RouterLink,
+          {
+            to: `/projects/${project.slug}`,
+            class: "pm-project-title-link"
+          },
+          () => projectName
+        ),
         h("span", { class: "pm-badge" }, project.runtime),
         h("span", { class: "pm-badge" }, detail?.framework ?? "loading")
       ]),
@@ -33,21 +39,20 @@ function renderAdminProjectRow(
       h("div", { class: "pm-project-meta" }, [
         h("span", `slug: ${project.slug}`),
         h("span", `route: ${project.route}`),
-        h("span", `entry: ${project.entry}`)
+        h(
+          RouterLink,
+          {
+            to: {
+              path: `/projects/${project.slug}/workspace`,
+              query: { path: project.entry }
+            },
+            class: "pm-entry-link"
+          },
+          () => `entry: ${project.entry} ->`
+        )
       ])
     ]),
-    h("div", { class: "pm-project-actions" }, [
-      h(RouterLink, { to: `/projects/${project.slug}`, class: "pm-project-link pm-project-link-primary" }, () => "Open repository"),
-      h("a", { href: runtimeHrefForProject(project), class: "pm-project-link" }, "Open page"),
-      h("button", {
-        type: "button",
-        class: "pm-project-link",
-        disabled: deletingSlug === project.slug,
-        onClick: () => {
-          onDelete(project.slug);
-        }
-      }, deletingSlug === project.slug ? "Deleting..." : "Delete")
-    ])
+    h("a", { href: runtimeHrefForProject(project), class: "pm-project-open-page" }, "open page ->")
   ]);
 }
 
@@ -91,7 +96,7 @@ export interface ProjectsIndexRenderProps {
   adminMode: boolean;
   createBusy: boolean;
   createForm: ProjectCreateInput;
-  deleteBusySlug: string | null;
+  createModalOpen: boolean;
   filteredProjects: ProjectListEntry[];
   projectDetails: Record<string, ManagedProjectRecord>;
   projectsError: string | null;
@@ -100,8 +105,9 @@ export interface ProjectsIndexRenderProps {
   searchQuery: string;
   taskError: string | null;
   tasksLoading: boolean;
+  closeCreateModal(): void;
   onCreateProject(): void;
-  onDeleteProject(slug: string): void;
+  openCreateModal(): void;
   setCreateField<K extends keyof ProjectCreateInput>(key: K, value: ProjectCreateInput[K]): void;
   setSearchQuery(value: string): void;
 }
@@ -142,58 +148,91 @@ function renderSelectField<T extends string>(
   ]);
 }
 
-function renderAdminCreatePanel(props: ProjectsIndexRenderProps): VNode {
-  return h("section", { class: "pm-card pm-stack" }, [
-    h("div", { class: "pm-page-copy" }, [
-      h("p", { class: "pm-kicker" }, "Admin"),
-      h("h1", { class: "pm-title" }, "Repository management"),
-      h("p", { class: "pm-copy" }, "Create projects, inspect active AI work, or jump into a repository.")
-    ]),
-    props.actionError ? renderStatusMessage(props.actionError, "error") : null,
-    h("div", { class: "pm-form-grid" }, [
-      renderTextField("Project slug", props.createForm.slug, (value) => {
-        props.setCreateField("slug", value);
-      }),
-      renderTextField("Project name", props.createForm.name, (value) => {
-        props.setCreateField("name", value);
-      }),
-      renderSelectField("Runtime", props.createForm.runtime, ["static", "dynamic"], (value) => {
-        props.setCreateField("runtime", value);
-      }),
-      renderSelectField("Visibility", props.createForm.visibility, ["public", "private"], (value) => {
-        props.setCreateField("visibility", value);
-      }),
-      renderTextField("Description", props.createForm.description, (value) => {
-        props.setCreateField("description", value);
-      }, "pm-field pm-field-full"),
-      h("label", { class: "pm-field pm-field-full" }, [
-        h("span", "AI bootstrap prompt"),
-        h("textarea", {
-          class: "pm-textarea",
-          value: props.createForm.aiPrompt,
-          placeholder: "Optional. Describe the initial project build the AI should perform.",
-          onInput: (event: Event) => {
-            props.setCreateField("aiPrompt", (event.target as HTMLTextAreaElement).value);
-          }
-        })
+function renderAdminCreateModal(props: ProjectsIndexRenderProps): VNode | null {
+  if (!props.createModalOpen) {
+    return null;
+  }
+
+  return h("div", { class: "pm-modal-backdrop" }, [
+    h("section", { class: "pm-access-modal pm-card", role: "dialog", "aria-modal": "true" }, [
+      h("div", { class: "pm-page-copy" }, [
+        h("p", { class: "pm-kicker" }, "New repository"),
+        h("h2", { class: "pm-page-title" }, "AI create project"),
+        h("p", { class: "pm-copy" }, "Define the project shell and the bootstrap prompt. The AI task will start right after creation.")
       ]),
-      renderTextField("AI task slug", props.createForm.aiTaskSlug, (value) => {
-        props.setCreateField("aiTaskSlug", value);
-      }),
-      renderSelectField("Sandbox", props.createForm.sandboxMode, ["workspace-write", "danger-full-access"], (value) => {
-        props.setCreateField("sandboxMode", value);
-      }),
-      h("div", { class: "pm-actions pm-actions-end pm-field-full" }, [
-        h("button", {
-          type: "button",
-          class: "pm-button",
-          disabled: props.createBusy,
-          onClick: () => {
-            props.onCreateProject();
-          }
-        }, props.createBusy ? "Creating..." : "Create project")
+      props.actionError ? renderStatusMessage(props.actionError, "error") : null,
+      h("div", { class: "pm-form-grid" }, [
+        renderTextField("Project slug", props.createForm.slug, (value) => {
+          props.setCreateField("slug", value);
+        }),
+        renderTextField("Project name", props.createForm.name, (value) => {
+          props.setCreateField("name", value);
+        }),
+        renderSelectField("Runtime", props.createForm.runtime, ["static", "dynamic"], (value) => {
+          props.setCreateField("runtime", value);
+        }),
+        renderSelectField("Visibility", props.createForm.visibility, ["public", "private"], (value) => {
+          props.setCreateField("visibility", value);
+        }),
+        renderTextField("Description", props.createForm.description, (value) => {
+          props.setCreateField("description", value);
+        }, "pm-field pm-field-full"),
+        h("label", { class: "pm-field pm-field-full" }, [
+          h("span", "AI bootstrap prompt"),
+          h("textarea", {
+            class: "pm-textarea",
+            value: props.createForm.aiPrompt,
+            placeholder: "Describe the project you want AI to create.",
+            onInput: (event: Event) => {
+              props.setCreateField("aiPrompt", (event.target as HTMLTextAreaElement).value);
+            }
+          })
+        ]),
+        renderTextField("AI task slug", props.createForm.aiTaskSlug, (value) => {
+          props.setCreateField("aiTaskSlug", value);
+        }),
+        renderSelectField("Sandbox", props.createForm.sandboxMode, ["workspace-write", "danger-full-access"], (value) => {
+          props.setCreateField("sandboxMode", value);
+        }),
+        h("div", { class: "pm-actions pm-actions-end pm-field-full" }, [
+          h("button", {
+            type: "button",
+            class: "pm-button pm-button-ghost",
+            onClick: () => {
+              props.closeCreateModal();
+            }
+          }, "Cancel"),
+          h("button", {
+            type: "button",
+            class: "pm-button",
+            disabled: props.createBusy,
+            onClick: () => {
+              props.onCreateProject();
+            }
+          }, props.createBusy ? "Creating..." : "Create project")
+        ])
       ])
     ])
+  ]);
+}
+
+function renderAdminCreatePanel(props: ProjectsIndexRenderProps): VNode {
+  return h("section", { class: "pm-card pm-stack" }, [
+    h("div", { class: "pm-card-head" }, [
+      h("div", { class: "pm-page-copy" }, [
+        h("p", { class: "pm-kicker" }, "Admin"),
+        h("h1", { class: "pm-title" }, "Repository management"),
+        h("p", { class: "pm-copy" }, "Inspect active AI work, open repositories, or start a new AI-created project.")
+      ]),
+      h("button", {
+        type: "button",
+        class: "pm-button",
+        onClick: () => {
+          props.openCreateModal();
+        }
+      }, "New repository")
+    ]),
+    renderAdminCreateModal(props)
   ]);
 }
 
@@ -241,9 +280,7 @@ function renderProjectCollection(props: ProjectsIndexRenderProps): VNode {
             "ul",
             { class: "pm-project-list", "aria-label": "Managed repositories" },
             props.filteredProjects.map((project) =>
-              renderAdminProjectRow(project, props.projectDetails[project.slug] ?? null, props.deleteBusySlug, (slug) => {
-                props.onDeleteProject(slug);
-              })
+              renderAdminProjectRow(project, props.projectDetails[project.slug] ?? null)
             )
           )
         ]

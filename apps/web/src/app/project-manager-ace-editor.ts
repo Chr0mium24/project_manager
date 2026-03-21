@@ -1,4 +1,13 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import aceCoreUrl from "ace-builds/src-noconflict/ace.js?url";
+import aceModeCssUrl from "ace-builds/src-noconflict/mode-css.js?url";
+import aceModeHtmlUrl from "ace-builds/src-noconflict/mode-html.js?url";
+import aceModeJavascriptUrl from "ace-builds/src-noconflict/mode-javascript.js?url";
+import aceModeJsonUrl from "ace-builds/src-noconflict/mode-json.js?url";
+import aceModeMarkdownUrl from "ace-builds/src-noconflict/mode-markdown.js?url";
+import aceModeTypescriptUrl from "ace-builds/src-noconflict/mode-typescript.js?url";
+import aceModeXmlUrl from "ace-builds/src-noconflict/mode-xml.js?url";
+import aceThemeGithubUrl from "ace-builds/src-noconflict/theme-github.js?url";
 
 interface AceSessionLike {
   on(eventName: "change", callback: () => void): void;
@@ -20,15 +29,19 @@ interface AceModuleLike {
   edit(target: Element): AceEditorLike;
 }
 
+interface AceWindowLike {
+  ace?: AceModuleLike;
+}
+
 const modeLoaders = {
-  css: () => import("ace-builds/src-noconflict/mode-css"),
-  html: () => import("ace-builds/src-noconflict/mode-html"),
-  javascript: () => import("ace-builds/src-noconflict/mode-javascript"),
-  json: () => import("ace-builds/src-noconflict/mode-json"),
-  markdown: () => import("ace-builds/src-noconflict/mode-markdown"),
+  css: () => loadScript("ace-mode-css", aceModeCssUrl),
+  html: () => loadScript("ace-mode-html", aceModeHtmlUrl),
+  javascript: () => loadScript("ace-mode-javascript", aceModeJavascriptUrl),
+  json: () => loadScript("ace-mode-json", aceModeJsonUrl),
+  markdown: () => loadScript("ace-mode-markdown", aceModeMarkdownUrl),
   text: () => Promise.resolve(),
-  typescript: () => import("ace-builds/src-noconflict/mode-typescript"),
-  xml: () => import("ace-builds/src-noconflict/mode-xml")
+  typescript: () => loadScript("ace-mode-typescript", aceModeTypescriptUrl),
+  xml: () => loadScript("ace-mode-xml", aceModeXmlUrl)
 } satisfies Record<string, () => Promise<unknown>>;
 
 const fileModeMatchers: Array<[keyof typeof modeLoaders, RegExp]> = [
@@ -49,6 +62,53 @@ function resolveMode(filePath: string): keyof typeof modeLoaders {
   }
 
   return "text";
+}
+
+const scriptLoads = new Map<string, Promise<void>>();
+
+function loadScript(id: string, src: string): Promise<void> {
+  const existing = scriptLoads.get(id);
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  const pending = new Promise<void>((resolve, reject) => {
+    if (typeof document === "undefined") {
+      reject(new Error("Ace editor can only load in a browser context."));
+      return;
+    }
+
+    const found = document.querySelector<HTMLScriptElement>(`script[data-ace-script="${id}"]`);
+      if (found !== null) {
+      if (found.dataset.loaded === "true") {
+        resolve();
+        return;
+      }
+      found.addEventListener("load", () => {
+        resolve();
+      }, { once: true });
+      found.addEventListener("error", () => {
+        reject(new Error(`Failed to load Ace asset: ${id}`));
+      }, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.dataset.aceScript = id;
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "true";
+      resolve();
+    }, { once: true });
+    script.addEventListener("error", () => {
+      reject(new Error(`Failed to load Ace asset: ${id}`));
+    }, { once: true });
+    document.head.append(script);
+  });
+
+  scriptLoads.set(id, pending);
+  return pending;
 }
 
 async function loadEditorMode(filePath: string, editor: AceEditorLike): Promise<void> {
@@ -106,8 +166,12 @@ export const ProjectManagerAceEditor = defineComponent({
     }
 
     async function createEditor(target: HTMLElement): Promise<AceEditorLike> {
-      await import("ace-builds/src-noconflict/theme-github");
-      const aceModule = await import("ace-builds/src-noconflict/ace") as unknown as AceModuleLike;
+      await loadScript("ace-core", aceCoreUrl);
+      const aceModule = (globalThis as AceWindowLike).ace;
+      if (aceModule === undefined) {
+        throw new Error("Ace editor global failed to initialize.");
+      }
+      await loadScript("ace-theme-github", aceThemeGithubUrl);
       return aceModule.edit(target);
     }
 
