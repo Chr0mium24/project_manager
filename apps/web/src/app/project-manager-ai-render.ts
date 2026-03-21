@@ -1,5 +1,6 @@
 import { h, type Ref, type VNode } from "vue";
 import type { AiTaskDiagnostics, AiTaskRecord, AiTaskSandboxMode, ManagedTaskSummary } from "../ai-task-api.ts";
+import { buildAiTaskSessions } from "./project-manager-ai-sessions.ts";
 import { renderAiTaskSummaryPanel } from "./project-manager-ai-task-details.ts";
 import { renderAiWriteActions } from "./project-manager-ai-write-actions.ts";
 import { renderPageHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
@@ -7,8 +8,8 @@ import { renderPageHeader, renderStatusMessage } from "./project-manager-view-sh
 interface AiRenderState {
   tasks: Ref<AiTaskRecord[]>;
   selectedTask: Ref<AiTaskRecord | null>;
-  summary: Ref<ManagedTaskSummary | null>;
-  diagnostics: Ref<AiTaskDiagnostics | null>;
+  summariesByTaskId: Ref<Record<string, ManagedTaskSummary | null | undefined>>;
+  diagnosticsByTaskId: Ref<Record<string, AiTaskDiagnostics | null | undefined>>;
   error: Ref<string | null>;
   isBusy: Ref<boolean>;
   composeOpen: Ref<boolean>;
@@ -23,25 +24,33 @@ interface AiRenderState {
   openFollowUpComposer(): void;
 }
 
-function renderAiTaskList(state: AiRenderState): VNode {
+function renderAiSessionList(state: AiRenderState): VNode {
+  const sessions = buildAiTaskSessions(state.tasks.value);
+
   return h("aside", { class: "pm-card pm-subcard" }, [
-    state.tasks.value.length === 0
-      ? renderStatusMessage("No AI tasks for this project yet.")
+    sessions.length === 0
+      ? renderStatusMessage("No AI sessions for this project yet.")
       : h(
           "ul",
           { class: "pm-list" },
-          state.tasks.value.map((task) =>
+          sessions.map((session) =>
             h("li", [
               h(
                 "button",
                 {
                   type: "button",
-                  class: ["pm-list-button", state.selectedTask.value?.taskId === task.taskId ? "is-active" : ""],
+                  class: [
+                    "pm-list-button",
+                    session.tasks.some((task) => task.taskId === state.selectedTask.value?.taskId) ? "is-active" : ""
+                  ],
                   onClick: () => {
-                    void state.selectTask(task.taskId);
+                    void state.selectTask(session.latestTask.taskId);
                   }
                 },
-                [h("strong", task.taskSlug), h("small", task.status)]
+                [
+                  h("strong", session.title),
+                  h("small", `${String(session.tasks.length)} turns · ${session.status}`)
+                ]
               )
             ])
           )
@@ -51,11 +60,12 @@ function renderAiTaskList(state: AiRenderState): VNode {
 
 function renderAiBody(state: AiRenderState): VNode {
   return h("div", { class: "pm-version-grid" }, [
-    renderAiTaskList(state),
+    renderAiSessionList(state),
     renderAiTaskSummaryPanel({
+      tasks: state.tasks,
       selectedTask: state.selectedTask,
-      summary: state.summary,
-      diagnostics: state.diagnostics
+      summariesByTaskId: state.summariesByTaskId,
+      diagnosticsByTaskId: state.diagnosticsByTaskId
     })
   ]);
 }
@@ -69,8 +79,8 @@ export function renderAiView(
     renderPageHeader({
       projectSlug,
       currentView: "ai",
-      title: "Repository AI tasks",
-      description: "Review queued and completed AI tasks here, then apply a completed task when the summary is ready.",
+      title: "Repository AI sessions",
+      description: "Work session by session. Pick a conversation on the left, inspect the turn history on the right, then continue or apply when it is ready.",
       action: publicHref
         ? h(
             "a",
@@ -84,8 +94,8 @@ export function renderAiView(
     }),
     h("section", { class: "pm-card pm-stack" }, [
       h("div", { class: "pm-page-copy" }, [
-        h("h2", { class: "pm-section-title" }, "Task queue"),
-        h("p", { class: "pm-copy" }, "The left column is the queue. The right column is the selected task summary.")
+        h("h2", { class: "pm-section-title" }, "Sessions"),
+        h("p", { class: "pm-copy" }, "The left column is the session list. The right column shows the selected conversation flow.")
       ]),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderAiBody(state)

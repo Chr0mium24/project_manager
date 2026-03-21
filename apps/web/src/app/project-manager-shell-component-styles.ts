@@ -280,6 +280,10 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   margin: 0;
   color: var(--pm-muted);
 }
+.pm-stack-tight {
+  display: grid;
+  gap: 6px;
+}
 .pm-error { color: var(--pm-danger); }
 .pm-code-list {
   display: grid;
@@ -318,6 +322,50 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   font-size: 0.78rem;
   line-height: 1.55;
   color: var(--pm-text);
+}
+.pm-event-timeline {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+.pm-event-row {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.pm-event-dot {
+  width: 12px;
+  height: 12px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--pm-muted);
+}
+.pm-event-dot.is-success {
+  background: var(--pm-accent);
+}
+.pm-event-dot.is-error {
+  background: var(--pm-danger);
+}
+.pm-event-body {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--pm-line);
+}
+.pm-event-title,
+.pm-event-copy {
+  margin: 0;
+}
+.pm-event-title {
+  font-weight: 700;
+}
+.pm-event-copy {
+  color: var(--pm-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 @media (max-width: 1040px) {
   .pm-directory-grid,

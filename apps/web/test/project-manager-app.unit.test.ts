@@ -51,7 +51,7 @@ describe("project manager app", () => {
     const tabLinks = wrapper.findAll(".pm-tab-link");
     expect(tabLinks).toHaveLength(4);
     expect(tabLinks[3]?.text()).toBe("AI Tasks");
-    expect(wrapper.get("[data-view='ai']").text()).toContain("Repository AI tasks");
+    expect(wrapper.get("[data-view='ai']").text()).toContain("Repository AI sessions");
   });
 
   it("keeps management routes behind admin access", async () => {

@@ -11,11 +11,15 @@ import { useProjectContextStore } from "./project-context-store.ts";
 import { renderAiView } from "./project-manager-ai-render.ts";
 import { runtimeHrefForSlug } from "./project-runtime-link.ts";
 import { createAiComposerControls } from "./project-manager-ai-composer-controls.ts";
+import { findAiTaskSession } from "./project-manager-ai-sessions.ts";
+
 interface AiState {
   tasks: Ref<AiTaskRecord[]>;
   selectedTask: Ref<AiTaskRecord | null>;
   summary: Ref<ManagedTaskSummary | null>;
   diagnostics: Ref<AiTaskDiagnostics | null>;
+  summariesByTaskId: Ref<Record<string, ManagedTaskSummary | null | undefined>>;
+  diagnosticsByTaskId: Ref<Record<string, AiTaskDiagnostics | null | undefined>>;
   error: Ref<string | null>;
   isBusy: Ref<boolean>;
   composeOpen: Ref<boolean>;
@@ -31,6 +35,7 @@ interface AiState {
   openFollowUpComposer(): void;
   reset(): void;
 }
+
 interface AiQueryContext {
   projectSlug: ComputedRef<string>;
   adminToken: ComputedRef<string>;
@@ -38,8 +43,11 @@ interface AiQueryContext {
   selectedTask: Ref<AiTaskRecord | null>;
   summary: Ref<ManagedTaskSummary | null>;
   diagnostics: Ref<AiTaskDiagnostics | null>;
+  summariesByTaskId: Ref<Record<string, ManagedTaskSummary | null | undefined>>;
+  diagnosticsByTaskId: Ref<Record<string, AiTaskDiagnostics | null | undefined>>;
   error: Ref<string | null>;
 }
+
 interface AiMutationContext {
   projectSlug: ComputedRef<string>;
   adminToken: ComputedRef<string>;
@@ -53,6 +61,7 @@ interface AiMutationContext {
   parentTaskId: Ref<string | null>;
   queries: ReturnType<typeof createAiQueries>;
 }
+
 function createClient(adminToken: string): AiTaskApiClient {
   return adminToken.length === 0
     ? new AiTaskApiClient()
@@ -60,24 +69,76 @@ function createClient(adminToken: string): AiTaskApiClient {
         adminToken
       });
 }
+
+function replaceTask(tasks: AiTaskRecord[], nextTask: AiTaskRecord): AiTaskRecord[] {
+  const index = tasks.findIndex((task) => task.taskId === nextTask.taskId);
+  if (index === -1) {
+    return [...tasks, nextTask];
+  }
+
+  return tasks.map((task) => task.taskId === nextTask.taskId ? nextTask : task);
+}
+
 function createAiQueries(context: AiQueryContext) {
+  async function loadTaskArtifacts(task: AiTaskRecord) {
+    const client = createClient(context.adminToken.value);
+    const diagnostics = await client.readDiagnostics(task.taskId);
+    const summary = task.summaryPath === null ? null : await client.readSummary(task.taskId);
+
+    context.diagnosticsByTaskId.value = {
+      ...context.diagnosticsByTaskId.value,
+      [task.taskId]: diagnostics
+    };
+    context.summariesByTaskId.value = {
+      ...context.summariesByTaskId.value,
+      [task.taskId]: summary
+    };
+
+    if (context.selectedTask.value?.taskId === task.taskId) {
+      context.diagnostics.value = diagnostics;
+      context.summary.value = summary;
+    }
+  }
+
+  async function hydrateSelectedSession(task: AiTaskRecord) {
+    const session = findAiTaskSession(context.tasks.value, task.taskId);
+    if (session === null) {
+      return;
+    }
+
+    for (const sessionTask of session.tasks) {
+      const needsRefresh = sessionTask.status === "queued"
+        || sessionTask.status === "running"
+        || context.diagnosticsByTaskId.value[sessionTask.taskId] === undefined
+        || (sessionTask.summaryPath !== null && context.summariesByTaskId.value[sessionTask.taskId] === undefined);
+      if (!needsRefresh) {
+        continue;
+      }
+
+      await loadTaskArtifacts(sessionTask);
+    }
+  }
+
   async function selectTask(taskId: string) {
     if (!taskId) {
       return;
     }
+
     try {
       context.error.value = null;
       context.summary.value = null;
       context.diagnostics.value = null;
       const client = createClient(context.adminToken.value);
-      const task = await client.readTask(taskId);
+      const task = context.tasks.value.find((entry) => entry.taskId === taskId) ?? await client.readTask(taskId);
+      context.tasks.value = replaceTask(context.tasks.value, task);
       context.selectedTask.value = task;
-      context.diagnostics.value = await client.readDiagnostics(taskId);
-      context.summary.value = task.summaryPath === null ? null : await client.readSummary(taskId);
+      await loadTaskArtifacts(task);
+      await hydrateSelectedSession(task);
     } catch (selectError) {
       context.error.value = selectError instanceof Error ? selectError.message : "unknown ai task error";
     }
   }
+
   async function refreshTasks() {
     try {
       const client = createClient(context.adminToken.value);
@@ -91,8 +152,10 @@ function createAiQueries(context: AiQueryContext) {
       context.error.value = refreshError instanceof Error ? refreshError.message : "unknown ai task error";
     }
   }
+
   return { refreshTasks, selectTask };
 }
+
 function validateTaskCreation(
   projectSlug: string,
   adminToken: string,
@@ -110,6 +173,7 @@ function validateTaskCreation(
   }
   return null;
 }
+
 function createAiMutations(context: AiMutationContext) {
   async function createTask() {
     const validationError = validateTaskCreation(
@@ -148,6 +212,7 @@ function createAiMutations(context: AiMutationContext) {
       context.isBusy.value = false;
     }
   }
+
   async function applySelectedTask() {
     if (context.selectedTask.value === null) {
       return;
@@ -169,6 +234,7 @@ function createAiMutations(context: AiMutationContext) {
       context.isBusy.value = false;
     }
   }
+
   return { createTask, applySelectedTask };
 }
 
@@ -177,6 +243,8 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
   const selectedTask = ref<AiTaskRecord | null>(null);
   const summary = ref<ManagedTaskSummary | null>(null);
   const diagnostics = ref<AiTaskDiagnostics | null>(null);
+  const summariesByTaskId = ref<Record<string, ManagedTaskSummary | null | undefined>>({});
+  const diagnosticsByTaskId = ref<Record<string, AiTaskDiagnostics | null | undefined>>({});
   const error = ref<string | null>(null);
   const isBusy = ref(false);
   const composeOpen = ref(false);
@@ -191,6 +259,8 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     selectedTask,
     summary,
     diagnostics,
+    summariesByTaskId,
+    diagnosticsByTaskId,
     error
   });
   const mutations = createAiMutations({
@@ -219,11 +289,19 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     taskSlug,
     tasks
   });
+  function reset() {
+    summariesByTaskId.value = {};
+    diagnosticsByTaskId.value = {};
+    composerControls.reset();
+  }
+
   return {
     tasks,
     selectedTask,
     summary,
     diagnostics,
+    summariesByTaskId,
+    diagnosticsByTaskId,
     error,
     isBusy,
     composeOpen,
@@ -237,9 +315,10 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     applySelectedTask: mutations.applySelectedTask,
     openNewTaskComposer: composerControls.openNewTaskComposer,
     openFollowUpComposer: composerControls.openFollowUpComposer,
-    reset: composerControls.reset
+    reset
   };
 }
+
 export const ProjectAiTasksView = defineComponent({
   name: "ProjectAiTasksView",
   setup() {
