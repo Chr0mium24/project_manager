@@ -31,6 +31,7 @@ export interface CreateAiTaskOptions {
   prompt: string;
   force?: boolean;
   parentTaskId?: string;
+  sandboxMode?: "danger-full-access" | "workspace-write";
 }
 
 export interface AiTaskRunnerOptions {
@@ -53,7 +54,8 @@ const createAiTaskOptionsSchema = z.object({
   taskSlug: z.string().min(1),
   prompt: z.string().min(1),
   force: z.boolean().optional(),
-  parentTaskId: z.string().min(1).optional()
+  parentTaskId: z.string().min(1).optional(),
+  sandboxMode: z.enum(["danger-full-access", "workspace-write"]).optional()
 });
 const aiTaskSummarySchema = z.object({
   projectSlug: z.string().min(1),
@@ -111,6 +113,7 @@ function buildQueuedTask(rootDir: string, input: {
   projectSlug: string;
   taskSlug: string;
   prompt: string;
+  sandboxMode: "danger-full-access" | "workspace-write";
   parentTaskId: string | null;
   sessionId: string | null;
 }): AiTaskRecord {
@@ -123,6 +126,7 @@ function buildQueuedTask(rootDir: string, input: {
     projectSlug: input.projectSlug,
     taskSlug: input.taskSlug,
     prompt: input.prompt,
+    sandboxMode: input.sandboxMode,
     parentTaskId: input.parentTaskId,
     sessionId: input.sessionId,
     createdAt: nowIso(),
@@ -264,6 +268,7 @@ export function createAiTask(
       projectSlug: normalizedOptions.projectSlug,
       taskSlug: resolvedTaskSlug,
       prompt: normalizedOptions.prompt,
+      sandboxMode: normalizedOptions.sandboxMode ?? parentTask?.sandboxMode ?? "workspace-write",
       parentTaskId: parentTask?.taskId ?? null,
       sessionId: parentTask?.sessionId ?? null
     })
@@ -297,6 +302,7 @@ export async function runAiTask(
     execResult = await executor({
       cwd: workspaceProjectDir,
       prompt: runningTask.prompt,
+      sandboxMode: runningTask.sandboxMode,
       sessionId: runningTask.sessionId ?? undefined
     });
   } catch (error) {

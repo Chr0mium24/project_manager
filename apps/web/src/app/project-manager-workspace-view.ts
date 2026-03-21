@@ -1,42 +1,44 @@
 import {
   computed,
   defineComponent,
-  h,
   onMounted,
   ref,
   watch,
   type ComputedRef,
-  type Ref,
-  type VNode
+  type Ref
 } from "vue";
 import { useRoute } from "vue-router";
 import {
   GatewayProjectApiClient,
+  type ProjectFileMutationResult,
   type ProjectFileTreeDirectoryNode,
   type ProjectFileTreeNode
 } from "../gateway-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
-import {
-  renderPageHeader,
-  renderSectionHeader,
-  renderStatusMessage
-} from "./project-manager-view-shared.ts";
 import { runtimeHrefForSlug } from "./project-runtime-link.ts";
+import { renderWorkspaceView } from "./project-manager-workspace-render.ts";
 
 const client = new GatewayProjectApiClient();
 
 interface WorkspaceState {
   tree: Ref<ProjectFileTreeDirectoryNode | null>;
   selectedFilePath: Ref<string>;
+  newFilePath: Ref<string>;
   fileContent: Ref<string | null>;
   fileDraft: Ref<string>;
+  lastMutation: Ref<ProjectFileMutationResult | null>;
   isLoading: Ref<boolean>;
   isSaving: Ref<boolean>;
+  isCreating: Ref<boolean>;
+  isDeleting: Ref<boolean>;
   error: Ref<string | null>;
   navOpen: Ref<boolean>;
+  editorError: Ref<string | null>;
   isDirty: ComputedRef<boolean>;
   loadWorkspace(slug: string): Promise<void>;
   loadFile(filePath: string): Promise<void>;
+  createFile(): Promise<void>;
+  deleteFile(): Promise<void>;
   saveFile(): Promise<void>;
 }
 
@@ -45,10 +47,14 @@ interface WorkspaceActionContext {
   adminToken: ComputedRef<string>;
   tree: Ref<ProjectFileTreeDirectoryNode | null>;
   selectedFilePath: Ref<string>;
+  newFilePath: Ref<string>;
   fileContent: Ref<string | null>;
   fileDraft: Ref<string>;
+  lastMutation: Ref<ProjectFileMutationResult | null>;
   isLoading: Ref<boolean>;
   isSaving: Ref<boolean>;
+  isCreating: Ref<boolean>;
+  isDeleting: Ref<boolean>;
   error: Ref<string | null>;
 }
 
@@ -68,7 +74,25 @@ function firstFilePath(node: ProjectFileTreeNode | null): string {
   return "";
 }
 
-function createWorkspaceActions(context: WorkspaceActionContext) {
+function hasFilePath(node: ProjectFileTreeNode | null, filePath: string): boolean {
+  if (node === null) {
+    return false;
+  }
+  if (node.kind === "file") {
+    return node.path === filePath;
+  }
+  return node.children.some((child) => hasFilePath(child, filePath));
+}
+
+function requireAdminToken(adminToken: string): string {
+  if (adminToken.length === 0) {
+    throw new Error("Admin access is required for file writes. Open Admin access from the header.");
+  }
+
+  return adminToken;
+}
+
+function createWorkspaceQueries(context: WorkspaceActionContext) {
   async function loadFile(filePath: string) {
     if (!context.projectSlug.value || !filePath) {
       return;
@@ -85,6 +109,14 @@ function createWorkspaceActions(context: WorkspaceActionContext) {
       context.error.value = loadError instanceof Error ? loadError.message : "unknown project file error";
     }
   }
+
+  async function refreshTree(preferredPath: string): Promise<void> {
+    const nextTree = await client.readProjectFileTree(context.projectSlug.value);
+    context.tree.value = nextTree;
+    const nextSelectedPath = hasFilePath(nextTree, preferredPath) ? preferredPath : firstFilePath(nextTree);
+    context.selectedFilePath.value = nextSelectedPath;
+  }
+
   async function loadWorkspace(slug: string) {
     if (!slug) {
       return;
@@ -93,13 +125,10 @@ function createWorkspaceActions(context: WorkspaceActionContext) {
     context.error.value = null;
     context.tree.value = null;
     try {
-      const nextTree = await client.readProjectFileTree(slug);
-      context.tree.value = nextTree;
-      const nextFilePath = firstFilePath(nextTree);
-      if (nextFilePath) {
-        await loadFile(nextFilePath);
+      await refreshTree(context.selectedFilePath.value);
+      if (context.selectedFilePath.value) {
+        await loadFile(context.selectedFilePath.value);
       } else {
-        context.selectedFilePath.value = "";
         context.fileContent.value = "";
         context.fileDraft.value = "";
       }
@@ -109,24 +138,81 @@ function createWorkspaceActions(context: WorkspaceActionContext) {
       context.isLoading.value = false;
     }
   }
-  async function saveFile() {
-    if (!context.projectSlug.value || !context.selectedFilePath.value) {
+
+  return { loadFile, loadWorkspace, refreshTree };
+}
+
+function createWorkspaceMutations(
+  context: WorkspaceActionContext,
+  queries: ReturnType<typeof createWorkspaceQueries>
+) {
+  async function createFile() {
+    if (!context.projectSlug.value || context.newFilePath.value.trim().length === 0) {
       return;
     }
-    if (context.adminToken.value.length === 0) {
-      context.error.value = "Admin access is required for file writes. Open Admin access from the header.";
+    context.isCreating.value = true;
+    context.error.value = null;
+    try {
+      const adminToken = requireAdminToken(context.adminToken.value);
+      const filePath = context.newFilePath.value.trim();
+      await client.writeProjectFile({
+        slug: context.projectSlug.value,
+        filePath,
+        content: "",
+        adminToken
+      });
+      context.newFilePath.value = "";
+      await queries.refreshTree(filePath);
+      await queries.loadFile(filePath);
+      context.lastMutation.value = null;
+    } catch (error) {
+      context.error.value = error instanceof Error ? error.message : "unknown project file error";
+    } finally {
+      context.isCreating.value = false;
+    }
+  }
+
+  async function deleteFile() {
+    if (!context.projectSlug.value || context.selectedFilePath.value.length === 0) {
+      return;
+    }
+    context.isDeleting.value = true;
+    context.error.value = null;
+    try {
+      const adminToken = requireAdminToken(context.adminToken.value);
+      const deletedPath = context.selectedFilePath.value;
+      context.lastMutation.value = await client.deleteProjectFile(context.projectSlug.value, deletedPath, adminToken);
+      await queries.refreshTree("");
+      if (context.selectedFilePath.value.length > 0) {
+        await queries.loadFile(context.selectedFilePath.value);
+      } else {
+        context.fileContent.value = "";
+        context.fileDraft.value = "";
+      }
+    } catch (error) {
+      context.error.value = error instanceof Error ? error.message : "unknown project file error";
+    } finally {
+      context.isDeleting.value = false;
+    }
+  }
+
+  async function saveFile() {
+    if (!context.projectSlug.value || !context.selectedFilePath.value) {
       return;
     }
     context.isSaving.value = true;
     context.error.value = null;
     try {
-      await client.writeProjectFile(
-        context.projectSlug.value,
-        context.selectedFilePath.value,
-        context.fileDraft.value,
-        context.adminToken.value
-      );
+      const adminToken = requireAdminToken(context.adminToken.value);
+      context.lastMutation.value = await client.writeProjectFile({
+        slug: context.projectSlug.value,
+        filePath: context.selectedFilePath.value,
+        content: context.fileDraft.value,
+        adminToken,
+        runChecks: true
+      });
       context.fileContent.value = context.fileDraft.value;
+      await queries.refreshTree(context.selectedFilePath.value);
     } catch (saveError) {
       context.error.value = saveError instanceof Error ? saveError.message : "unknown project file error";
     } finally {
@@ -134,182 +220,76 @@ function createWorkspaceActions(context: WorkspaceActionContext) {
     }
   }
 
-  return {
-    loadWorkspace,
-    loadFile,
-    saveFile
-  };
+  return { createFile, deleteFile, saveFile };
 }
 
 function createWorkspaceState(projectSlug: ComputedRef<string>, adminToken: ComputedRef<string>): WorkspaceState {
   const tree = ref<ProjectFileTreeDirectoryNode | null>(null);
   const selectedFilePath = ref("");
+  const newFilePath = ref("");
   const fileContent = ref<string | null>(null);
   const fileDraft = ref("");
+  const lastMutation = ref<ProjectFileMutationResult | null>(null);
   const isLoading = ref(false);
   const isSaving = ref(false);
+  const isCreating = ref(false);
+  const isDeleting = ref(false);
   const error = ref<string | null>(null);
   const navOpen = ref(true);
+  const editorError = ref<string | null>(null);
   const isDirty = computed(() => fileContent.value !== null && fileDraft.value !== fileContent.value);
-  const actions = createWorkspaceActions({
+  const queries = createWorkspaceQueries({
     projectSlug,
     adminToken,
     tree,
     selectedFilePath,
+    newFilePath,
     fileContent,
     fileDraft,
+    lastMutation,
     isLoading,
     isSaving,
+    isCreating,
+    isDeleting,
     error
   });
+  const mutations = createWorkspaceMutations({
+    projectSlug,
+    adminToken,
+    tree,
+    selectedFilePath,
+    newFilePath,
+    fileContent,
+    fileDraft,
+    lastMutation,
+    isLoading,
+    isSaving,
+    isCreating,
+    isDeleting,
+    error
+  }, queries);
 
   return {
     tree,
     selectedFilePath,
+    newFilePath,
     fileContent,
     fileDraft,
+    lastMutation,
     isLoading,
     isSaving,
+    isCreating,
+    isDeleting,
     error,
     navOpen,
+    editorError,
     isDirty,
-    loadWorkspace: actions.loadWorkspace,
-    loadFile: actions.loadFile,
-    saveFile: actions.saveFile
+    loadWorkspace: queries.loadWorkspace,
+    loadFile: queries.loadFile,
+    createFile: mutations.createFile,
+    deleteFile: mutations.deleteFile,
+    saveFile: mutations.saveFile
   };
-}
-
-function renderTree(
-  node: ProjectFileTreeNode,
-  selectedFilePath: string,
-  onSelect: (filePath: string) => void
-): VNode {
-  if (node.kind === "file") {
-    return h("li", [
-      h(
-        "button",
-        {
-          type: "button",
-          class: ["pm-tree-button", selectedFilePath === node.path ? "is-active" : ""],
-          onClick: () => {
-            onSelect(node.path);
-          }
-        },
-        [h("span", node.name), h("small", `${String(node.size)}b`)]
-      )
-    ]);
-  }
-
-  return h("li", [
-    h("div", { class: "pm-tree-dir" }, node.path.length === 0 ? "workspace" : node.name),
-    h(
-      "ul",
-      { class: "pm-tree-list" },
-      node.children.map((child) => renderTree(child, selectedFilePath, onSelect))
-    )
-  ]);
-}
-
-function renderWorkspaceEditor(state: WorkspaceState): VNode {
-  if (state.selectedFilePath.value.length === 0) {
-    return renderStatusMessage("Select a file from the tree to inspect its contents.");
-  }
-  if (state.fileContent.value === null) {
-    return renderStatusMessage("Loading file...");
-  }
-  return h("div", { class: "pm-editor-stack" }, [
-    h("textarea", {
-      class: "pm-textarea pm-editor",
-      value: state.fileDraft.value,
-      spellcheck: false,
-      onInput: (event: Event) => {
-        state.fileDraft.value = (event.target as HTMLTextAreaElement).value;
-      }
-    }),
-    h("div", { class: "pm-actions pm-actions-end" }, [
-      h(
-        "button",
-        {
-          type: "button",
-          class: "pm-button",
-          disabled: state.isSaving.value || !state.isDirty.value,
-          onClick: () => {
-            void state.saveFile();
-          }
-        },
-        state.isSaving.value ? "Saving..." : "Save File"
-      )
-    ])
-  ]);
-}
-
-function renderWorkspaceBody(state: WorkspaceState): VNode {
-  if (state.isLoading.value) {
-    return renderStatusMessage("Loading workspace...");
-  }
-
-  return h("div", { class: ["pm-workspace-grid", state.navOpen.value ? "" : "is-focused"] }, [
-    state.navOpen.value
-      ? h("aside", { class: "pm-card pm-subcard pm-workspace-nav" }, [
-          state.tree.value === null
-            ? renderStatusMessage("No workspace tree available.")
-            : h("ul", { class: "pm-tree-list" }, [
-                ...state.tree.value.children.map((node) =>
-                  renderTree(node, state.selectedFilePath.value, (filePath) => {
-                    void state.loadFile(filePath);
-                  })
-                )
-              ])
-        ])
-      : null,
-    h("section", { class: "pm-card pm-subcard pm-editor-shell" }, [renderWorkspaceEditor(state)])
-  ]);
-}
-
-function renderWorkspaceView(
-  projectSlug: string,
-  state: WorkspaceState,
-  publicHref: string | null
-): VNode {
-  return h("div", { class: "pm-view", "data-view": "workspace" }, [
-    renderPageHeader({
-      projectSlug,
-      currentView: "workspace",
-      title: "Repository workspace",
-      description: "Browse repository files, edit the selected file, and save changes back to the managed project.",
-      action: publicHref
-        ? h(
-            "a",
-            {
-              href: publicHref,
-              class: "pm-project-link"
-            },
-            "Open page"
-          )
-        : null
-    }),
-    h("section", { class: "pm-card pm-workspace-card" }, [
-      renderSectionHeader(
-        "Files",
-        state.selectedFilePath.value
-          ? `Editing ${state.selectedFilePath.value}`
-          : "Choose a file from the repository tree, then edit it in the main panel.",
-        h(
-          "button",
-          {
-            type: "button",
-            class: "pm-button pm-button-ghost",
-            onClick: () => {
-              state.navOpen.value = !state.navOpen.value;
-            }
-          },
-          state.navOpen.value ? "Hide tree" : "Show tree"
-        )
-      ),
-      state.error.value ? renderStatusMessage(state.error.value, "error") : null,
-      renderWorkspaceBody(state)
-    ])
-  ]);
 }
 
 export const ProjectWorkspaceView = defineComponent({
@@ -329,6 +309,47 @@ export const ProjectWorkspaceView = defineComponent({
       void state.loadWorkspace(slug);
     });
 
-    return () => renderWorkspaceView(projectSlug.value, state, publicHref.value);
+    return () => renderWorkspaceView({
+      editorError: state.editorError.value,
+      error: state.error.value,
+      fileContent: state.fileContent.value,
+      fileDraft: state.fileDraft.value,
+      isCreating: state.isCreating.value,
+      isDeleting: state.isDeleting.value,
+      isDirty: state.isDirty.value,
+      isLoading: state.isLoading.value,
+      isSaving: state.isSaving.value,
+      lastMutation: state.lastMutation.value,
+      navOpen: state.navOpen.value,
+      newFilePath: state.newFilePath.value,
+      projectSlug: projectSlug.value,
+      publicHref: publicHref.value,
+      selectedFilePath: state.selectedFilePath.value,
+      tree: state.tree.value,
+      createFile: () => {
+        void state.createFile();
+      },
+      deleteFile: () => {
+        void state.deleteFile();
+      },
+      loadFile: (filePath) => {
+        void state.loadFile(filePath);
+      },
+      saveFile: () => {
+        void state.saveFile();
+      },
+      setEditorDraft: (value) => {
+        state.fileDraft.value = value;
+      },
+      setEditorError: (message) => {
+        state.editorError.value = message;
+      },
+      setNavOpen: (value) => {
+        state.navOpen.value = value;
+      },
+      setNewFilePath: (value) => {
+        state.newFilePath.value = value;
+      }
+    });
   }
 });

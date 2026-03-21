@@ -10,6 +10,17 @@ import {
   writeContentRepo
 } from "./test-fixtures.ts";
 
+function passingMutationChecks() {
+  return Promise.resolve({
+    command: "./scripts/run-quality-gate.sh",
+    durationMs: 8,
+    exitCode: 0,
+    ok: true,
+    stdout: "gate ok",
+    stderr: ""
+  });
+}
+
 interface FilesPayload {
   slug: string;
   files: Array<{ path: string }>;
@@ -137,6 +148,53 @@ void test("createGatewayApp writes project file content", async () => {
   assert.equal(readBackResponse.statusCode, 200);
   assert.equal(readBackPayload.content, 'console.log("saved");\n');
   assert.equal(invalidWriteResponse.statusCode, 400);
+
+  await app.close();
+});
+
+void test("createGatewayApp deletes project files and returns requested checks", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "gateway-"));
+  writeContentRepo(rootDir);
+  const app = createGatewayApp(rootDir, {
+    adminToken: TEST_ADMIN_TOKEN,
+    mutationChecksRunner: passingMutationChecks
+  });
+
+  const writeResponse = await app.inject({
+    method: "PUT",
+    url: "/api/projects/landing-a/file",
+    headers: authHeaders(),
+    payload: {
+      path: "src/temp.txt",
+      content: "temp",
+      runChecks: true
+    }
+  });
+  const deleteResponse = await app.inject({
+    method: "DELETE",
+    url: "/api/projects/landing-a/file?path=src/temp.txt&runChecks=true",
+    headers: authHeaders()
+  });
+  const readDeletedResponse = await app.inject({
+    method: "GET",
+    url: "/api/projects/landing-a/file?path=src/temp.txt"
+  });
+  const writePayload: FileWritePayload & { checks: { ok: boolean; stdout: string } | null } = writeResponse.json();
+  const deletePayload: {
+    path: string;
+    updatedAt: string;
+    checks: { ok: boolean; stdout: string } | null;
+  } = deleteResponse.json();
+
+  assert.equal(writeResponse.statusCode, 200);
+  assert.notEqual(writePayload.checks, null);
+  assert.equal(writePayload.checks.ok, true);
+  assert.equal(writePayload.checks.stdout, "gate ok");
+  assert.equal(deleteResponse.statusCode, 200);
+  assert.equal(deletePayload.path, "src/temp.txt");
+  assert.notEqual(deletePayload.checks, null);
+  assert.equal(deletePayload.checks.ok, true);
+  assert.equal(readDeletedResponse.statusCode, 404);
 
   await app.close();
 });

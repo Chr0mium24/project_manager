@@ -1,5 +1,5 @@
 export type AiTaskStatus = "queued" | "running" | "completed" | "failed";
-
+export type AiTaskSandboxMode = "danger-full-access" | "workspace-write";
 export interface AiTaskRecord {
   schemaVersion: 1;
   taskId: string;
@@ -8,6 +8,7 @@ export interface AiTaskRecord {
   projectSlug: string;
   taskSlug: string;
   prompt: string;
+  sandboxMode: AiTaskSandboxMode;
   parentTaskId: string | null;
   sessionId: string | null;
   createdAt: string;
@@ -40,8 +41,8 @@ export interface CreateAiTaskInput {
   prompt: string;
   force?: boolean;
   parentTaskId?: string;
+  sandboxMode?: AiTaskSandboxMode;
 }
-
 export interface AiTaskDiagnostics {
   taskId: string;
   parentTaskId: string | null;
@@ -60,7 +61,6 @@ export interface AiTaskApplyResult {
   status: "applied";
   lastAppliedAt: string;
 }
-
 export interface AiTaskClient {
   listTasks(): Promise<AiTaskRecord[]>;
   readTask(taskId: string): Promise<AiTaskRecord>;
@@ -183,6 +183,7 @@ function parseAiTaskRecord(value: unknown): AiTaskRecord {
     projectSlug: expectString(record.projectSlug, "ai task projectSlug"),
     taskSlug: expectString(record.taskSlug, "ai task taskSlug"),
     prompt: expectString(record.prompt, "ai task prompt"),
+    sandboxMode: expectString(record.sandboxMode, "ai task sandboxMode") as AiTaskSandboxMode,
     parentTaskId: expectNullableString(record.parentTaskId, "ai task parentTaskId"),
     sessionId: expectNullableString(record.sessionId, "ai task sessionId"),
     createdAt: expectString(record.createdAt, "ai task createdAt"),
@@ -243,6 +244,9 @@ function parseCreateAiTaskInput(value: CreateAiTaskInput): CreateAiTaskInput {
     if (parentTaskId.length > 0) {
       parsed.parentTaskId = parentTaskId;
     }
+  }
+  if (input.sandboxMode !== undefined) {
+    parsed.sandboxMode = expectString(input.sandboxMode, "create ai task input sandboxMode") as AiTaskSandboxMode;
   }
   return parsed;
 }
@@ -390,7 +394,6 @@ export class AiTaskApiClient implements AiTaskClient {
     if (!response.ok) {
       throw new GatewayApiError(response.status, readGatewayErrorCode(body));
     }
-
     return body;
   }
 }

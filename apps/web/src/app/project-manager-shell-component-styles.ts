@@ -114,6 +114,10 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   display: grid;
   gap: 6px;
 }
+.pm-field-grow {
+  flex: 1 1 320px;
+  min-width: min(320px, 100%);
+}
 .pm-field span,
 .pm-field-full span {
   color: var(--pm-muted);
@@ -225,6 +229,19 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   font-family: "JetBrains Mono", "SFMono-Regular", monospace;
   font-size: 0.84rem;
   line-height: 1.6;
+}
+.pm-ace-editor-host,
+.pm-ace-editor-fallback {
+  border: 1px solid var(--pm-line);
+  border-radius: 8px;
+  background: var(--pm-panel);
+}
+.pm-ace-editor-host {
+  overflow: hidden;
+}
+.pm-ace-editor-fallback {
+  padding: 16px;
+  color: var(--pm-danger);
 }
 .pm-inline-note,
 .pm-muted-block {

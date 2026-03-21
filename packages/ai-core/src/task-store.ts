@@ -12,6 +12,7 @@ export const aiTaskRecordSchema = z.object({
   projectSlug: z.string().min(1),
   taskSlug: z.string().min(1),
   prompt: z.string().min(1),
+  sandboxMode: z.enum(["danger-full-access", "workspace-write"]).default("workspace-write"),
   parentTaskId: z.string().nullable(),
   sessionId: z.string().nullable(),
   createdAt: z.string().min(1),

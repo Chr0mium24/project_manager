@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 export interface CodexExecInput {
   cwd: string;
   prompt: string;
+  sandboxMode?: "danger-full-access" | "workspace-write";
   sessionId?: string;
 }
 
@@ -21,12 +22,13 @@ function joinChunks(chunks: string[]): string {
 }
 
 export function buildCodexExecArgs(input: CodexExecInput): string[] {
+  const sandboxMode = input.sandboxMode ?? "workspace-write";
   const baseArgs = [
     "exec",
     "--skip-git-repo-check",
     "--json",
     "--sandbox",
-    "workspace-write",
+    sandboxMode,
     "--cd",
     input.cwd
   ];

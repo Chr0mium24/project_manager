@@ -2,6 +2,7 @@ import { computed, defineComponent, h, onMounted, ref, watch, type ComputedRef, 
 import { useRoute } from "vue-router";
 import {
   AiTaskApiClient,
+  type AiTaskSandboxMode,
   type AiTaskDiagnostics,
   type AiTaskRecord,
   type ManagedTaskSummary
@@ -11,6 +12,7 @@ import { renderAiTaskSummaryPanel } from "./project-manager-ai-task-details.ts";
 import { renderPageHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
 import { runtimeHrefForSlug } from "./project-runtime-link.ts";
 import { renderAiWriteActions } from "./project-manager-ai-write-actions.ts";
+import { createAiComposerControls } from "./project-manager-ai-composer-controls.ts";
 interface AiState {
   tasks: Ref<AiTaskRecord[]>;
   selectedTask: Ref<AiTaskRecord | null>;
@@ -21,6 +23,7 @@ interface AiState {
   composeOpen: Ref<boolean>;
   taskSlug: Ref<string>;
   prompt: Ref<string>;
+  sandboxMode: Ref<AiTaskSandboxMode>;
   parentTaskId: Ref<string | null>;
   refreshTasks(): Promise<void>;
   selectTask(taskId: string): Promise<void>;
@@ -48,6 +51,7 @@ interface AiMutationContext {
   composeOpen: Ref<boolean>;
   taskSlug: Ref<string>;
   prompt: Ref<string>;
+  sandboxMode: Ref<AiTaskSandboxMode>;
   parentTaskId: Ref<string | null>;
   queries: ReturnType<typeof createAiQueries>;
 }
@@ -127,7 +131,8 @@ function createAiMutations(context: AiMutationContext) {
       const input = {
         projectSlug: context.projectSlug.value,
         taskSlug: context.taskSlug.value.trim(),
-        prompt: context.prompt.value.trim()
+        prompt: context.prompt.value.trim(),
+        sandboxMode: context.sandboxMode.value
       };
       const created = await client.createTask({
         ...input,
@@ -171,6 +176,7 @@ function createAiMutations(context: AiMutationContext) {
   }
   return { createTask, applySelectedTask };
 }
+
 function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef<string>): AiState {
   const tasks = ref<AiTaskRecord[]>([]);
   const selectedTask = ref<AiTaskRecord | null>(null);
@@ -181,31 +187,8 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
   const composeOpen = ref(false);
   const taskSlug = ref("");
   const prompt = ref("");
+  const sandboxMode = ref<AiTaskSandboxMode>("workspace-write");
   const parentTaskId = ref<string | null>(null);
-  function openNewTaskComposer() {
-    const shouldSwitchFromFollowUp = parentTaskId.value !== null;
-    parentTaskId.value = null;
-    composeOpen.value = shouldSwitchFromFollowUp ? true : !composeOpen.value;
-  }
-  function openFollowUpComposer() {
-    if (selectedTask.value === null) {
-      return;
-    }
-    parentTaskId.value = selectedTask.value.taskId;
-    composeOpen.value = true;
-  }
-  function reset() {
-    tasks.value = [];
-    selectedTask.value = null;
-    summary.value = null;
-    diagnostics.value = null;
-    error.value = null;
-    isBusy.value = false;
-    composeOpen.value = false;
-    taskSlug.value = "";
-    prompt.value = "";
-    parentTaskId.value = null;
-  }
   const queries = createAiQueries({
     projectSlug,
     adminToken,
@@ -224,8 +207,22 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     composeOpen,
     taskSlug,
     prompt,
+    sandboxMode,
     parentTaskId,
     queries
+  });
+  const composerControls = createAiComposerControls({
+    composeOpen,
+    diagnostics,
+    error,
+    isBusy,
+    parentTaskId,
+    prompt,
+    sandboxMode,
+    selectedTask,
+    summary,
+    taskSlug,
+    tasks
   });
   return {
     tasks,
@@ -237,14 +234,15 @@ function createAiState(projectSlug: ComputedRef<string>, adminToken: ComputedRef
     composeOpen,
     taskSlug,
     prompt,
+    sandboxMode,
     parentTaskId,
     refreshTasks: queries.refreshTasks,
     selectTask: queries.selectTask,
     createTask: mutations.createTask,
     applySelectedTask: mutations.applySelectedTask,
-    openNewTaskComposer,
-    openFollowUpComposer,
-    reset
+    openNewTaskComposer: composerControls.openNewTaskComposer,
+    openFollowUpComposer: composerControls.openFollowUpComposer,
+    reset: composerControls.reset
   };
 }
 function renderAiBody(state: AiState): VNode {
@@ -317,6 +315,7 @@ function renderAiView(
       composeOpen: state.composeOpen.value,
       taskSlug: state.taskSlug.value,
       prompt: state.prompt.value,
+      sandboxMode: state.sandboxMode.value,
       isBusy: state.isBusy.value,
       canApplySelectedTask: state.selectedTask.value?.status === "completed",
       canContinueSelectedTask:
@@ -329,6 +328,9 @@ function renderAiView(
       },
       setPrompt: (value) => {
         state.prompt.value = value;
+      },
+      setSandboxMode: (value) => {
+        state.sandboxMode.value = value;
       },
       openNewTaskComposer: () => {
         state.openNewTaskComposer();
@@ -354,13 +356,23 @@ export const ProjectAiTasksView = defineComponent({
     const adminToken = computed(() => context.adminToken.trim());
     const publicHref = computed(() => runtimeHrefForSlug(context.projects, projectSlug.value));
     const state = createAiState(projectSlug, adminToken);
+    async function refreshFromRoute() {
+      await state.refreshTasks();
+      const taskId = typeof route.query.taskId === "string" ? route.query.taskId : "";
+      if (taskId.length > 0) {
+        await state.selectTask(taskId);
+      }
+      if (route.query.compose === "follow-up") {
+        state.openFollowUpComposer();
+      }
+    }
 
     onMounted(() => {
-      void state.refreshTasks();
+      void refreshFromRoute();
     });
-    watch(projectSlug, () => {
+    watch(() => [projectSlug.value, route.query.taskId, route.query.compose], () => {
       state.reset();
-      void state.refreshTasks();
+      void refreshFromRoute();
     });
 
     return () => renderAiView(projectSlug.value, state, publicHref.value);

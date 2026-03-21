@@ -5,12 +5,14 @@ export interface ProjectAiWriteActionsProps {
   composeOpen: boolean;
   taskSlug: string;
   prompt: string;
+  sandboxMode: "danger-full-access" | "workspace-write";
   isBusy: boolean;
   canApplySelectedTask: boolean;
   canContinueSelectedTask: boolean;
   continueTaskLabel: string | null;
   setTaskSlug(value: string): void;
   setPrompt(value: string): void;
+  setSandboxMode(value: "danger-full-access" | "workspace-write"): void;
   openNewTaskComposer(): void;
   openFollowUpComposer(): void;
   createTask(): void;
@@ -36,6 +38,19 @@ function renderAiComposer(props: ProjectAiWriteActionsProps): VNode | null {
           props.setTaskSlug((event.target as HTMLInputElement).value);
         }
       })
+    ]),
+    h("label", { class: "pm-field" }, [
+      h("span", "Sandbox"),
+      h("select", {
+        class: "pm-input",
+        value: props.sandboxMode,
+        onChange: (event: Event) => {
+          props.setSandboxMode((event.target as HTMLSelectElement).value as ProjectAiWriteActionsProps["sandboxMode"]);
+        }
+      }, [
+        h("option", { value: "workspace-write" }, "workspace-write"),
+        h("option", { value: "danger-full-access" }, "danger-full-access")
+      ])
     ]),
     h("label", { class: "pm-field pm-field-full" }, [
       h("span", "Prompt"),

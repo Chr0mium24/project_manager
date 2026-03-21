@@ -18,6 +18,7 @@ function createTaskRecord(overrides: Partial<AiTaskRecord> = {}): AiTaskRecord {
     projectSlug: "landing-a",
     taskSlug: "fix-copy",
     prompt: "Update the heading.",
+    sandboxMode: "workspace-write",
     parentTaskId: null,
     sessionId: null,
     createdAt: "2026-03-20T00:00:00.000Z",

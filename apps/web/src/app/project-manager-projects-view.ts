@@ -1,22 +1,47 @@
-import { computed, defineComponent, h, onMounted, ref, watch, type VNode } from "vue";
-import { RouterLink } from "vue-router";
-import { GatewayProjectApiClient, type ManagedProjectRecord } from "../gateway-api.ts";
+import { computed, defineComponent, onMounted, onUnmounted, ref, watch, type ComputedRef, type Ref } from "vue";
+import { useRouter } from "vue-router";
+import { AiTaskApiClient, type AiTaskRecord } from "../ai-task-api.ts";
+import { GatewayProjectApiClient, type ManagedProjectRecord, type ProjectCreateInput } from "../gateway-api.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
-import { runtimeHrefForProject } from "./project-runtime-link.ts";
-import { renderInfoCard, renderStatusMessage } from "./project-manager-view-shared.ts";
+import { renderProjectsIndexView } from "./project-manager-projects-render.ts";
 
 const client = new GatewayProjectApiClient();
 
+interface ProjectsState {
+  actionError: Ref<string | null>;
+  createBusy: Ref<boolean>;
+  createForm: Ref<ProjectCreateInput>;
+  deleteBusySlug: Ref<string | null>;
+  filteredProjects: ComputedRef<ReturnType<typeof useProjectContextStore>["projects"]>;
+  projectDetails: Ref<Record<string, ManagedProjectRecord>>;
+  runningTasks: Ref<AiTaskRecord[]>;
+  searchQuery: Ref<string>;
+  taskError: Ref<string | null>;
+  tasksLoading: Ref<boolean>;
+}
+
+function createInitialProjectForm(): ProjectCreateInput {
+  return {
+    slug: "",
+    name: "",
+    runtime: "static",
+    visibility: "public",
+    description: "",
+    aiPrompt: "",
+    aiTaskSlug: "init",
+    sandboxMode: "workspace-write",
+    runChecks: true
+  };
+}
+
 async function readProjectDetails(slugs: string[]): Promise<Record<string, ManagedProjectRecord>> {
-  const details = await Promise.all(
-    slugs.map(async (slug) => {
-      try {
-        return await client.readProject(slug);
-      } catch {
-        return null;
-      }
-    })
-  );
+  const details = await Promise.all(slugs.map(async (slug) => {
+    try {
+      return await client.readProject(slug);
+    } catch {
+      return null;
+    }
+  }));
 
   return details
     .filter((detail): detail is ManagedProjectRecord => detail !== null)
@@ -35,193 +60,230 @@ function matchesProject(
     return true;
   }
 
-  const searchTarget = [
-    project.slug,
-    detail?.name ?? "",
-    detail?.description ?? "",
-    project.route
-  ].join(" ").toLowerCase();
-
+  const searchTarget = [project.slug, detail?.name ?? "", detail?.description ?? "", project.route].join(" ").toLowerCase();
   return searchTarget.includes(searchQuery);
 }
 
-function renderPublicProjectCard(project: ReturnType<typeof useProjectContextStore>["projects"][number], detail: ManagedProjectRecord | null) {
-  return h(
-    "a",
-    {
-      href: runtimeHrefForProject(project),
-      class: "pm-directory-card"
-    },
-    [
-      h("div", { class: "pm-project-title-row" }, [
-        h("h2", { class: "pm-project-title" }, detail?.name ?? project.slug),
-        h("span", { class: "pm-badge" }, project.runtime)
-      ]),
-      h("p", { class: "pm-copy" }, detail?.description ?? "Loading project description..."),
-      h("div", { class: "pm-project-meta" }, [h("span", project.route)])
-    ]
-  );
+function createProjectsState(context: ReturnType<typeof useProjectContextStore>): ProjectsState {
+  const projectDetails = ref<Record<string, ManagedProjectRecord>>({});
+  const searchQuery = ref("");
+  const createBusy = ref(false);
+  const deleteBusySlug = ref<string | null>(null);
+  const actionError = ref<string | null>(null);
+  const taskError = ref<string | null>(null);
+  const tasksLoading = ref(false);
+  const runningTasks = ref<AiTaskRecord[]>([]);
+  const createForm = ref<ProjectCreateInput>(createInitialProjectForm());
+  const filteredProjects = computed(() => {
+    const normalizedQuery = searchQuery.value.trim().toLowerCase();
+    return context.projects.filter((project) =>
+      matchesProject(project, projectDetails.value[project.slug] ?? null, normalizedQuery)
+    );
+  });
+
+  return {
+    actionError,
+    createBusy,
+    createForm,
+    deleteBusySlug,
+    filteredProjects,
+    projectDetails,
+    runningTasks,
+    searchQuery,
+    taskError,
+    tasksLoading
+  };
 }
 
-function renderAdminProjectRow(project: ReturnType<typeof useProjectContextStore>["projects"][number], detail: ManagedProjectRecord | null) {
-  return h("li", { class: "pm-project-row" }, [
-    h("div", { class: "pm-project-main" }, [
-      h("div", { class: "pm-project-title-row" }, [
-        h("h2", { class: "pm-project-title" }, detail?.name ?? project.slug),
-        h("span", { class: "pm-badge" }, project.runtime),
-        h("span", { class: "pm-badge" }, detail?.framework ?? "loading")
-      ]),
-      h("p", { class: "pm-copy" }, detail?.description ?? "Loading repository description..."),
-      h("div", { class: "pm-project-meta" }, [
-        h("span", `slug: ${project.slug}`),
-        h("span", `route: ${project.route}`),
-        h("span", `entry: ${project.entry}`)
-      ])
-    ]),
-    h("div", { class: "pm-project-actions" }, [
-      h(
-        RouterLink,
-        {
-          to: `/projects/${project.slug}`,
-          class: "pm-project-link pm-project-link-primary"
-        },
-        () => "Open repository"
-      ),
-      h(
-        "a",
-        {
-          href: runtimeHrefForProject(project),
-          class: "pm-project-link"
-        },
-        "Open page"
-      )
-    ])
-  ]);
+function buildCreateProjectPayload(form: ProjectCreateInput): ProjectCreateInput {
+  return {
+    ...form,
+    slug: form.slug.trim(),
+    name: form.name.trim(),
+    ...(form.description?.trim() ? { description: form.description.trim() } : {}),
+    ...(form.aiPrompt?.trim() ? { aiPrompt: form.aiPrompt.trim() } : {}),
+    ...(form.aiTaskSlug?.trim() ? { aiTaskSlug: form.aiTaskSlug.trim() } : {})
+  };
 }
 
-interface ProjectsIndexRenderState {
-  adminMode: boolean;
-  projectsLoading: boolean;
-  projectsError: string | null;
-  filteredProjects: ReturnType<typeof useProjectContextStore>["projects"];
-  projectDetails: Record<string, ManagedProjectRecord>;
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
+function createTaskPolling(
+  adminMode: ComputedRef<boolean>,
+  loadRunningTasks: () => Promise<void>
+) {
+  let taskPollHandle: number | null = null;
+
+  function startTaskPolling() {
+    if (taskPollHandle !== null || !adminMode.value) {
+      return;
+    }
+
+    taskPollHandle = window.setInterval(() => {
+      void loadRunningTasks();
+    }, 3_000);
+  }
+
+  function stopTaskPolling() {
+    if (taskPollHandle !== null) {
+      window.clearInterval(taskPollHandle);
+      taskPollHandle = null;
+    }
+  }
+
+  return { startTaskPolling, stopTaskPolling };
 }
 
-function renderProjectsIndexView(state: ProjectsIndexRenderState): VNode {
-  return h("div", { class: "pm-view", "data-view": "projects-index" }, [
-    state.adminMode
-      ? h("section", { class: "pm-card pm-stack" }, [
-          h("div", { class: "pm-page-copy" }, [
-            h("p", { class: "pm-kicker" }, "Admin"),
-            h("h1", { class: "pm-title" }, "Repository management"),
-            h(
-              "p",
-              { class: "pm-copy" },
-              "Admin mode is active. Pick a repository to open overview, workspace, versions, or AI tasks."
-            )
-          ])
-        ])
-      : h("section", { class: "pm-card pm-stack" }, [
-          h("div", { class: "pm-page-copy" }, [
-            h("p", { class: "pm-kicker" }, "Projects"),
-            h("h1", { class: "pm-title" }, "Project directory"),
-            h(
-              "p",
-              { class: "pm-copy" },
-              "Browse published projects. Search by name or description, then jump straight into the selected project."
-            )
-          ]),
-          h("label", { class: "pm-field" }, [
-            h("span", "Search projects"),
-            h("input", {
-              class: "pm-input pm-directory-search",
-              value: state.searchQuery,
-              placeholder: "Search project name or description",
-              onInput: (event: Event) => {
-                state.setSearchQuery((event.target as HTMLInputElement).value);
-              }
-            })
-          ])
-        ]),
-    renderInfoCard(
-      state.adminMode ? "Repositories" : "All projects",
-      state.filteredProjects.length === 0
-        ? [
-            state.projectsLoading
-              ? renderStatusMessage("Loading projects...")
-              : renderStatusMessage(
-                  state.projectsError ?? (state.searchQuery ? "No projects match the current search." : "No projects available yet.")
-                )
-          ]
-        : state.adminMode
-          ? [
-              h(
-                "ul",
-                { class: "pm-project-list", "aria-label": "Managed repositories" },
-                state.filteredProjects.map((project) =>
-                  renderAdminProjectRow(project, state.projectDetails[project.slug] ?? null)
-                )
-              )
-            ]
-          : [
-              h(
-                "div",
-                { class: "pm-directory-grid", "aria-label": "Public projects" },
-                state.filteredProjects.map((project) =>
-                  renderPublicProjectCard(project, state.projectDetails[project.slug] ?? null)
-                )
-              )
-            ]
-    )
-  ]);
+function createProjectsActions(
+  router: ReturnType<typeof useRouter>,
+  context: ReturnType<typeof useProjectContextStore>,
+  adminMode: ComputedRef<boolean>,
+  state: ProjectsState
+) {
+  async function loadProjectDetails() {
+    state.projectDetails.value = await readProjectDetails(context.projects.map((project) => project.slug));
+  }
+  async function loadRunningTasks() {
+    if (!adminMode.value) {
+      state.runningTasks.value = [];
+      state.taskError.value = null;
+      return;
+    }
+
+    state.tasksLoading.value = true;
+    try {
+      const tasks = await new AiTaskApiClient({ adminToken: context.adminToken.trim() }).listTasks();
+      state.runningTasks.value = tasks.filter((task) => task.status === "queued" || task.status === "running");
+      state.taskError.value = null;
+    } catch (error) {
+      state.taskError.value = error instanceof Error ? error.message : "Unable to load running AI tasks.";
+    } finally {
+      state.tasksLoading.value = false;
+    }
+  }
+  const polling = createTaskPolling(adminMode, loadRunningTasks);
+  async function createProjectFromForm() {
+    const adminToken = context.adminToken.trim();
+    if (adminToken.length === 0) {
+      state.actionError.value = "Admin access is required for project creation.";
+      return;
+    }
+
+    state.createBusy.value = true;
+    state.actionError.value = null;
+    try {
+      const created = await client.createProject(buildCreateProjectPayload(state.createForm.value), adminToken);
+      await context.loadProjects();
+      await Promise.all([loadProjectDetails(), loadRunningTasks()]);
+      state.createForm.value = createInitialProjectForm();
+      await router.push(created.task === null
+        ? `/projects/${created.project.slug}`
+        : `/projects/${created.project.slug}/ai?taskId=${encodeURIComponent(created.task.taskId)}`);
+    } catch (error) {
+      state.actionError.value = error instanceof Error ? error.message : "Unable to create project.";
+    } finally {
+      state.createBusy.value = false;
+    }
+  }
+
+  async function deleteProject(slug: string) {
+    const adminToken = context.adminToken.trim();
+    if (adminToken.length === 0) {
+      state.actionError.value = "Admin access is required for project deletion.";
+      return;
+    }
+    if (typeof window !== "undefined" && !window.confirm(`Delete project ${slug}?`)) {
+      return;
+    }
+
+    state.deleteBusySlug.value = slug;
+    state.actionError.value = null;
+    try {
+      await client.deleteProject(slug, adminToken);
+      await context.loadProjects();
+      await Promise.all([loadProjectDetails(), loadRunningTasks()]);
+    } catch (error) {
+      state.actionError.value = error instanceof Error ? error.message : "Unable to delete project.";
+    } finally {
+      state.deleteBusySlug.value = null;
+    }
+  }
+  return {
+    createProjectFromForm,
+    deleteProject,
+    loadProjectDetails,
+    loadRunningTasks,
+    startTaskPolling: polling.startTaskPolling,
+    stopTaskPolling: polling.stopTaskPolling
+  };
 }
 
 export const ProjectsIndexView = defineComponent({
   name: "ProjectsIndexView",
   setup() {
+    const router = useRouter();
     const context = useProjectContextStore();
-    const projects = computed(() => context.projects);
     const adminMode = computed(() => context.adminToken.trim().length > 0);
-    const projectDetails = ref<Record<string, ManagedProjectRecord>>({});
-    const searchQuery = ref("");
-
-    const filteredProjects = computed(() => {
-      const normalizedQuery = searchQuery.value.trim().toLowerCase();
-      return projects.value.filter((project) =>
-        matchesProject(project, projectDetails.value[project.slug] ?? null, normalizedQuery)
-      );
-    });
-
-    async function loadProjectDetails() {
-      projectDetails.value = await readProjectDetails(context.projects.map((project) => project.slug));
-    }
+    const state = createProjectsState(context);
+    const actions = createProjectsActions(router, context, adminMode, state);
 
     onMounted(() => {
       void (async () => {
         if (context.projects.length === 0 && !context.projectsLoading) {
           await context.loadProjects();
         }
-        await loadProjectDetails();
+        await actions.loadProjectDetails();
+        await actions.loadRunningTasks();
+        actions.startTaskPolling();
       })();
     });
 
-    watch(projects, () => {
-      void loadProjectDetails();
+    onUnmounted(() => {
+      actions.stopTaskPolling();
     });
 
-    return () =>
-      renderProjectsIndexView({
-        adminMode: adminMode.value,
-        projectsLoading: context.projectsLoading,
-        projectsError: context.projectsError,
-        filteredProjects: filteredProjects.value,
-        projectDetails: projectDetails.value,
-        searchQuery: searchQuery.value,
-        setSearchQuery: (value) => {
-          searchQuery.value = value;
-        }
-      });
+    watch(() => context.projects, () => {
+      void actions.loadProjectDetails();
+    });
+
+    watch(adminMode, (enabled) => {
+      if (enabled) {
+        void actions.loadRunningTasks();
+        actions.startTaskPolling();
+        return;
+      }
+
+      actions.stopTaskPolling();
+      state.runningTasks.value = [];
+    });
+
+    return () => renderProjectsIndexView({
+      actionError: state.actionError.value,
+      adminMode: adminMode.value,
+      createBusy: state.createBusy.value,
+      createForm: state.createForm.value,
+      deleteBusySlug: state.deleteBusySlug.value,
+      filteredProjects: state.filteredProjects.value,
+      projectDetails: state.projectDetails.value,
+      projectsError: context.projectsError,
+      projectsLoading: context.projectsLoading,
+      runningTasks: state.runningTasks.value,
+      searchQuery: state.searchQuery.value,
+      taskError: state.taskError.value,
+      tasksLoading: state.tasksLoading.value,
+      onCreateProject: () => {
+        void actions.createProjectFromForm();
+      },
+      onDeleteProject: (slug) => {
+        void actions.deleteProject(slug);
+      },
+      setCreateField: (key, value) => {
+        state.createForm.value = {
+          ...state.createForm.value,
+          [key]: value
+        } as ProjectCreateInput;
+      },
+      setSearchQuery: (value) => {
+        state.searchQuery.value = value;
+      }
+    });
   }
 });

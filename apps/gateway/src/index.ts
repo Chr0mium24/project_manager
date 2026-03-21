@@ -19,16 +19,12 @@ import { sendManagedTaskApi } from "./managed-task-api.ts";
 import { sendManagedTaskQueryApi } from "./managed-task-query-api.ts";
 import { sendPlatformUi } from "./platform-ui.ts";
 import { sendProjectApi } from "./project-api.ts";
-import { sendProjectFilesApi } from "./project-files-api.ts";
+import { sendProjectFilesApi, sendSingleProjectFileApi } from "./project-files-api.ts";
+import { runProjectMutationChecks, type ProjectMutationChecksRunner } from "./project-mutation-checks.ts";
 import { sendProjectVersionsApi } from "./project-versions-api.ts";
-import {
-  sendDynamicProject,
-  sendStaticProject
-} from "./project-runtime-routes.ts";
-import {
-  sendPublishApi,
-  sendPublishMutationApi
-} from "./publish-api.ts";
+import { sendDynamicProject, sendStaticProject } from "./project-runtime-routes.ts";
+import { sendPublishApi, sendPublishMutationApi } from "./publish-api.ts";
+
 export type RouteTargetKind = "internal-handler" | "static-build" | "dynamic-handler";
 export interface RouteRecord {
   routePrefix: string;
@@ -57,6 +53,7 @@ interface GatewayRequestContext {
   authConfig: GatewayAuthConfig;
   rootDir: string;
   aiOptions: GatewayAiOptions;
+  mutationChecksRunner: ProjectMutationChecksRunner;
 }
 interface ResolutionRouteRegistration {
   method: "get" | "post" | "put" | "delete" | "all";
@@ -64,6 +61,7 @@ interface ResolutionRouteRegistration {
 }
 export interface GatewayAppOptions extends GatewayAuthOptions {
   aiExecutor?: CodexExecutor;
+  mutationChecksRunner?: ProjectMutationChecksRunner;
 }
 const routeRecordSchema = z.object({
   routePrefix: z.string().min(1),
@@ -71,7 +69,6 @@ const routeRecordSchema = z.object({
   targetRef: z.string().min(1),
   updatedAt: z.string().optional()
 });
-
 const routeRegistrySchema = z.object({
   version: z.number().int().positive(),
   updatedAt: z.string().nullable(),
@@ -84,13 +81,11 @@ export const REGISTRY_VERSION = 1;
 export function getRouteRegistryPath(rootDir: string): string {
   return path.join(rootDir, "storage", "route-registry", "dev-routes.json");
 }
-
 export function readRouteRegistry(rootDir: string): RouteRegistry {
   const registryPath = getRouteRegistryPath(rootDir);
   if (!fs.existsSync(registryPath)) {
     return { version: REGISTRY_VERSION, updatedAt: null, routes: [] };
   }
-
   const rawValue: unknown = JSON.parse(fs.readFileSync(registryPath, "utf8"));
   return routeRegistrySchema.parse(rawValue);
 }
@@ -103,7 +98,6 @@ function findBestManagedRoute(pathname: string, routes: RouteRecord[]): RouteRec
   const matches = routes
     .filter((route) => matchesRoutePrefix(pathname, route.routePrefix))
     .sort((left, right) => right.routePrefix.length - left.routePrefix.length);
-
   return matches[0] ?? null;
 }
 
@@ -172,14 +166,24 @@ function resolveRequestPath(request: FastifyRequest): string {
   return request.url.split("?")[0] ?? "/";
 }
 
-function sendControlApiRoutes(
+async function sendControlApiRoutes(
   controlRequest: ControlApiRequest,
   reply: FastifyReply,
   context: GatewayRequestContext
-): boolean {
+): Promise<boolean> {
   const { rootDir, pathname, request } = controlRequest;
 
-  if (sendProjectFilesApi(rootDir, pathname, request, reply)) {
+  if (sendProjectFilesApi({
+    rootDir,
+    mutationChecksRunner: context.mutationChecksRunner
+  }, pathname, request, reply)) {
+    return true;
+  }
+
+  if (await sendSingleProjectFileApi({
+    rootDir,
+    mutationChecksRunner: context.mutationChecksRunner
+  }, pathname, request, reply)) {
     return true;
   }
 
@@ -207,27 +211,28 @@ function sendControlApiRoutes(
     return true;
   }
 
-  return sendProjectApi(rootDir, pathname, request.method, reply);
+  return await sendProjectApi({
+    rootDir,
+    aiOptions: context.aiOptions,
+    mutationChecksRunner: context.mutationChecksRunner
+  }, pathname, request, reply);
 }
 
-function sendControlApi(
+async function sendControlApi(
   context: GatewayRequestContext,
   controlRequest: ControlApiRequest,
   reply: FastifyReply
-): boolean {
+): Promise<boolean> {
   const { rootDir, pathname, request } = controlRequest;
   if (!pathname.startsWith("/api/")) {
     return false;
   }
-
   if (sendAdminAuthRejection(context.authConfig, pathname, request, reply)) {
     return true;
   }
-
-  if (sendControlApiRoutes(controlRequest, reply, context)) {
+  if (await sendControlApiRoutes(controlRequest, reply, context)) {
     return true;
   }
-
   const resolution = resolveGatewayRequest(rootDir, pathname);
   if (resolution.kind !== "control-api") {
     return false;
@@ -255,7 +260,6 @@ function sendPublishRoutes(
   if (method === "POST") {
     return sendPublishMutationApi(rootDir, pathname, reply);
   }
-
   return false;
 }
 
@@ -268,7 +272,6 @@ async function sendRuntimeApi(
   if (!pathname.startsWith("/api/runtime/")) {
     return false;
   }
-
   const response = await executeDynamicRuntimeRequest(rootDir, {
     pathname,
     method: request.method,
@@ -278,10 +281,10 @@ async function sendRuntimeApi(
   if (response === null) {
     return false;
   }
-
   void reply.code(response.statusCode).send(response.body);
   return true;
 }
+
 async function sendResolution(
   context: GatewayRequestContext,
   request: FastifyRequest,
@@ -301,10 +304,9 @@ async function sendResolution(
   if (await sendRuntimeApi(rootDir, pathname, request, reply)) {
     return;
   }
-  if (sendControlApi(context, { rootDir, pathname, request }, reply)) {
+  if (await sendControlApi(context, { rootDir, pathname, request }, reply)) {
     return;
   }
-
   const resolution = resolveGatewayRequest(rootDir, pathname);
   if (resolution.kind === "healthz") {
     void reply.code(200).send({ ok: true, service: moduleName });
@@ -314,6 +316,7 @@ async function sendResolution(
     void reply.code(404).send(resolution);
     return;
   }
+
   void reply.code(200).send(resolution);
 }
 
@@ -337,7 +340,8 @@ export function createGatewayApp(rootDir: string, options?: GatewayAppOptions): 
       queue: createAiTaskQueue(rootDir, {
         executor: options?.aiExecutor
       })
-    }
+    },
+    mutationChecksRunner: options?.mutationChecksRunner ?? runProjectMutationChecks
   };
   const routes: ResolutionRouteRegistration[] = [
     { method: "get", routePath: "/healthz" },
@@ -345,6 +349,7 @@ export function createGatewayApp(rootDir: string, options?: GatewayAppOptions): 
     { method: "get", routePath: "/projects/*" },
     { method: "get", routePath: "/assets/*" },
     { method: "get", routePath: "/api/projects" },
+    { method: "post", routePath: "/api/projects" },
     { method: "get", routePath: "/api/projects/*" },
     { method: "post", routePath: "/api/projects/*" },
     { method: "put", routePath: "/api/projects/*" },
@@ -363,11 +368,9 @@ export function createGatewayApp(rootDir: string, options?: GatewayAppOptions): 
   for (const route of routes) {
     registerResolutionRoute(app, route, context);
   }
-
   app.setNotFoundHandler((request, reply) => {
     return sendResolution(context, request, reply);
   });
-
   return app;
 }
 
@@ -385,7 +388,6 @@ async function main(): Promise<void> {
   const rootDir = process.cwd();
   const port = resolvePortFromEnv();
   const app = await startGatewayServer(rootDir, port);
-
   app.log.info({ service: moduleName, port }, "gateway listening");
   process.stdout.write(`${JSON.stringify({ service: moduleName, port }, null, 2)}\n`);
 }

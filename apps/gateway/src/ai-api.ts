@@ -31,6 +31,7 @@ interface CreateAiTaskBody {
   prompt?: string;
   force?: boolean;
   parentTaskId?: string;
+  sandboxMode?: "danger-full-access" | "workspace-write";
 }
 
 interface AiTaskPayload {
@@ -65,7 +66,8 @@ const createAiTaskBodySchema = z.object({
   taskSlug: z.string().min(1),
   prompt: z.string().min(1),
   force: z.boolean().optional(),
-  parentTaskId: z.string().min(1).optional()
+  parentTaskId: z.string().min(1).optional(),
+  sandboxMode: z.enum(["danger-full-access", "workspace-write"]).optional()
 }).strict();
 
 const createErrorMatches: CreateErrorMatch[] = [

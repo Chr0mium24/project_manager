@@ -48,7 +48,7 @@ describe("ai task api client", () => {
 
 });
 
-describe("gateway project api client", () => {
+describe("gateway project api client reads", () => {
   it("binds the default fetch for project api requests", async () => {
     globalThis.fetch = function fetchWithRequiredThis(this: unknown): Promise<Response> {
       expect(this).toBe(globalThis);
@@ -91,6 +91,88 @@ describe("gateway project api client", () => {
     });
   });
 
+});
+
+describe("gateway project api client mutations", () => {
+  it("creates a project and parses ai bootstrap plus checks payloads", async () => {
+    const client = new GatewayProjectApiClient({
+      fetch: () =>
+        Promise.resolve(Response.json({
+          project: {
+            schemaVersion: 1,
+            slug: "docs",
+            path: "projects/docs",
+            name: "Docs",
+            description: "Docs project",
+            runtime: "static",
+            visibility: "public",
+            entry: "src/index.html",
+            route: "/p/docs",
+            tags: [],
+            latestVersion: "v1",
+            mainLanguage: "html",
+            framework: "vanilla",
+            owner: "project-manager",
+            createdAt: "2026-03-20T00:00:00.000Z",
+            updatedAt: "2026-03-20T00:00:00.000Z"
+          },
+          task: {
+            taskId: "task-1",
+            projectSlug: "docs",
+            taskSlug: "init",
+            status: "queued"
+          },
+          checks: {
+            command: "./scripts/run-quality-gate.sh",
+            durationMs: 5,
+            exitCode: 0,
+            ok: true,
+            stdout: "ok",
+            stderr: ""
+          }
+        }))
+    });
+
+    await expect(client.createProject({
+      slug: "docs",
+      name: "Docs",
+      runtime: "static"
+    }, "secret-token")).resolves.toMatchObject({
+      project: { slug: "docs" },
+      task: { taskId: "task-1" },
+      checks: { ok: true }
+    });
+  });
+});
+
+describe("gateway project api client file mutations", () => {
+  it("deletes a project file and parses returned checks", async () => {
+    const client = new GatewayProjectApiClient({
+      fetch: () =>
+        Promise.resolve(Response.json({
+          path: "src/temp.txt",
+          updatedAt: "2026-03-20T00:00:00.000Z",
+          checks: {
+            command: "./scripts/run-quality-gate.sh",
+            durationMs: 9,
+            exitCode: 1,
+            ok: false,
+            stdout: "",
+            stderr: "failed"
+          }
+        }))
+    });
+
+    await expect(client.deleteProjectFile("landing-a", "src/temp.txt", "secret-token", {
+      runChecks: true
+    })).resolves.toMatchObject({
+      path: "src/temp.txt",
+      checks: { ok: false, stderr: "failed" }
+    });
+  });
+});
+
+describe("gateway project api client auth", () => {
   it("verifies an admin session with bearer auth", async () => {
     let capturedInit: RequestInit | undefined;
     const fetchSpy: typeof fetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
