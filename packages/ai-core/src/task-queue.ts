@@ -2,6 +2,7 @@ import process from "node:process";
 import { type CodexExecutor } from "./codex-executor.ts";
 import {
   createAiTask,
+  listAiTasks,
   runAiTask,
   type AiTaskRecord,
   type AiTaskRunnerOptions,
@@ -16,7 +17,9 @@ export class AiTaskQueue {
   public constructor(
     private readonly rootDir: string,
     private readonly runnerOptions?: AiTaskRunnerOptions
-  ) {}
+  ) {
+    this.recoverPendingTasks();
+  }
 
   public enqueue(options: CreateAiTaskOptions): AiTaskRecord {
     const task = createAiTask(this.rootDir, options);
@@ -52,6 +55,19 @@ export class AiTaskQueue {
         }
         this.resolveIdleWaiters();
       });
+  }
+
+  private recoverPendingTasks(): void {
+    const pendingTaskIds = listAiTasks(this.rootDir)
+      .filter((task) => task.status === "queued" || task.status === "running")
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+      .map((task) => task.taskId);
+    if (pendingTaskIds.length === 0) {
+      return;
+    }
+
+    this.taskIds.push(...pendingTaskIds);
+    this.scheduleDrain();
   }
 
   private async drain(): Promise<void> {
