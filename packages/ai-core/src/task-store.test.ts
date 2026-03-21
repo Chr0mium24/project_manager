@@ -31,5 +31,5 @@ void test("readAiTask throws when persisted task payload is missing required fie
   }, null, 2), "utf8");
 
   assert.throws(() => readAiTask(rootDir, "legacy-task"), /parentTaskId/i);
-  assert.throws(() => listAiTasks(rootDir), /parentTaskId/i);
+  assert.deepEqual(listAiTasks(rootDir), []);
 });

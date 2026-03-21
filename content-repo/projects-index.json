@@ -1,7 +1,17 @@
 {
   "version": 1,
-  "generatedAt": "2026-03-20T23:13:21.918Z",
+  "generatedAt": "2026-03-21T01:17:47.108Z",
   "projects": [
+    {
+      "slug": "1",
+      "path": "projects/1",
+      "name": "editor",
+      "runtime": "static",
+      "visibility": "public",
+      "entry": "src/index.html",
+      "route": "/p/1",
+      "updatedAt": "2026-03-21T01:17:47.108Z"
+    },
     {
       "slug": "agent-brain-core",
       "path": "projects/agent-brain-core",

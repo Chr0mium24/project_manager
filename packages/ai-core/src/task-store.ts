@@ -75,7 +75,13 @@ export function listAiTasks(rootDir: string): AiTaskRecord[] {
 
   return fs.readdirSync(tasksRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .map((entry) => readAiTask(rootDir, entry.name))
+    .map((entry) => {
+      try {
+        return readAiTask(rootDir, entry.name);
+      } catch {
+        return null;
+      }
+    })
     .filter((task): task is AiTaskRecord => task !== null)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }

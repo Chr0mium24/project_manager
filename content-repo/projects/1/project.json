@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "editor",
+  "slug": "1",
+  "description": "",
+  "runtime": "static",
+  "entry": "src/index.html",
+  "route": "/p/1",
+  "visibility": "public",
+  "tags": [],
+  "latestVersion": "v1",
+  "mainLanguage": "html",
+  "framework": "vanilla",
+  "owner": "project-manager",
+  "createdAt": "2026-03-21T01:17:47.077Z",
+  "updatedAt": "2026-03-21T01:17:47.108Z"
+}
