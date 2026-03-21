@@ -131,7 +131,6 @@ function createWorkspaceQueries(context: WorkspaceActionContext) {
     }
     context.isLoading.value = true;
     context.error.value = null;
-    context.tree.value = null;
     try {
       await refreshTree(preferredPath || context.selectedFilePath.value);
       if (context.selectedFilePath.value) {

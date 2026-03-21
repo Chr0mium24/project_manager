@@ -130,7 +130,7 @@ function renderWorkspaceEditor(props: WorkspaceRenderProps): VNode {
 }
 
 function renderWorkspaceBody(props: WorkspaceRenderProps): VNode {
-  if (props.isLoading) {
+  if (props.isLoading && props.tree === null) {
     return renderStatusMessage("Loading workspace...");
   }
 
