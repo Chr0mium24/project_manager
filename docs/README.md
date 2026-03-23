@@ -16,6 +16,7 @@ These docs are the source of truth for:
 - [Tech Stack](./tech-stack.md)
 - [Development Architecture](./development-architecture.md)
 - [Frontend Rebuild Plan](./frontend-rebuild-plan.md)
+- [Current UI Review](./current-ui-review.md)
 - [Testing Strategy](./testing-strategy.md)
 - [Quality Gate](./quality-gate.md)
 - [Code Standards](./code-standards.md)
