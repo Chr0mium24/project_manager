@@ -253,9 +253,15 @@ export function renderProjectsIndexView(props: ProjectsIndexRenderProps): VNode 
     createForm: props.createForm,
     createModalOpen: props.createModalOpen,
     createSlugInputRef: props.createSlugInputRef,
-    closeCreateModal: props.closeCreateModal,
-    onCreateProject: props.onCreateProject,
-    setCreateField: props.setCreateField
+    closeCreateModal: () => {
+      props.closeCreateModal();
+    },
+    onCreateProject: () => {
+      props.onCreateProject();
+    },
+    setCreateField: (key, value) => {
+      props.setCreateField(key, value);
+    }
   };
 
   return h("div", { class: "pm-view", "data-view": "projects-index" }, [

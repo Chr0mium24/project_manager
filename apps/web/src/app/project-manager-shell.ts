@@ -311,7 +311,9 @@ function useShellNavigationGuards(
     dialogRef: state.dialogRef,
     initialFocusRef: state.inputRef,
     isOpen: state.accessPanelOpen,
-    onClose: state.closeAccessPanel
+    onClose: () => {
+      state.closeAccessPanel();
+    }
   });
 
   watch(state.isAdminMode, (enabled) => {
@@ -339,7 +341,14 @@ function renderShellLayout(routeName: string | symbol | null | undefined, state:
       inert: state.accessPanelOpen.value ? "" : undefined,
       "aria-hidden": state.accessPanelOpen.value ? "true" : undefined
     }, [
-      renderTopbar(state.isAdminMode.value, state.adminAvailability.value, state.accessPanelOpen.value, state.toggleAccessPanel),
+      renderTopbar(
+        state.isAdminMode.value,
+        state.adminAvailability.value,
+        state.accessPanelOpen.value,
+        () => {
+          state.toggleAccessPanel();
+        }
+      ),
       h("main", { class: ["pm-layout", routeName === "projects-index" ? "pm-layout-home" : ""] }, [h(RouterView)])
     ]),
     state.accessPanelOpen.value
@@ -351,11 +360,15 @@ function renderShellLayout(routeName: string | symbol | null | undefined, state:
           isAdminMode: state.isAdminMode.value,
           isSubmitting: state.isSubmitting.value,
           tokenDraft: state.tokenDraft,
-          onCancel: state.closeAccessPanel,
+          onCancel: () => {
+            state.closeAccessPanel();
+          },
           onContinue: () => {
             void state.saveAdminToken();
           },
-          onExitAdminMode: state.exitAdminMode
+          onExitAdminMode: () => {
+            state.exitAdminMode();
+          }
         })
       : null
   ]);
