@@ -3,6 +3,10 @@ import type { ProjectFileMutationResult, ProjectFileTreeNode } from "../gateway-
 import { ProjectManagerAceEditor } from "./project-manager-ace-editor.ts";
 import { renderPageHeader, renderSectionHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
 
+function shouldCollapseWorkspaceNav(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 1040px)").matches;
+}
+
 function renderTree(node: ProjectFileTreeNode, selectedFilePath: string, onSelect: (filePath: string) => void): VNode {
   if (node.kind === "file") {
     return h("li", [
@@ -75,6 +79,27 @@ function renderWorkspaceEditor(props: WorkspaceRenderProps): VNode {
     return renderStatusMessage("Loading file...");
   }
   return h("div", { class: "pm-editor-stack" }, [
+    h("div", { class: "pm-editor-head" }, [
+      h("div", { class: "pm-editor-file-copy" }, [
+        h("p", { class: "pm-section-title" }, "Editing file"),
+        h("p", { class: "pm-editor-file-path" }, props.selectedFilePath),
+        h(
+          "p",
+          { class: "pm-selection-note" },
+          props.navOpen ? "File tree stays open while you edit." : "File tree is hidden so the editor can take the viewport."
+        )
+      ]),
+      h("div", { class: "pm-actions pm-actions-end" }, [
+        h("button", {
+          type: "button",
+          class: "pm-button",
+          disabled: props.isSaving || !props.isDirty,
+          onClick: () => {
+            props.saveFile();
+          }
+        }, props.isSaving ? "Saving..." : "Save file")
+      ])
+    ]),
     h("div", { class: "pm-toolbar" }, [
       h("label", { class: "pm-field pm-field-grow" }, [
         h("span", "New file"),
@@ -115,17 +140,7 @@ function renderWorkspaceEditor(props: WorkspaceRenderProps): VNode {
       }
     }),
     props.editorError ? renderStatusMessage(props.editorError, "error") : null,
-    renderMutationResult(props.lastMutation),
-    h("div", { class: "pm-actions pm-actions-end" }, [
-      h("button", {
-        type: "button",
-        class: "pm-button",
-        disabled: props.isSaving || !props.isDirty,
-        onClick: () => {
-          props.saveFile();
-        }
-      }, props.isSaving ? "Saving..." : "Save file")
-    ])
+    renderMutationResult(props.lastMutation)
   ]);
 }
 
@@ -142,6 +157,9 @@ function renderWorkspaceBody(props: WorkspaceRenderProps): VNode {
             : h("ul", { class: "pm-tree-list" }, props.tree.children.map((node) =>
                 renderTree(node, props.selectedFilePath, (filePath) => {
                   props.loadFile(filePath);
+                  if (shouldCollapseWorkspaceNav()) {
+                    props.setNavOpen(false);
+                  }
                 })
               ))
         ])
@@ -163,7 +181,7 @@ export function renderWorkspaceView(props: WorkspaceRenderProps): VNode {
       renderSectionHeader(
         "Files",
         props.selectedFilePath
-          ? `Editing ${props.selectedFilePath}`
+          ? `Editing ${props.selectedFilePath}. Use Show files to switch context without losing the current editor draft.`
           : "Choose a file from the repository tree, then edit it in the main panel.",
         h("button", {
           type: "button",

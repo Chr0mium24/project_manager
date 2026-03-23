@@ -27,20 +27,30 @@ function renderTaskChanges(summary: ManagedTaskSummary | null | undefined): VNod
   if (summary === undefined) {
     return renderStatusMessage("Loading change summary...");
   }
-
   if (summary === null) {
     return null;
   }
 
-  return h(
-    "ul",
-    { class: "pm-list" },
+  return h("section", { class: "pm-task-section" }, [
+    h("h3", { class: "pm-section-title" }, "Changed files"),
+    h("div", { class: "pm-review-summary" }, [
+      h("span", { class: "pm-badge" }, `${String(summary.changedFiles)} total`)
+    ]),
     summary.changes.length === 0
-      ? [h("li", { class: "pm-focus-item" }, "No changed files in the summary artifact.")]
-      : summary.changes.map((change) =>
-          h("li", { class: "pm-focus-item" }, `${change.kind} · ${change.path}`)
+      ? renderStatusMessage("No changed files in the summary artifact.")
+      : h(
+          "details",
+          { class: "pm-log-block" },
+          [
+            h("summary", { class: "pm-log-summary" }, "Open changed files"),
+            h(
+              "ul",
+              { class: "pm-focus-list" },
+              summary.changes.map((change) => h("li", { class: "pm-focus-item" }, `${change.kind} · ${change.path}`))
+            )
+          ]
         )
-  );
+  ]);
 }
 
 function renderEntryDetails(entry: AiEventStreamEntry): VNode | null {
@@ -80,7 +90,6 @@ function renderTaskDiagnostics(diagnostics: AiTaskDiagnostics | null | undefined
   if (diagnostics === undefined) {
     return renderStatusMessage("Loading task activity...");
   }
-
   if (diagnostics === null) {
     return null;
   }
@@ -103,30 +112,83 @@ function renderTaskDiagnostics(diagnostics: AiTaskDiagnostics | null | undefined
       : null
   ].filter((item): item is VNode => item !== null);
 
-  return blocks.length === 0 ? null : h("div", { class: "pm-stack" }, blocks);
+  return blocks.length === 0
+    ? null
+    : h("details", { class: "pm-log-block" }, [
+        h("summary", { class: "pm-log-summary" }, "Open raw activity"),
+        h("div", { class: "pm-stack" }, blocks)
+      ]);
+}
+
+function summarizeSessionChanges(state: AiTaskDetailsState, taskIds: string[]): number {
+  return taskIds.reduce((total, taskId) => {
+    const summary = state.summariesByTaskId.value[taskId];
+    return total + (summary?.changedFiles ?? 0);
+  }, 0);
+}
+
+function renderSessionOverview(
+  state: AiTaskDetailsState,
+  session: NonNullable<ReturnType<typeof findAiTaskSession>>
+): VNode {
+  const changedFiles = summarizeSessionChanges(state, session.tasks.map((task) => task.taskId));
+
+  return h("section", { class: "pm-session-overview" }, [
+    h("div", { class: "pm-card-head" }, [
+      h("div", { class: "pm-page-copy" }, [
+        h("h2", { class: "pm-section-title" }, session.title),
+        h(
+          "p",
+          { class: "pm-copy" },
+          session.status === "queued" || session.status === "running"
+            ? `Session running with ${String(session.tasks.length)} turns.`
+            : `Session completed after ${String(session.tasks.length)} turns.`
+        )
+      ]),
+      h("span", { class: "pm-badge" }, session.status)
+    ]),
+    h("div", { class: "pm-session-stats" }, [
+      h("div", { class: "pm-session-stat" }, [h("strong", String(session.tasks.length)), h("span", "Turns")]),
+      h("div", { class: "pm-session-stat" }, [h("strong", String(changedFiles)), h("span", "Changed files across summaries")]),
+      h("div", { class: "pm-session-stat" }, [h("strong", session.latestTask.status), h("span", "Latest task status")])
+    ])
+  ]);
 }
 
 function renderTaskTurn(task: AiTaskRecord, state: AiTaskDetailsState): VNode {
   const diagnostics = state.diagnosticsByTaskId.value[task.taskId];
   const summary = state.summariesByTaskId.value[task.taskId];
+  const changeCount = summary?.changedFiles ?? 0;
   const endedLabel = task.status === "queued" || task.status === "running"
     ? null
     : task.completedAt ? `Ended ${task.completedAt}` : "Ended";
 
-  return h("article", { class: "pm-card pm-stack" }, [
-    h("div", { class: "pm-badge-row" }, [
-      h("span", { class: "pm-badge" }, task.status),
-      h("p", { class: "pm-kicker" }, task.createdAt)
+  return h("article", { class: "pm-card pm-task-turn" }, [
+    h("div", { class: "pm-task-turn-head" }, [
+      h("div", { class: "pm-badge-row" }, [
+        h("span", { class: "pm-badge" }, task.status),
+        h("p", { class: "pm-kicker" }, task.createdAt),
+        summary ? h("span", { class: "pm-badge" }, `${String(changeCount)} changed`) : null
+      ]),
+      h("div", [
+        h("span", { class: "pm-turn-title" }, task.taskSlug),
+        h("span", { class: "pm-turn-preview" }, task.prompt)
+      ])
     ]),
-    h("div", { class: "pm-stack-tight" }, [
-      h("h3", { class: "pm-section-title" }, task.taskSlug),
-      h("p", { class: "pm-copy" }, task.prompt),
-      endedLabel ? h("p", { class: "pm-muted-block" }, endedLabel) : null,
-      task.appliedAt ? h("p", { class: "pm-muted-block" }, `Applied at ${task.appliedAt}`) : null
-    ]),
-    renderTaskMetadata(task, diagnostics),
-    renderTaskDiagnostics(diagnostics),
-    renderTaskChanges(summary)
+    h("details", { class: "pm-log-block" }, [
+      h("summary", { class: "pm-log-summary" }, "Open task details"),
+      h("div", { class: "pm-stack" }, [
+        h("section", { class: "pm-task-section" }, [
+          h("h3", { class: "pm-section-title" }, "Prompt"),
+          h("p", { class: "pm-copy" }, task.prompt),
+          endedLabel ? h("p", { class: "pm-muted-block" }, endedLabel) : null,
+          task.appliedAt ? h("p", { class: "pm-muted-block" }, `Applied at ${task.appliedAt}`) : null
+        ]),
+        renderTaskMetadata(task, diagnostics),
+        renderTaskChanges(summary),
+        renderTaskDiagnostics(diagnostics)
+      ])
+    ])
   ]);
 }
 
@@ -144,22 +206,8 @@ export function renderAiTaskSummaryPanel(state: AiTaskDetailsState): VNode {
     ]);
   }
 
-  const sessionEnded = session.status !== "queued" && session.status !== "running";
-
   return h("section", { class: "pm-card pm-subcard pm-stack" }, [
-    h("div", { class: "pm-card-head" }, [
-      h("div", { class: "pm-page-copy" }, [
-        h("h2", { class: "pm-section-title" }, session.title),
-        h(
-          "p",
-          { class: "pm-copy" },
-          sessionEnded
-            ? `Session ended after ${String(session.tasks.length)} turn${session.tasks.length > 1 ? "s" : ""}.`
-            : `Session running with ${String(session.tasks.length)} turn${session.tasks.length > 1 ? "s" : ""}.`
-        )
-      ]),
-      h("span", { class: "pm-badge" }, session.status)
-    ]),
+    renderSessionOverview(state, session),
     ...session.tasks.map((task) => renderTaskTurn(task, state))
   ]);
 }

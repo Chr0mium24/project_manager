@@ -2,6 +2,8 @@ import { computed, defineComponent, onMounted, onUnmounted, ref, watch, type Com
 import { useRouter } from "vue-router";
 import { AiTaskApiClient, type AiTaskRecord } from "../ai-task-api.ts";
 import { GatewayProjectApiClient, type ManagedProjectRecord, type ProjectCreateInput } from "../gateway-api.ts";
+import { describeProtectedActionError } from "./project-manager-admin-access.ts";
+import { useModalBehavior } from "./project-manager-modal.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
 import { renderProjectsIndexView } from "./project-manager-projects-render.ts";
 
@@ -179,7 +181,7 @@ function createProjectsActions(
         ? `/projects/${created.project.slug}`
         : `/projects/${created.project.slug}/ai?taskId=${encodeURIComponent(created.task.taskId)}`);
     } catch (error) {
-      state.actionError.value = error instanceof Error ? error.message : "Unable to create project.";
+      state.actionError.value = describeProtectedActionError(error, "Unable to create project.");
     } finally {
       state.createBusy.value = false;
     }
@@ -200,7 +202,18 @@ export const ProjectsIndexView = defineComponent({
     const context = useProjectContextStore();
     const adminMode = computed(() => context.adminToken.trim().length > 0);
     const state = createProjectsState(context);
+    const createDialogRef = ref<HTMLElement | null>(null);
+    const createSlugInputRef = ref<HTMLElement | null>(null);
     const actions = createProjectsActions(router, context, adminMode, state);
+
+    useModalBehavior({
+      dialogRef: createDialogRef,
+      initialFocusRef: createSlugInputRef,
+      isOpen: state.createModalOpen,
+      onClose: () => {
+        state.createModalOpen.value = false;
+      }
+    });
 
     onMounted(() => {
       void (async () => {
@@ -238,6 +251,8 @@ export const ProjectsIndexView = defineComponent({
       createBusy: state.createBusy.value,
       createForm: state.createForm.value,
       createModalOpen: state.createModalOpen.value,
+      createDialogRef,
+      createSlugInputRef,
       filteredProjects: state.filteredProjects.value,
       projectDetails: state.projectDetails.value,
       projectsError: context.projectsError,

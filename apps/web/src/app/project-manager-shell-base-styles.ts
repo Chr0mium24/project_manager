@@ -138,7 +138,7 @@ button { color: inherit; }
 .pm-card { padding: 20px; }
 .pm-page-header-card {
   gap: 18px;
-  padding: 20px 24px 12px;
+  padding: 18px 22px 12px;
 }
 .pm-page-head-top {
   display: flex;
@@ -215,14 +215,14 @@ button { color: inherit; }
 .pm-tab-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 14px;
   border-top: 1px solid var(--pm-line);
   padding-top: 12px;
 }
 .pm-tab-link {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 40px;
   text-decoration: none;
   color: var(--pm-muted);
   font-size: 0.9rem;

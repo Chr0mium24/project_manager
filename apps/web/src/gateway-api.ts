@@ -230,6 +230,26 @@ export class GatewayProjectApiClient {
     });
   }
 
+  public async probeAdminAccess(): Promise<"available" | "unavailable"> {
+    const response = await this.fetchImpl(this.resolveUrl("/api/admin/session"), {
+      method: "POST"
+    });
+    const payload: unknown = await response.json();
+    if (response.ok) {
+      return "available";
+    }
+
+    const errorCode = readErrorCode(payload);
+    if (response.status === 401 && errorCode === "unauthorized") {
+      return "available";
+    }
+    if (response.status === 503 && errorCode === "auth-not-configured") {
+      return "unavailable";
+    }
+
+    throw new GatewayApiError(response.status, errorCode);
+  }
+
   private async requestJson(pathname: string, init: RequestInit = {}): Promise<unknown> {
     const response = await this.fetchImpl(this.resolveUrl(pathname), init);
     const payload: unknown = await response.json();

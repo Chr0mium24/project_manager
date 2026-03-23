@@ -14,6 +14,7 @@ import {
   type ProjectFileTreeDirectoryNode,
   type ProjectFileTreeNode
 } from "../gateway-api.ts";
+import { describeProtectedActionError } from "./project-manager-admin-access.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
 import { runtimeHrefForSlug } from "./project-runtime-link.ts";
 import { renderWorkspaceView } from "./project-manager-workspace-render.ts";
@@ -114,7 +115,7 @@ function createWorkspaceQueries(context: WorkspaceActionContext) {
       if (requestToken !== fileRequestToken) {
         return;
       }
-      context.error.value = loadError instanceof Error ? loadError.message : "unknown project file error";
+      context.error.value = describeProtectedActionError(loadError, "Unable to load the selected file.");
     }
   }
 
@@ -140,7 +141,7 @@ function createWorkspaceQueries(context: WorkspaceActionContext) {
         context.fileDraft.value = "";
       }
     } catch (loadError) {
-      context.error.value = loadError instanceof Error ? loadError.message : "unknown workspace error";
+      context.error.value = describeProtectedActionError(loadError, "Unable to load the repository workspace.");
     } finally {
       context.isLoading.value = false;
     }
@@ -173,7 +174,7 @@ function createWorkspaceMutations(
       await queries.loadFile(filePath);
       context.lastMutation.value = null;
     } catch (error) {
-      context.error.value = error instanceof Error ? error.message : "unknown project file error";
+      context.error.value = describeProtectedActionError(error, "Unable to create the file.");
     } finally {
       context.isCreating.value = false;
     }
@@ -197,7 +198,7 @@ function createWorkspaceMutations(
         context.fileDraft.value = "";
       }
     } catch (error) {
-      context.error.value = error instanceof Error ? error.message : "unknown project file error";
+      context.error.value = describeProtectedActionError(error, "Unable to delete the file.");
     } finally {
       context.isDeleting.value = false;
     }
@@ -221,7 +222,7 @@ function createWorkspaceMutations(
       context.fileContent.value = context.fileDraft.value;
       await queries.refreshTree(context.selectedFilePath.value);
     } catch (saveError) {
-      context.error.value = saveError instanceof Error ? saveError.message : "unknown project file error";
+      context.error.value = describeProtectedActionError(saveError, "Unable to save the file.");
     } finally {
       context.isSaving.value = false;
     }

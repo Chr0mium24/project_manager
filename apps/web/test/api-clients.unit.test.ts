@@ -193,4 +193,36 @@ describe("gateway project api client auth", () => {
     expect(capturedInit?.body).toBeUndefined();
     expect(capturedInit?.headers).not.toHaveProperty("content-type");
   });
+
+  it("probes admin access without a token and detects unavailable auth", async () => {
+    const client = new GatewayProjectApiClient({
+      fetch: () =>
+        Promise.resolve(new Response(JSON.stringify({
+          error: "auth-not-configured"
+        }), {
+          status: 503,
+          headers: {
+            "content-type": "application/json"
+          }
+        }))
+    });
+
+    await expect(client.probeAdminAccess()).resolves.toBe("unavailable");
+  });
+
+  it("treats unauthorized admin probe responses as available auth", async () => {
+    const client = new GatewayProjectApiClient({
+      fetch: () =>
+        Promise.resolve(new Response(JSON.stringify({
+          error: "unauthorized"
+        }), {
+          status: 401,
+          headers: {
+            "content-type": "application/json"
+          }
+        }))
+    });
+
+    await expect(client.probeAdminAccess()).resolves.toBe("available");
+  });
 });

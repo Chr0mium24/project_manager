@@ -1,14 +1,12 @@
 import { computed, defineComponent, h, onMounted, ref, watch, type ComputedRef, type Ref, type VNode } from "vue";
 import { useRoute } from "vue-router";
 import { GatewayProjectApiClient, type ProjectVersionDiff, type ProjectVersionRecord } from "../gateway-api.ts";
+import { describeProtectedActionError } from "./project-manager-admin-access.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
-import {
-  renderPageHeader,
-  renderSectionHeader,
-  renderStatusMessage
-} from "./project-manager-view-shared.ts";
 import { runtimeHrefForSlug } from "./project-runtime-link.ts";
+import { renderVersionDetail } from "./project-manager-versions-detail.ts";
 import { renderVersionsWriteActions } from "./project-manager-versions-write-actions.ts";
+import { renderPageHeader, renderSectionHeader, renderStatusMessage } from "./project-manager-view-shared.ts";
 
 const client = new GatewayProjectApiClient();
 
@@ -16,6 +14,7 @@ interface VersionsState {
   versions: Ref<ProjectVersionRecord[]>;
   selectedVersionId: Ref<string>;
   diff: Ref<ProjectVersionDiff | null>;
+  restoreConfirmed: Ref<boolean>;
   message: Ref<string>;
   error: Ref<string | null>;
   isLoading: Ref<boolean>;
@@ -32,6 +31,7 @@ interface VersionLoaderContext {
   versions: Ref<ProjectVersionRecord[]>;
   selectedVersionId: Ref<string>;
   diff: Ref<ProjectVersionDiff | null>;
+  restoreConfirmed: Ref<boolean>;
   error: Ref<string | null>;
   isLoading: Ref<boolean>;
   composeOpen: Ref<boolean>;
@@ -47,18 +47,21 @@ interface VersionMutationContext {
   composeOpen: Ref<boolean>;
   loaders: ReturnType<typeof createVersionLoaders>;
 }
+
 function createVersionLoaders(context: VersionLoaderContext) {
   async function selectVersion(versionId: string) {
     if (!context.projectSlug.value || !versionId) {
       return;
     }
+
     context.selectedVersionId.value = versionId;
+    context.restoreConfirmed.value = false;
     context.diff.value = null;
     context.error.value = null;
     try {
       context.diff.value = await client.readVersionDiff(context.projectSlug.value, versionId);
     } catch (loadError) {
-      context.error.value = loadError instanceof Error ? loadError.message : "unknown project version error";
+      context.error.value = describeProtectedActionError(loadError, "Unable to load the project version diff.");
     }
   }
 
@@ -66,10 +69,12 @@ function createVersionLoaders(context: VersionLoaderContext) {
     if (!slug) {
       return;
     }
+
     context.isLoading.value = true;
     context.error.value = null;
     context.versions.value = [];
     context.selectedVersionId.value = "";
+    context.restoreConfirmed.value = false;
     context.diff.value = null;
     try {
       context.versions.value = await client.listVersions(slug);
@@ -79,13 +84,15 @@ function createVersionLoaders(context: VersionLoaderContext) {
         await selectVersion(latestVersion);
       }
     } catch (loadError) {
-      context.error.value = loadError instanceof Error ? loadError.message : "unknown project version error";
+      context.error.value = describeProtectedActionError(loadError, "Unable to load project snapshots.");
     } finally {
       context.isLoading.value = false;
     }
   }
+
   return { loadVersions, selectVersion };
 }
+
 function createVersionMutations(context: VersionMutationContext) {
   async function createVersion() {
     if (!context.projectSlug.value) {
@@ -99,6 +106,7 @@ function createVersionMutations(context: VersionMutationContext) {
       context.error.value = "Snapshot message is required.";
       return;
     }
+
     context.isBusy.value = true;
     context.error.value = null;
     try {
@@ -112,7 +120,7 @@ function createVersionMutations(context: VersionMutationContext) {
       await context.loaders.loadVersions(context.projectSlug.value);
       await context.loaders.selectVersion(created.versionId);
     } catch (createError) {
-      context.error.value = createError instanceof Error ? createError.message : "unknown project version error";
+      context.error.value = describeProtectedActionError(createError, "Unable to create the snapshot.");
     } finally {
       context.isBusy.value = false;
     }
@@ -126,6 +134,7 @@ function createVersionMutations(context: VersionMutationContext) {
       context.error.value = "Admin access is required for restore. Open Admin access from the header.";
       return;
     }
+
     context.isBusy.value = true;
     context.error.value = null;
     try {
@@ -137,17 +146,20 @@ function createVersionMutations(context: VersionMutationContext) {
       await context.loaders.loadVersions(context.projectSlug.value);
       await context.loaders.selectVersion(restored.versionId);
     } catch (restoreError) {
-      context.error.value = restoreError instanceof Error ? restoreError.message : "unknown project version error";
+      context.error.value = describeProtectedActionError(restoreError, "Unable to restore the selected snapshot.");
     } finally {
       context.isBusy.value = false;
     }
   }
+
   return { createVersion, restoreSelectedVersion };
 }
+
 function createVersionsState(projectSlug: ComputedRef<string>, adminToken: ComputedRef<string>): VersionsState {
   const versions = ref<ProjectVersionRecord[]>([]);
   const selectedVersionId = ref("");
   const diff = ref<ProjectVersionDiff | null>(null);
+  const restoreConfirmed = ref(false);
   const message = ref("");
   const error = ref<string | null>(null);
   const isLoading = ref(false);
@@ -158,6 +170,7 @@ function createVersionsState(projectSlug: ComputedRef<string>, adminToken: Compu
     versions,
     selectedVersionId,
     diff,
+    restoreConfirmed,
     error,
     isLoading,
     composeOpen
@@ -172,10 +185,12 @@ function createVersionsState(projectSlug: ComputedRef<string>, adminToken: Compu
     composeOpen,
     loaders
   });
+
   return {
     versions,
     selectedVersionId,
     diff,
+    restoreConfirmed,
     message,
     error,
     isLoading,
@@ -187,16 +202,7 @@ function createVersionsState(projectSlug: ComputedRef<string>, adminToken: Compu
     restoreSelectedVersion: mutations.restoreSelectedVersion
   };
 }
-function renderVersionsBody(state: VersionsState): VNode {
-  if (state.isLoading.value) {
-    return renderStatusMessage("Loading snapshots...");
-  }
 
-  return h("div", { class: "pm-version-grid" }, [
-    renderVersionsList(state),
-    renderVersionDetail(state)
-  ]);
-}
 function renderVersionsList(state: VersionsState): VNode {
   return h("aside", { class: "pm-card pm-subcard" }, [
     state.versions.value.length === 0
@@ -222,54 +228,29 @@ function renderVersionsList(state: VersionsState): VNode {
         )
   ]);
 }
-function renderVersionDetail(state: VersionsState): VNode {
-  if (state.selectedVersionId.value.length === 0) {
-    return h("section", { class: "pm-card pm-subcard" }, [
-      renderStatusMessage("Select a snapshot to inspect its diff.")
-    ]);
-  }
-  if (state.diff.value === null) {
-    return h("section", { class: "pm-card pm-subcard" }, [renderStatusMessage("Loading diff...")]);
-  }
-  const selectedVersion = state.versions.value.find((version) => version.versionId === state.selectedVersionId.value) ?? null;
 
-  return h("section", { class: "pm-card pm-subcard" }, [
-    h("div", { class: "pm-stack" }, [
-      h("div", { class: "pm-badge-row" }, [
-        h("span", { class: "pm-badge" }, state.selectedVersionId.value),
-        selectedVersion === null ? null : h("p", { class: "pm-kicker" }, selectedVersion.createdAt)
-      ]),
-      h(
-        "p",
-        { class: "pm-copy" },
-        selectedVersion === null
-          ? `${String(state.diff.value.changedFiles)} file changes against current project.`
-          : `${selectedVersion.message} · ${String(state.diff.value.changedFiles)} file changes against current project.`
-      ),
-      h(
-        "ul",
-        { class: "pm-list" },
-        state.diff.value.changes.length === 0
-          ? [h("li", { class: "pm-focus-item" }, "No changes against the current project.")]
-          : state.diff.value.changes.map((change) =>
-              h("li", { class: "pm-focus-item" }, `${change.kind} · ${change.path}`)
-            )
-      )
-    ])
+function renderVersionsBody(state: VersionsState): VNode {
+  if (state.isLoading.value) {
+    return renderStatusMessage("Loading snapshots...");
+  }
+
+  return h("div", { class: "pm-version-grid" }, [
+    renderVersionsList(state),
+    renderVersionDetail({
+      diff: state.diff.value,
+      selectedVersionId: state.selectedVersionId.value,
+      versions: state.versions.value
+    })
   ]);
 }
 
-function renderVersionsView(
-  projectSlug: string,
-  state: VersionsState,
-  publicHref: string | null
-): VNode {
+function renderVersionsView(projectSlug: string, state: VersionsState, publicHref: string | null): VNode {
   return h("div", { class: "pm-view", "data-view": "versions" }, [
     renderPageHeader({
       projectSlug,
       currentView: "versions",
       title: "Repository history",
-      description: "Review snapshots and diffs here before restoring any repository state.",
+      description: "Review snapshots here before restoring repository state.",
       action: publicHref
         ? h(
             "a",
@@ -284,7 +265,7 @@ function renderVersionsView(
     h("section", { class: "pm-card pm-stack" }, [
       renderSectionHeader(
         "Snapshot history",
-        "Select a snapshot from the left column to inspect its diff against the current repository."
+        "Select a snapshot from the left column to inspect its current file-level diff."
       ),
       state.error.value ? renderStatusMessage(state.error.value, "error") : null,
       renderVersionsBody(state)
@@ -292,10 +273,14 @@ function renderVersionsView(
     renderVersionsWriteActions({
       selectedVersionId: state.selectedVersionId.value,
       composeOpen: state.composeOpen.value,
+      restoreConfirmed: state.restoreConfirmed.value,
       message: state.message.value,
       isBusy: state.isBusy.value,
       setMessage: (value) => {
         state.message.value = value;
+      },
+      setRestoreConfirmed: (value) => {
+        state.restoreConfirmed.value = value;
       },
       toggleComposer: () => {
         state.composeOpen.value = !state.composeOpen.value;

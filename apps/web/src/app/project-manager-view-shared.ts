@@ -31,10 +31,7 @@ export function renderPageHeader(options: PageHeaderOptions): VNode {
         h("h1", { class: "pm-page-title" }, options.title),
         h("p", { class: "pm-copy" }, options.description)
       ]),
-      h("div", { class: "pm-page-head-actions" }, [
-        options.action ?? null,
-        h("span", { class: "pm-badge pm-badge-accent" }, options.currentView)
-      ])
+      h("div", { class: "pm-page-head-actions" }, [options.action ?? null])
     ]),
     h(
       "nav",

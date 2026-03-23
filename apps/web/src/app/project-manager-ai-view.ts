@@ -7,6 +7,7 @@ import {
   type AiTaskDiagnostics,
   type ManagedTaskSummary
 } from "../ai-task-api.ts";
+import { describeProtectedActionError } from "./project-manager-admin-access.ts";
 import { useProjectContextStore } from "./project-context-store.ts";
 import { renderAiView } from "./project-manager-ai-render.ts";
 import { runtimeHrefForSlug } from "./project-runtime-link.ts";
@@ -135,7 +136,7 @@ function createAiQueries(context: AiQueryContext) {
       await loadTaskArtifacts(task);
       await hydrateSelectedSession(task);
     } catch (selectError) {
-      context.error.value = selectError instanceof Error ? selectError.message : "unknown ai task error";
+      context.error.value = describeProtectedActionError(selectError, "Unable to load the selected AI task.");
     }
   }
 
@@ -149,7 +150,7 @@ function createAiQueries(context: AiQueryContext) {
         await selectTask(selectedTaskId);
       }
     } catch (refreshError) {
-      context.error.value = refreshError instanceof Error ? refreshError.message : "unknown ai task error";
+      context.error.value = describeProtectedActionError(refreshError, "Unable to load AI tasks.");
     }
   }
 
@@ -207,7 +208,7 @@ function createAiMutations(context: AiMutationContext) {
       await context.queries.refreshTasks();
       await context.queries.selectTask(created.taskId);
     } catch (createError) {
-      context.error.value = createError instanceof Error ? createError.message : "unknown ai task error";
+      context.error.value = describeProtectedActionError(createError, "Unable to create the AI task.");
     } finally {
       context.isBusy.value = false;
     }
@@ -229,7 +230,7 @@ function createAiMutations(context: AiMutationContext) {
       await context.queries.refreshTasks();
       context.selectedTask.value = applied.task;
     } catch (applyError) {
-      context.error.value = applyError instanceof Error ? applyError.message : "unknown ai task error";
+      context.error.value = describeProtectedActionError(applyError, "Unable to apply the selected AI task.");
     } finally {
       context.isBusy.value = false;
     }

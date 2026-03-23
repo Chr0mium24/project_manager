@@ -95,7 +95,7 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
+  min-height: 44px;
   padding: 0 12px;
   border-radius: 8px;
   text-decoration: none;
@@ -181,7 +181,7 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid #1f883d;
   border-radius: 8px;
@@ -219,7 +219,7 @@ export const PROJECT_MANAGER_SHELL_COMPONENT_STYLES = `
   border: 1px solid var(--pm-line);
   border-radius: 8px;
   background: var(--pm-panel);
-  padding: 10px 12px;
+  padding: 12px 14px;
   text-align: left;
 }
 .pm-list-button:hover,
